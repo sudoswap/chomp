@@ -34,13 +34,17 @@ Rough engine flow:
 ```
 
 ## game flow
-turn-based pvp game
-borrows a lot from pokemon battle system
-2 players (can have extensions for more, but probably needs engine overhaul)
-game ends when one player has no more monsters with health
-players select moves simultaneously, then resolve in priority order
+- turn-based pvp game
+- borrows a lot from pokemon battle system
+- 2 players (can have extensions for more, but probably needs engine overhaul)
+- game ends when one player has no more monsters with health
+- players select moves simultaneously, then resolve in priority order
 
-instead of pp, use stamina/energy system to balance out stronger move selection
+instead of pp, use stamina/energy system to balance out stronger move selection.
+
+(basically each monster has some max energy (probably standardize it to like 5), and moves consume energy (1/2/3), and monsters regen 1 energy per turn)
+
+(similar to AP from [cassette beasts](https://www.cassettebeasts.com/) sorta)
 
 ## making a monster
 - stats (health/attack/speed/defense/etc)
@@ -64,6 +68,9 @@ General musings on roles for monsters:
 This allows for a simple building block for people to build synchronous PvE scenarios (e.g. gym leaders in pokemon, dungeons, gauntlet, kaizo-style challenges, etc.).
 
 Also sets up the infra for NPC vs NPC style gauntlets, 0xmonaco style. Bringing back GOFAI onchain :^)
+
+### ELO
+Can do some mixture of onchain identity / [eigenkarma](https://www.lesswrong.com/posts/Fu7bqAyCMjfcMzBah/eigenkarma-trust-at-scale) to track ladders on-chain. Sweaty people can have their ranked games.
 
 ### Betting
 Game logic is on-chain so it's very trivial to handle wagering for both players. External hooks / game state being readable means can even have sidebets etc. etc.

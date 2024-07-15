@@ -80,3 +80,5 @@ Game logic is on-chain so it's very trivial to handle wagering for both players.
 - constructed (both players create teams ahead of time)
 - draft (teams are created in real-time from some shared pool)
 - random (teams are randomly selected, with some high-level balancing)
+- battle royale, round robin
+- tournament structure 

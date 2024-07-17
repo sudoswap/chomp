@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import {IBattleConsumer} from "./IBattleConsumer.sol";
+import "./Structs.sol";
 
 interface IBattleValidator {
-
-    function validateGameStart(IBattleConsumer.Battle memory b) external;
+    function validateGameStart(Battle memory b) external;
 }

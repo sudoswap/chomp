@@ -1,0 +1,33 @@
+GameEngine.sol
+    - define game state struct
+    - execute(state, p1 move, p2 move)
+    - finish(state)
+        - call validator to assert who is the winner
+    - q: how to handle timeouts / other errors?
+
+IValidator.sol
+    - validate game start
+    - validate execute (round start)
+    - validate game end (after every round)
+
+IExternalHooks.sol
+    - before game start
+    - after round end
+    - after game end
+
+IRngOracle.sol
+    - expected to synchronously return a random value
+    - default oracle works w/ default commit x reveal validator + blockhash of previous block
+    - alternate execution submission to reduce risk of rng manipulation (?)
+
+MonRecords.sol
+
+AttackRecords.sol
+
+IAttack
+    - attack takes in pointer to current state, and is able to return an array of uint256 values + arbitrary bytes + returns the new list of effects to iterate through?
+    - attacks also need a way to signal their priority
+    - 
+
+
+need some scripts to convert from yaml descriptions of mons into bst spread / move pool

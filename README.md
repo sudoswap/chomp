@@ -1,66 +1,84 @@
-## Foundry
+# unnamed battle game
+tldr: onchain turn-based battling, think [pokemon showdown](https://play.pokemonshowdown.com/) meets [m.u.g.e.n.](https://en.wikipedia.org/wiki/Mugen_(game_engine))
+extensible on-chain battle engine for custom characters / rulesets
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## why
+- i think it's something that should exist
+- make an on-chain game that people can point to as an example of something nice
+- import web3 ip in fun ways, take advantage of being open-source
+- somewhat neutral skill-based game for the community
+- get other people nerdsniped
 
-Foundry consists of:
+## game engine overview
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+```
+MonsterRecord. // tracks monster stats and info
+AttackRecord(s). // stores info for attacks to modify state
+ItemRercord(s). // stores info for items to modify state
+IValidator(s). // validates that game state is valid before starting and checks for end of game condition, as well as pre-turn conditions, different PvP modes can use different validators 
+IExternalHook(s). // handles external calls after relevant game stages
+GameEngine. // handles executing moves to progress from state to state
+state-modifying effects are expected to register/deregister themselves with the engine
 
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
+Rough engine flow:
+- initiate game, call validator to ensure it's a valid game configuration
+- pre-game external hook calls
+- advance turn with p1 and p2 moves, validator ensures they are valid moves
+- validator checks priority between p1 and p2
+- pre-move state updates 
+- call p1 and p2 moves to update state 
+- post-move state updates
+- post-turn validator check (e.g. for end of game conditions)
+- post-turn external hook calls
+- if game end: post-game external hook calls
 ```
 
-### Test
+## game flow
+- turn-based pvp game
+- borrows a lot from pokemon battle system
+- 2 players (can have extensions for more, but probably needs engine overhaul)
+- game ends when one player has no more monsters with health
+- players select moves simultaneously, then resolve in priority order
 
-```shell
-$ forge test
-```
+instead of pp, use stamina/energy system to balance out stronger move selection.
 
-### Format
+(basically each monster has some max energy (probably standardize it to like 5), and moves consume energy (1/2/3), and monsters regen 1 energy per turn)
 
-```shell
-$ forge fmt
-```
+(similar to AP from [cassette beasts](https://www.cassettebeasts.com/) sorta)
 
-### Gas Snapshots
+## making a monster
+- stats (health/attack/speed/defense/etc)
+- moves (list of function selectors and targets)
+- abilities 
+- art (front/back sprite, maybe animations / attacking / hurt if we have the ability to add those)
 
-```shell
-$ forge snapshot
-```
+Goal is for anyone to contribute a monster, add it to their list/ruleset, and then use it with other people (who also adopt the ruleset). Bring tcrs back :^)
 
-### Anvil
+General musings on roles for monsters:
+- stall (force opponent to FF)
+- sweep (glass cannon type build, rely on priority / damage to win)
+- midrange (generally outvalue your opponent by trying to be Pareto on all fronts)
+- subgames (e.g. final countdown in yugioh or helix pinnacle in mtg, some weird subgame, sorta like stall variant)
 
-```shell
-$ anvil
-```
+## game extensions
 
-### Deploy
+### NPCs
+`Validator` contracts ensure that both players select valid moves (e.g. for normal pvp games, they would ensure correct commit/reveal flow), but can also be used to plug in NPCs. General NPC interface would take in the state of the last turn as input and return a new valid move as output.
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+This allows for a simple building block for people to build synchronous PvE scenarios (e.g. gym leaders in pokemon, dungeons, gauntlet, kaizo-style challenges, etc.).
 
-### Cast
+Also sets up the infra for NPC vs NPC style gauntlets, 0xmonaco style. Bringing back GOFAI onchain :^)
 
-```shell
-$ cast <subcommand>
-```
+### ELO
+Can do some mixture of onchain identity / [eigenkarma](https://www.lesswrong.com/posts/Fu7bqAyCMjfcMzBah/eigenkarma-trust-at-scale) to track ladders on-chain. Sweaty people can have their ranked games.
 
-### Help
+### Betting
+Game logic is on-chain so it's very trivial to handle wagering for both players. External hooks / game state being readable means can even have sidebets etc. etc.
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+## game modes
+
+- constructed (both players create teams ahead of time)
+- draft (teams are created in real-time from some shared pool)
+- random (teams are randomly selected, with some high-level balancing)
+- battle royale, round robin
+- tournament structure 

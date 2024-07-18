@@ -22,6 +22,7 @@ struct BattleState {
     uint256 turnId;
     uint256 p1ActiveMon;
     uint256 p2ActiveMon;
+    uint256 pAllowanceFlag; // 0 for both players, 1 for p1, 2 for p2
     MonState[] p1TeamState;
     MonState[] p2TeamState;
     RevealedMove[] p1MoveHistory;
@@ -65,5 +66,5 @@ struct Commitment {
 
 struct RevealedMove {
     uint256 moveIdx;
-    bytes32 salt;
+    bytes extraData;
 }

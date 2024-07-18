@@ -66,5 +66,6 @@ struct Commitment {
 
 struct RevealedMove {
     uint256 moveIdx;
+    bytes32 salt;
     bytes extraData;
 }

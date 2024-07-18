@@ -8,4 +8,6 @@ interface IMoveSet {
         external
         pure
         returns (BattleState memory updatedState);
+
+    function priority(uint256 moveId, Battle calldata battle, BattleState calldata state) external pure returns (uint256);
 }

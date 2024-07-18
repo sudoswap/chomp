@@ -67,5 +67,3 @@ struct RevealedMove {
     uint256 moveIdx;
     bytes32 salt;
 }
-
-// TODO: game state altering effects

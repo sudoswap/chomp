@@ -129,12 +129,12 @@ contract Engine {
 
     function execute(bytes32 battleKey) external {
         Battle memory battle = battles[battleKey];
-        BattleState memory state = battleStates[battleKey];
+        BattleState storage state = battleStates[battleKey];
 
         uint256 turnId = state.turnId;
 
         // If only a single player has a move to submit, then we don't trigger any effects
-        // (Basically this only handles switching)
+        // (Basically this only handles switching mons for now)
         if (state.pAllowanceFlag == 1 || state.pAllowanceFlag == 2) {
             if (state.pAllowanceFlag == 1) {
                 {
@@ -143,9 +143,10 @@ contract Engine {
                     // If p1 is switching in a mon, update the active mon index
                     // (assume that validateMove validates that this is a valid choice)
                     if (p1Move.moveIdx == SWITCH_MOVE_INDEX) {
-                        state.p1ActiveMon = abi.decode(p1Move.extraData, (uint256));
-
-                        // TODO: remove any effects that care about active mon
+                        uint256 monToSwitchIndex = abi.decode(p1Move.extraData, (uint256));
+                        MonState memory currentMonState = state.p1TeamState[state.p1ActiveMon];
+                        state.p1TeamState[state.p1ActiveMon] = battle.hook.modifyMonStateAfterSwitch(currentMonState);
+                        state.p1ActiveMon = monToSwitchIndex;
                     }
 
                     // No support for any other single-player actions for now
@@ -157,9 +158,10 @@ contract Engine {
                     // If p2 is switching in a mon, update the active mon index
                     // (assume that validateMove validates that this is a valid choice)
                     if (p2Move.moveIdx == SWITCH_MOVE_INDEX) {
-                        state.p2ActiveMon = abi.decode(p2Move.extraData, (uint256));
-
-                        // TODO: remove any effects that care about active mon
+                        uint256 monToSwitchIndex = abi.decode(p2Move.extraData, (uint256));
+                        MonState memory currentMonState = state.p1TeamState[state.p2ActiveMon];
+                        state.p2TeamState[state.p2ActiveMon] = battle.hook.modifyMonStateAfterSwitch(currentMonState);
+                        state.p2ActiveMon = monToSwitchIndex;
                     }
 
                     // No support for any other single-player actions for now
@@ -168,6 +170,8 @@ contract Engine {
 
             // Progress turn index
             state.turnId += 1;
+
+            // TODO: run end of turn effects
         }
         // Otherwise, we need to run priority calculations and update the game state for both players
         else {
@@ -177,11 +181,34 @@ contract Engine {
             RevealedMove memory p2Move = battleStates[battleKey].p2MoveHistory[turnId];
 
             // Before turn effects, e.g. items, battlefield moves, recurring move effects, etc (TBD)
-
             // Check priorities, then execute move, check for end of game, execute move, then check for end of game
             // if knocked out, then swapping is an action where the other person can only do a no-op
             // Check for end of turn effects
             // If end of game, call end of game hook
+
+            uint256 p1Priority = battle.p1Team[state.p1ActiveMon].moves[p1Move.moveIdx].moveSet.priority(battle, state);
+            uint256 p2Priority = battle.p2Team[state.p2ActiveMon].moves[p2Move.moveIdx].moveSet.priority(battle, state);
+
+            // Check priority for p1move and p2move
+            // If p1move priority is higher, run p1move first
+            // If p2move priority is higher, run p2move first
+            // If they are the same priority, check p1 active mon speed and p2 active mon speed
+            // If they are the same, use the rng
+
+            if (p1Priority > p2Priority) {
+                // run p1 effect first
+                // check if game over
+                // check if knockout
+                // then update game state
+            }
+            else if (p2Priority > p1Priority) {
+
+            }
+            else {
+
+            }
+
+            // 
         }
     }
 

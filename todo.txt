@@ -1,4 +1,10 @@
-- scripts to convert from yaml descriptions of mons into bst spread / move pool
-- some way to let p1 and p2 signal their starting pokemon (random?)
-- switch is always a free move, so i guess both players need to pick switch as their first move (special sentinel value)
-- battle state needs to track situations where only p1 or p2 needs to make a move, but not both
+Desired Features Missing:
+
+- make/take model for starting matches (e.g. p1 starts a challenge, p2 can accept)
+    - let users specify if they want to be filled against anyone or a specific person
+
+- items (static and activated effects)
+
+- abilities (static and triggered effects)
+
+- need to handle priority correctly when moves that mess with turn order or recoil cause errors when unexpected

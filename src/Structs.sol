@@ -8,9 +8,7 @@ import {IHook} from "./IHook.sol";
 // active mon and team stats are variable, the rest are not
 struct Battle {
     address p1;
-    uint256 p1ActiveMon;
     address p2;
-    uint256 p2ActiveMon;
     IHook hook;
     Mon[] p1Team;
     Mon[] p2Team;
@@ -23,10 +21,11 @@ struct BattleState {
     uint256 p1ActiveMon;
     uint256 p2ActiveMon;
     uint256 pAllowanceFlag; // 0 for both players, 1 for p1, 2 for p2
-    MonState[] p1TeamState;
-    MonState[] p2TeamState;
+    MonState[] p1MonStates;
+    MonState[] p2MonStates;
     RevealedMove[] p1MoveHistory;
     RevealedMove[] p2MoveHistory;
+    uint256[] pRNGStream;
     bytes extraData;
 }
 

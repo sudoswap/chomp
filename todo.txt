@@ -8,3 +8,16 @@ Desired Features Missing:
 - abilities (static and triggered effects)
 
 - need to handle priority correctly when moves that mess with turn order or recoil cause errors when unexpected
+
+- tricky moves to use as examples for edge cases:
+    - parting shot
+    - destiny bond
+    - substitute
+
+- validateMove needs to see if it's a case where a player MUST switch (e.g. if it's turn ID 0 or the current active mon is knocked out)
+
+- add a flag in MonState for whether or not it's knocked out
+
+- need to handle in game engine the case where a player switches, and another player chooses a move
+
+- need to figure out when to register/register effects, need an IEffects interface

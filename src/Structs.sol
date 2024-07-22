@@ -49,6 +49,7 @@ struct MonState {
     int256 defenceDelta;
     int256 specialAttackDelta;
     int256 specialDefenceDelta;
+    bool isKnockedOut; // Is either 0 or 1
     bytes extraData;
 }
 

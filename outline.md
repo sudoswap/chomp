@@ -12,14 +12,6 @@ extensible on-chain battle engine for custom characters / rulesets
 ## game engine overview
 
 ```
-MonsterRecord. // tracks monster stats and info
-AttackRecord(s). // stores info for attacks to modify state
-ItemRercord(s). // stores info for items to modify state
-IValidator(s). // validates that game state is valid before starting and checks for end of game condition, as well as pre-turn conditions, different PvP modes can use different validators 
-IExternalHook(s). // handles external calls after relevant game stages
-GameEngine. // handles executing moves to progress from state to state
-state-modifying effects are expected to register/deregister themselves with the engine
-
 Rough engine flow:
 - initiate game, call validator to ensure it's a valid game configuration
 - pre-game external hook calls

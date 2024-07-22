@@ -8,7 +8,7 @@ interface IHook {
     function validateGameStart(Battle calldata b, address gameStartCaller) external returns (bool);
 
     // Validates that you can't switch to the same mon, you have enough stamina, the move isn't disabled, etc.
-    function validateMove(Battle calldata b, BattleState calldata state, uint256 moveIdx, address player)
+    function validateMove(Battle calldata b, BattleState calldata state, uint256 moveIdx, address player, bytes calldata extraData)
         external
         pure
         returns (bool);

@@ -38,18 +38,42 @@ contract DefaultHook is IHook {
     }
 
     // Validates that you can't switch to the same mon, you have enough stamina, the move isn't disabled, etc.
-    function validateMove(Battle calldata b, BattleState calldata state, uint256 moveIdx, address player)
+    function validateMove(Battle calldata b, BattleState calldata state, uint256 moveIdx, address player, bytes calldata extraData)
         external
         pure
         returns (bool) {
         
-        // Require that the zeroth move has to be a swap for both players
-        if (state.turnId == 0) {
+        // Enforce a switch IF:
+        // - if it is the zeroth turn
+        // - if the active mon is knocked out, 
+        // AND:
+        // - the new mon has to be not knocked out
+        bool isTurnZero = state.turnId == 0;
+        bool isActiveMonKnockedOut;
+        if (player == b.p1) {
+            isActiveMonKnockedOut = state.p1MonStates[state.p1ActiveMon].isKnockedOut;
+        }
+        else {
+            isActiveMonKnockedOut = state.p2MonStates[state.p2ActiveMon].isKnockedOut;
+        }
+        if (isTurnZero || isActiveMonKnockedOut) {
             if (moveIdx != SWITCH_MOVE_INDEX) {
+                return false;
+            }
+            bool isNewMonKnockedOut;
+            uint256 monToSwitchIndex = abi.decode(extraData, (uint256));
+            if (player == b.p1) {
+                isNewMonKnockedOut = state.p1MonStates[monToSwitchIndex].isKnockedOut;
+            }
+            else {
+                isNewMonKnockedOut = state.p2MonStates[monToSwitchIndex].isKnockedOut;
+            }
+            if (isNewMonKnockedOut) {
                 return false;
             }
         }
 
+        // Validates that there is enough stamina to use the selected move
         if (player == b.p1) {
             IMoveSet p1MoveSet = b.p1Team[state.p1ActiveMon].moves[moveIdx].moveSet;
             int256 p1MonStaminaDelta = state.p1MonStates[state.p1ActiveMon].staminaDelta;

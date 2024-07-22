@@ -103,7 +103,7 @@ contract Engine {
 
         // validate that the commited moves are legal
         // (e.g. there is enough stamina, move is not disabled, etc.)
-        if (!battle.hook.validateMove(battle, state, moveIdx, msg.sender)) {
+        if (!battle.hook.validateMove(battle, state, moveIdx, msg.sender, extraData)) {
             revert InvalidMove();
         }
 

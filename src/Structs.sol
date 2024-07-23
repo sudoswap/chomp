@@ -2,28 +2,24 @@
 pragma solidity ^0.8.0;
 
 import {IMoveSet} from "./IMoveSet.sol";
-import {IHook} from "./IHook.sol";
+import {IValidator} from "./IValidator.sol";
 
 // battle vars are split into immutable and mutable parts
 // active mon and team stats are variable, the rest are not
 struct Battle {
+    address p0;
     address p1;
-    address p2;
-    IHook hook;
-    Mon[] p1Team;
-    Mon[] p2Team;
+    IValidator validator;
+    Mon[][] teams;
     bytes extraData;
 }
 
 struct BattleState {
     uint256 turnId;
-    uint256 p1ActiveMon;
-    uint256 p2ActiveMon;
-    uint256 pAllowanceFlag; // 0 for both players, 1 for p1, 2 for p2
-    MonState[] p1MonStates;
-    MonState[] p2MonStates;
-    RevealedMove[] p1MoveHistory;
-    RevealedMove[] p2MoveHistory;
+    uint256 pAllowanceFlag;
+    MonState[][] monStates;
+    uint256[] activeMonIndex;
+    RevealedMove[][] moveHistory;
     uint256[] pRNGStream;
     address winner;
     bytes extraData;
@@ -65,7 +61,7 @@ struct Commitment {
 }
 
 struct RevealedMove {
-    uint256 moveIdx;
+    uint256 moveIndex;
     bytes32 salt;
     bytes extraData;
 }

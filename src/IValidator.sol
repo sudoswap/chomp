@@ -3,7 +3,10 @@ pragma solidity ^0.8.0;
 
 import "./Structs.sol";
 
-interface IHook {
+interface IValidator {
+
+    function numPlayers() external pure returns (uint256);
+
     // Validates that e.g. there are 6 mons per team w/ 4 moves each
     function validateGameStart(Battle calldata b, address gameStartCaller) external returns (bool);
 
@@ -11,7 +14,7 @@ interface IHook {
     function validateMove(
         Battle calldata b,
         BattleState calldata state,
-        uint256 moveIdx,
+        uint256 moveIndex,
         address player,
         bytes calldata extraData
     ) external pure returns (bool);

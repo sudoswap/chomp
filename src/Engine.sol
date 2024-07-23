@@ -11,52 +11,57 @@ contract Engine {
     mapping(bytes32 battleKey => BattleState) public battleStates;
     mapping(bytes32 battleKey => mapping(address player => Commitment)) public commitments;
 
-    error NotP1OrP2();
+    error NotP0OrP1();
     error AlreadyCommited();
     error RevealBeforeOtherCommit();
     error WrongTurnId();
     error WrongPreimage();
     error InvalidMove();
+    error OnlyP0Allowed();
     error OnlyP1Allowed();
-    error OnlyP2Allowed();
     error InvalidBattleConfig();
 
     modifier onlyPlayer(bytes32 battleKey) {
         Battle memory battle = battles[battleKey];
-        if (msg.sender != battle.p1 && msg.sender != battle.p2) {
-            revert NotP1OrP2();
+        if (msg.sender != battle.p0 && msg.sender != battle.p1) {
+            revert NotP0OrP1();
         }
         _;
     }
 
     function start(Battle calldata battle) external {
         // validate battle
-        if (!battle.hook.validateGameStart(battle, msg.sender)) {
+        if (!battle.validator.validateGameStart(battle, msg.sender)) {
             revert InvalidBattleConfig();
         }
 
-        // store battle
-        // pairwise address hash is sha256(p1, p2) or sha256(p2, p1), the lower address comes first
+        // Compute unique identifier for the battle
+        // pairhash is sha256(p0, p1) or sha256(p1, p0), the lower address comes first
         // then compute sha256(pair hash, nonce)
-
-        bytes32 pairHash = sha256(abi.encode(battle.p1, battle.p2));
-        if (uint256(uint160(battle.p1)) > uint256(uint160(battle.p2))) {
-            pairHash = sha256(abi.encode(battle.p2, battle.p1));
+        bytes32 pairHash = sha256(abi.encode(battle.p0, battle.p1));
+        if (uint256(uint160(battle.p0)) > uint256(uint160(battle.p1))) {
+            pairHash = sha256(abi.encode(battle.p1, battle.p0));
         }
         uint256 pairHashNonce = pairHashNonces[pairHash];
         pairHashNonces[pairHash] += 1;
         bytes32 battleKey = sha256(abi.encode(pairHash, pairHashNonce));
         battles[battleKey] = battle;
 
-        // Initialize empty mon state delta for each team
-        for (uint256 i; i < battle.p1Team.length; ++i) {
-            battleStates[battleKey].p1MonStates.push();
-        }
-        for (uint256 i; i < battle.p2Team.length; ++i) {
-            battleStates[battleKey].p2MonStates.push();
+        // Initialize empty mon state, move history, and active mon index for each team
+        for (uint i; i < battle.validator.numPlayers(); ++i) {
+            battleStates[battleKey].monStates.push();
+            battleStates[battleKey].moveHistory.push();
+            battleStates[battleKey].activeMonIndex.push();
+
+            // Initialize emtpy mon delta states for each mon on the team
+            for (uint j; j < battle.teams[i].length; ++j) {
+                battleStates[battleKey].monStates[i].push();
+            }
         }
     }
+}
 
+/*
     function commitMove(bytes32 battleKey, bytes32 moveHash) external onlyPlayer(battleKey) {
         Battle memory battle = battles[battleKey];
         BattleState memory state = battleStates[battleKey];
@@ -80,7 +85,7 @@ contract Engine {
             Commitment({moveHash: moveHash, turnId: turnId, timestamp: block.timestamp});
     }
 
-    function revealMove(bytes32 battleKey, uint256 moveIdx, bytes32 salt, bytes calldata extraData)
+    function revealMove(bytes32 battleKey, uint256 moveIndex, bytes32 salt, bytes calldata extraData)
         external
         onlyPlayer(battleKey)
     {
@@ -88,7 +93,7 @@ contract Engine {
         Commitment memory commitment = commitments[battleKey][msg.sender];
         Battle memory battle = battles[battleKey];
         BattleState memory state = battleStates[battleKey];
-        if (keccak256(abi.encodePacked(moveIdx, salt, extraData)) != commitment.moveHash) {
+        if (keccak256(abi.encodePacked(moveIndex, salt, extraData)) != commitment.moveHash) {
             revert WrongPreimage();
         }
 
@@ -113,29 +118,29 @@ contract Engine {
 
         // validate that the commited moves are legal
         // (e.g. there is enough stamina, move is not disabled, etc.)
-        if (!battle.hook.validateMove(battle, state, moveIdx, msg.sender, extraData)) {
+        if (!battle.hook.validateMove(battle, state, moveIndex, msg.sender, extraData)) {
             revert InvalidMove();
         }
 
         // store revealed move and extra data as needed
         if (msg.sender == battle.p1) {
             battleStates[battleKey].p1MoveHistory.push(
-                RevealedMove({moveIdx: moveIdx, salt: salt, extraData: extraData})
+                RevealedMove({moveIndex: moveIndex, salt: salt, extraData: extraData})
             );
         } else {
             battleStates[battleKey].p2MoveHistory.push(
-                RevealedMove({moveIdx: moveIdx, salt: salt, extraData: extraData})
+                RevealedMove({moveIndex: moveIndex, salt: salt, extraData: extraData})
             );
         }
 
         // store empty move for other player if it's a turn where only a single player has to make a move
         if (state.pAllowanceFlag == 1) {
             battleStates[battleKey].p2MoveHistory.push(
-                RevealedMove({moveIdx: NO_OP_MOVE_INDEX, salt: "", extraData: ""})
+                RevealedMove({moveIndex: NO_OP_MOVE_INDEX, salt: "", extraData: ""})
             );
         } else if (state.pAllowanceFlag == 2) {
             battleStates[battleKey].p1MoveHistory.push(
-                RevealedMove({moveIdx: NO_OP_MOVE_INDEX, salt: "", extraData: ""})
+                RevealedMove({moveIndex: NO_OP_MOVE_INDEX, salt: "", extraData: ""})
             );
         }
     }
@@ -158,7 +163,7 @@ contract Engine {
 
                     // If p1 is switching in a mon, update the active mon index
                     // (assume that validateMove validates that this is a valid choice)
-                    if (p1Move.moveIdx == SWITCH_MOVE_INDEX) {
+                    if (p1Move.moveIndex == SWITCH_MOVE_INDEX) {
                         _handleSwitch(battleKey, true);
                     }
 
@@ -170,7 +175,7 @@ contract Engine {
 
                     // If p2 is switching in a mon, update the active mon index
                     // (assume that validateMove validates that this is a valid choice)
-                    if (p2Move.moveIdx == SWITCH_MOVE_INDEX) {
+                    if (p2Move.moveIndex == SWITCH_MOVE_INDEX) {
                         _handleSwitch(battleKey, false);
                     }
 
@@ -211,6 +216,7 @@ contract Engine {
 
             if (priorityPlayer == 1) {
                 
+                // Do player 1 move first
                 _handlePlayerMove(battleKey, rng, true);
 
                 // Check for game over
@@ -220,13 +226,18 @@ contract Engine {
                     return;
                 }
 
-                // check for knockout
+                // TODO: check for knockout and force switch for p2 if needed (return early)
 
                 _handlePlayerMove(battleKey, rng, false);
 
-                // Check for a knockout
-                // If so, skip p2's move, and transition state to where only p2 can make a move, and it has to be a swap
-            } else {}
+                // TODO: check for knockout and force switch for p1 if needed (return early)
+
+            } else {
+
+
+            }
+
+            // TODO: update end of turn effects for both mons
         }
     }
 
@@ -236,17 +247,17 @@ contract Engine {
         uint256 turnId = state.turnId;
         if (isP1) {
             RevealedMove memory p1Move = battleStates[battleKey].p1MoveHistory[turnId];
-            IMoveSet p1MoveSet = battle.p1Team[state.p1ActiveMon].moves[p1Move.moveIdx].moveSet;
+            IMoveSet moveSet = battle.teams[0][state.p1ActiveMon].moves[p1Move.moveIndex].moveSet;
             // handle a switch, a no-op, or execute the moveset
-            if (p1Move.moveIdx == SWITCH_MOVE_INDEX) {
+            if (p1Move.moveIndex == SWITCH_MOVE_INDEX) {
                 _handleSwitch(battleKey, true);
-            } else if (p1Move.moveIdx == NO_OP_MOVE_INDEX) {
+            } else if (p1Move.moveIndex == NO_OP_MOVE_INDEX) {
                 // do nothing (e.g. just recover stamina)
             }
             // Execute the move and then copy state deltas over
             else {
                 (MonState[] memory p1MonStates, MonState[] memory p2MonStates) =
-                    p1MoveSet.move(battle, state, p1Move.extraData, rng);
+                    moveSet.move(battle, state, p1Move.extraData, rng);
                 for (uint256 i; i < p1MonStates.length; ++i) {
                     state.p1MonStates[i] = p1MonStates[i];
                 }
@@ -258,16 +269,16 @@ contract Engine {
         }
         else {
             RevealedMove memory p2Move = battleStates[battleKey].p2MoveHistory[turnId];
-            IMoveSet p2MoveSet = battle.p2Team[state.p2ActiveMon].moves[p2Move.moveIdx].moveSet;
-            if (p2Move.moveIdx == SWITCH_MOVE_INDEX) {
+            IMoveSet moveSet = battle.teams[1][state.p2ActiveMon].moves[p2Move.moveIndex].moveSet;
+            if (p2Move.moveIndex == SWITCH_MOVE_INDEX) {
                 _handleSwitch(battleKey, true);
-            } else if (p2Move.moveIdx == NO_OP_MOVE_INDEX) {
+            } else if (p2Move.moveIndex == NO_OP_MOVE_INDEX) {
                 // do nothing (e.g. just recover stamina)
             }
             // Execute the move and then copy state deltas over
             else {
                 (MonState[] memory p1MonStates, MonState[] memory p2MonStates) =
-                    p2MoveSet.move(battle, state, p2Move.extraData, rng);
+                    moveSet.move(battle, state, p2Move.extraData, rng);
                 for (uint256 i; i < p1MonStates.length; ++i) {
                     state.p1MonStates[i] = p1MonStates[i];
                 }
@@ -303,3 +314,4 @@ contract Engine {
         // TODO: resolve liveness issues to forcibly end games
     }
 }
+*/

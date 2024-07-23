@@ -12,7 +12,6 @@ struct Battle {
     IHook hook;
     Mon[] p1Team;
     Mon[] p2Team;
-    bytes32 salt;
     bytes extraData;
 }
 
@@ -26,6 +25,7 @@ struct BattleState {
     RevealedMove[] p1MoveHistory;
     RevealedMove[] p2MoveHistory;
     uint256[] pRNGStream;
+    address winner;
     bytes extraData;
 }
 

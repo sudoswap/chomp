@@ -8,16 +8,7 @@ interface IMoveSet {
         external
         pure
         returns (MonState[] memory p1MonStates, MonState[] memory p2MonStates);
-    function priority(Battle calldata battle, BattleState calldata state)
-        external
-        pure
-        returns (uint256);
-    function stamina(Battle calldata battle, BattleState calldata state)
-        external
-        pure
-        returns (uint256);
-    function moveType(Battle calldata battle, BattleState calldata state)
-        external
-        pure
-        returns (uint256);
+    function priority(Battle calldata battle, BattleState calldata state) external pure returns (uint256);
+    function stamina(Battle calldata battle, BattleState calldata state) external pure returns (uint256);
+    function moveType(Battle calldata battle, BattleState calldata state) external pure returns (uint256);
 }

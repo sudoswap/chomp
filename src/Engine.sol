@@ -6,6 +6,7 @@ import "./Constants.sol";
 import "./IMoveSet.sol";
 
 contract Engine {
+    mapping(bytes32 => uint256) public pairHashNonces;
     mapping(bytes32 battleKey => Battle) public battles;
     mapping(bytes32 battleKey => BattleState) public battleStates;
     mapping(bytes32 battleKey => mapping(address player => Commitment)) public commitments;
@@ -35,7 +36,16 @@ contract Engine {
         }
 
         // store battle
-        bytes32 battleKey = sha256(abi.encode(battle.salt, battle.p1, battle.p2));
+        // pairwise address hash is sha256(p1, p2) or sha256(p2, p1), the lower address comes first
+        // then compute sha256(pair hash, nonce)
+
+        bytes32 pairHash = sha256(abi.encode(battle.p1, battle.p2));
+        if (uint256(uint160(battle.p1)) > uint256(uint160(battle.p2))) {
+            pairHash = sha256(abi.encode(battle.p2, battle.p1));
+        }
+        uint256 pairHashNonce = pairHashNonces[pairHash];
+        pairHashNonces[pairHash] += 1;
+        bytes32 battleKey = sha256(abi.encode(pairHash, pairHashNonce));
         battles[battleKey] = battle;
 
         // Initialize empty mon state delta for each team
@@ -139,7 +149,6 @@ contract Engine {
         // If only a single player has a move to submit, then we don't trigger any effects
         // (Basically this only handles switching mons for now)
         if (state.pAllowanceFlag == 1 || state.pAllowanceFlag == 2) {
-
             // Push 0 to rng stream as only single player is switching, to keep in line with turnId
             state.pRNGStream.push(0);
 
@@ -150,10 +159,7 @@ contract Engine {
                     // If p1 is switching in a mon, update the active mon index
                     // (assume that validateMove validates that this is a valid choice)
                     if (p1Move.moveIdx == SWITCH_MOVE_INDEX) {
-                        uint256 monToSwitchIndex = abi.decode(p1Move.extraData, (uint256));
-                        MonState memory currentMonState = state.p1MonStates[state.p1ActiveMon];
-                        state.p1MonStates[state.p1ActiveMon] = battle.hook.modifyMonStateAfterSwitch(currentMonState);
-                        state.p1ActiveMon = monToSwitchIndex;
+                        _handleSwitch(battleKey, true);
                     }
 
                     // No support for any other single-player actions for now
@@ -165,12 +171,9 @@ contract Engine {
                     // If p2 is switching in a mon, update the active mon index
                     // (assume that validateMove validates that this is a valid choice)
                     if (p2Move.moveIdx == SWITCH_MOVE_INDEX) {
-                        uint256 monToSwitchIndex = abi.decode(p2Move.extraData, (uint256));
-                        MonState memory currentMonState = state.p2MonStates[state.p2ActiveMon];
-                        state.p2MonStates[state.p2ActiveMon] = battle.hook.modifyMonStateAfterSwitch(currentMonState);
-                        state.p2ActiveMon = monToSwitchIndex;
+                        _handleSwitch(battleKey, false);
                     }
-                    
+
                     // No support for any other single-player actions for now
                 }
             }
@@ -187,16 +190,13 @@ contract Engine {
             // (accessing the values will revert if they haven't been set)
             RevealedMove memory p1Move = battleStates[battleKey].p1MoveHistory[turnId];
             RevealedMove memory p2Move = battleStates[battleKey].p2MoveHistory[turnId];
-            IMoveSet p1MoveSet = battle.p1Team[state.p1ActiveMon].moves[p1Move.moveIdx].moveSet;
-            IMoveSet p2MoveSet = battle.p2Team[state.p2ActiveMon].moves[p2Move.moveIdx].moveSet;
 
             // Update the PRNG hash to include the newest value
             uint256 rng = uint256(sha256(abi.encode(p1Move.salt, p2Move.salt, blockhash(block.number - 1))));
             state.pRNGStream.push(rng);
 
             uint256 priorityPlayer = battle.hook.computePriorityPlayer(battle, state, rng);
-
-            // TODO: Before turn effects, e.g. items, battlefield moves, recurring move effects, etc 
+            // TODO: Before turn effects, e.g. items, battlefield moves, recurring move effects, etc
             // Execute priority player's move
             // Check for game over
             // If game over, then end execution, let game be endable
@@ -210,22 +210,96 @@ contract Engine {
             // Check for end of turn effects
 
             if (priorityPlayer == 1) {
-                (MonState[] memory p1MonStates, MonState[] memory p2MonStates) = p1MoveSet.move(battle, state, p1Move.extraData, rng);
-                for (uint i; i < p1MonStates.length; ++i) {
-                    state.p1MonStates[i] = p1MonStates[i];
-                }
-                for (uint i; i < p2MonStates.length; ++i) {
-                    state.p2MonStates[i] = p2MonStates[i];
-                }
+                
+                _handlePlayerMove(battleKey, rng, true);
 
                 // Check for game over
+                address gameResult = battle.hook.validateGameOver(battle, state);
+                if (gameResult != address(0)) {
+                    state.winner = gameResult;
+                    return;
+                }
 
-            }
-            else {
+                // check for knockout
 
-            }
+                _handlePlayerMove(battleKey, rng, false);
+
+                // Check for a knockout
+                // If so, skip p2's move, and transition state to where only p2 can make a move, and it has to be a swap
+            } else {}
         }
     }
 
-    function end(bytes32 battleKey) external {}
+    function _handlePlayerMove(bytes32 battleKey, uint256 rng, bool isP1) internal {
+        Battle memory battle = battles[battleKey];
+        BattleState storage state = battleStates[battleKey];
+        uint256 turnId = state.turnId;
+        if (isP1) {
+            RevealedMove memory p1Move = battleStates[battleKey].p1MoveHistory[turnId];
+            IMoveSet p1MoveSet = battle.p1Team[state.p1ActiveMon].moves[p1Move.moveIdx].moveSet;
+            // handle a switch, a no-op, or execute the moveset
+            if (p1Move.moveIdx == SWITCH_MOVE_INDEX) {
+                _handleSwitch(battleKey, true);
+            } else if (p1Move.moveIdx == NO_OP_MOVE_INDEX) {
+                // do nothing (e.g. just recover stamina)
+            }
+            // Execute the move and then copy state deltas over
+            else {
+                (MonState[] memory p1MonStates, MonState[] memory p2MonStates) =
+                    p1MoveSet.move(battle, state, p1Move.extraData, rng);
+                for (uint256 i; i < p1MonStates.length; ++i) {
+                    state.p1MonStates[i] = p1MonStates[i];
+                }
+                for (uint256 i; i < p2MonStates.length; ++i) {
+                    state.p2MonStates[i] = p2MonStates[i];
+                }
+                // TODO： handle moves that also update switching teams
+            }
+        }
+        else {
+            RevealedMove memory p2Move = battleStates[battleKey].p2MoveHistory[turnId];
+            IMoveSet p2MoveSet = battle.p2Team[state.p2ActiveMon].moves[p2Move.moveIdx].moveSet;
+            if (p2Move.moveIdx == SWITCH_MOVE_INDEX) {
+                _handleSwitch(battleKey, true);
+            } else if (p2Move.moveIdx == NO_OP_MOVE_INDEX) {
+                // do nothing (e.g. just recover stamina)
+            }
+            // Execute the move and then copy state deltas over
+            else {
+                (MonState[] memory p1MonStates, MonState[] memory p2MonStates) =
+                    p2MoveSet.move(battle, state, p2Move.extraData, rng);
+                for (uint256 i; i < p1MonStates.length; ++i) {
+                    state.p1MonStates[i] = p1MonStates[i];
+                }
+                for (uint256 i; i < p2MonStates.length; ++i) {
+                    state.p2MonStates[i] = p2MonStates[i];
+                }
+                // TODO： handle moves that also update switching teams
+            }
+        }        
+    }
+
+    // Update active mon to handle switches
+    function _handleSwitch(bytes32 battleKey, bool isP1) internal {
+        Battle memory battle = battles[battleKey];
+        BattleState storage state = battleStates[battleKey];
+        uint256 turnId = state.turnId;
+        if (isP1) {
+            RevealedMove memory p1Move = battleStates[battleKey].p1MoveHistory[turnId];
+            uint256 monToSwitchIndex = abi.decode(p1Move.extraData, (uint256));
+            MonState memory currentMonState = state.p1MonStates[state.p1ActiveMon];
+            state.p1MonStates[state.p1ActiveMon] = battle.hook.modifyMonStateAfterSwitch(currentMonState);
+            state.p1ActiveMon = monToSwitchIndex;
+        } else {
+            RevealedMove memory p2Move = battleStates[battleKey].p2MoveHistory[turnId];
+            uint256 monToSwitchIndex = abi.decode(p2Move.extraData, (uint256));
+            MonState memory currentMonState = state.p2MonStates[state.p2ActiveMon];
+            state.p2MonStates[state.p2ActiveMon] = battle.hook.modifyMonStateAfterSwitch(currentMonState);
+            state.p2ActiveMon = monToSwitchIndex;
+        }
+    }
+
+    function end(bytes32 battleKey) external {
+        // TODO: resolve liveness issues to forcibly end games
+    }
 }

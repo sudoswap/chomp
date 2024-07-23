@@ -20,7 +20,7 @@ interface IValidator {
     ) external pure returns (bool);
 
     // Computes which player (p1 or p2) should move first
-    function computePriorityPlayer(Battle calldata b, BattleState calldata state, uint256 rng)
+    function computePriorityPlayerIndex(Battle calldata b, BattleState calldata state, uint256 rng)
         external
         pure
         returns (uint256);

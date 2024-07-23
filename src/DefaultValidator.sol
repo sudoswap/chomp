@@ -20,12 +20,12 @@ contract DefaultValidator is IValidator {
         // game can only start if p0 or p1 calls game start
         // later can change so that matchmaking needs to happen beforehand
         // otherwise users can be griefed into matches they didn't want to join
-        if (gameStartCaller != b.p0 || gameStartCaller != b.p1) {
+        if (gameStartCaller != b.p0 && gameStartCaller != b.p1) {
             return false;
         }
         // p0 and p1 each have 6 mons, each mon has 4 moves
-        uint256[2] memory playerIndex = [uint256(0), uint256(1)];
-        for (uint i; i < playerIndex.length; ++i) {
+        uint256[2] memory playerIndices = [uint256(0), uint256(1)];
+        for (uint i; i < playerIndices.length; ++i) {
             if (b.teams[i].length != MONS_PER_TEAM) {
                 return false;
             }
@@ -68,6 +68,9 @@ contract DefaultValidator is IValidator {
                     return false;
                 }
                 uint256 monToSwitchIndex = abi.decode(extraData, (uint256));
+                if (monToSwitchIndex >= MONS_PER_TEAM) {
+                    return false;
+                }
                 bool isNewMonKnockedOut = state.monStates[playerIndex][monToSwitchIndex].isKnockedOut;
                 if (isNewMonKnockedOut) {
                     return false;
@@ -77,6 +80,14 @@ contract DefaultValidator is IValidator {
         
         // A move cannot be selected if its stamina costs more than the mon's current stamina
         IMoveSet moveSet = b.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[moveIndex].moveSet;
+
+        // Cannot go past the first 4 moves, or the switch move index or the no op
+        if (moveIndex != NO_OP_MOVE_INDEX && moveIndex != SWITCH_MOVE_INDEX) {
+            if (moveIndex >= MOVES_PER_MON) {
+                return false;
+            }
+        }
+
         int256 monStaminaDelta = state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta;
         uint256 monBaseStamina = b.teams[playerIndex][state.activeMonIndex[playerIndex]].stamina;
         uint256 monCurrentStamina = uint256(int256(monBaseStamina) + monStaminaDelta);
@@ -89,7 +100,7 @@ contract DefaultValidator is IValidator {
     }
 
     // Returns which player should move first
-    function computePriorityPlayer(Battle calldata b, BattleState calldata state, uint256 rng)
+    function computePriorityPlayerIndex(Battle calldata b, BattleState calldata state, uint256 rng)
         external
         pure
         returns (uint256)
@@ -138,10 +149,10 @@ contract DefaultValidator is IValidator {
             }
             if (numMonsKnockedOut == MONS_PER_TEAM) {
                 if (playerIndex[i] == 0) {
-                    return b.p0;
+                    return b.p1;
                 }
                 else {
-                    return b.p1;
+                    return b.p0;
                 }
             }
         }

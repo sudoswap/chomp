@@ -11,3 +11,7 @@ General flow:
 - p2 reveals hash
 - anyone can execute to advance game state
 - validator contract ensures moves are legal at each stag
+
+### IValidator
+- Handles more specific game logic
+- DefaultValidator gives example implementations to handle 1v1 pvp game rules

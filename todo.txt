@@ -1,23 +1,20 @@
 Desired Features Missing:
 
+- add held items to monData (later)
+    - static and triggered
+- add abilities to monData (later)
+    - static and triggered
+
 - make/take model for starting matches (e.g. p1 starts a challenge, p2 can accept)
     - let users specify if they want to be filled against anyone or a specific person
 
-- items (static and activated effects)
+- to think about move implementations:
+    - tricky moves to use as examples for edge cases:
+        - parting shot
+        - destiny bond
+        - substitute
+---------------------------------------------------------------------
 
-- abilities (static and triggered effects)
-
-- need to handle priority correctly when moves that mess with turn order or recoil cause errors when unexpected
-
-- tricky moves to use as examples for edge cases:
-    - parting shot
-    - destiny bond
-    - substitute
-
-- validateMove needs to see if it's a case where a player MUST switch (e.g. if it's turn ID 0 or the current active mon is knocked out)
-
-- add a flag in MonState for whether or not it's knocked out
-
-- need to handle in game engine the case where a player switches, and another player chooses a move
-
-- need to figure out when to register/register effects, need an IEffects interface
+Specific TODOs:
+- create interface for IEffect, which registers, updates, and removes
+- create interface for IEffectQueue which allows us to iterate through all effects and update them

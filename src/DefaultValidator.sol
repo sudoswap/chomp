@@ -95,7 +95,11 @@ contract DefaultValidator is IValidator {
             return false;
         }
 
-        // TODO: externally call the move to see if it is legal
+        // Lastly, we check the move itself to see if it enforces any other specific conditions
+        if (! moveSet.isValidTarget(b, state)) {
+            return false;
+        }
+
         return true;
     }
 

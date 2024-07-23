@@ -174,6 +174,17 @@ contract Engine {
         state.activeMonIndex[playerIndex] = monToSwitchIndex;
     }
 
+    function _checkForKnockoutAndForceSwitch(bytes32 battleKey, uint256 playerIndex) internal returns (bool) {
+        BattleState storage state = battleStates[battleKey];
+        if (state.monStates[playerIndex][state.activeMonIndex[playerIndex]].isKnockedOut) {
+            state.pAllowanceFlag = playerIndex;
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
     function execute(bytes32 battleKey) external {
         Battle memory battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
@@ -219,6 +230,7 @@ contract Engine {
             }
 
             // TODO: Before turn effects, e.g. items, battlefield moves, recurring move effects, etc
+            
             // Execute priority player's move
             // Check for game over
             // If game over, then end execution, let game be endable
@@ -237,11 +249,19 @@ contract Engine {
                 state.winner = gameResult;
                 return;
             }
-            // TODO: check for knockout and force switch for p2 if needed (return early)
+            bool shouldForceSwitch;
+            shouldForceSwitch = _checkForKnockoutAndForceSwitch(battleKey, otherPlayerIndex);
+            if (shouldForceSwitch) {
+                return;
+            }
             _handlePlayerMove(battleKey, rng, otherPlayerIndex);
             gameResult = battle.validator.validateGameOver(battle, state);
             if (gameResult != address(0)) {
                 state.winner = gameResult;
+                return;
+            }
+            shouldForceSwitch = _checkForKnockoutAndForceSwitch(battleKey, priorityPlayerIndex);
+            if (shouldForceSwitch) {
                 return;
             }
 

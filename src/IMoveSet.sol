@@ -11,4 +11,5 @@ interface IMoveSet {
     function priority(Battle calldata battle, BattleState calldata state) external pure returns (uint256);
     function stamina(Battle calldata battle, BattleState calldata state) external pure returns (uint256);
     function moveType(Battle calldata battle, BattleState calldata state) external pure returns (uint256);
+    function isValidTarget(Battle calldata battle, BattleState calldata state) external pure returns (bool);
 }

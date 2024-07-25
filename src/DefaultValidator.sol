@@ -7,7 +7,6 @@ import "./IMoveSet.sol";
 import "./Constants.sol";
 
 contract DefaultValidator is IValidator {
-
     uint256 constant MONS_PER_TEAM = 6;
     uint256 constant MOVES_PER_MON = 4;
 
@@ -25,11 +24,11 @@ contract DefaultValidator is IValidator {
         }
         // p0 and p1 each have 6 mons, each mon has 4 moves
         uint256[2] memory playerIndices = [uint256(0), uint256(1)];
-        for (uint i; i < playerIndices.length; ++i) {
+        for (uint256 i; i < playerIndices.length; ++i) {
             if (b.teams[i].length != MONS_PER_TEAM) {
                 return false;
             }
-            for (uint256 j; j< MONS_PER_TEAM; ++j) {
+            for (uint256 j; j < MONS_PER_TEAM; ++j) {
                 if (b.teams[i][j].moves.length != MOVES_PER_MON) {
                     return false;
                 }
@@ -47,7 +46,6 @@ contract DefaultValidator is IValidator {
         address player,
         bytes calldata extraData
     ) external pure returns (bool) {
-
         // Enforce a switch IF:
         // - if it is the zeroth turn
         // - if the active mon is knocked out,
@@ -57,8 +55,7 @@ contract DefaultValidator is IValidator {
         uint256 playerIndex;
         if (player == b.p1) {
             playerIndex = 0;
-        }
-        else {
+        } else {
             playerIndex = 1;
         }
         {
@@ -77,7 +74,7 @@ contract DefaultValidator is IValidator {
                 }
             }
         }
-        
+
         // A move cannot be selected if its stamina costs more than the mon's current stamina
         IMoveSet moveSet = b.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[moveIndex].moveSet;
 
@@ -96,7 +93,7 @@ contract DefaultValidator is IValidator {
         }
 
         // Lastly, we check the move itself to see if it enforces any other specific conditions
-        if (! moveSet.isValidTarget(b, state)) {
+        if (!moveSet.isValidTarget(b, state)) {
             return false;
         }
 
@@ -126,10 +123,14 @@ contract DefaultValidator is IValidator {
         } else if (p0Priority < p1Priority) {
             return 1;
         } else {
-            uint256 p0MonSpeed =
-                uint256(int256(b.teams[0][state.activeMonIndex[0]].speed) + state.monStates[0][state.activeMonIndex[0]].speedDelta);
-            uint256 p1MonSpeed =
-                uint256(int256(b.teams[1][state.activeMonIndex[1]].speed) + state.monStates[1][state.activeMonIndex[1]].speedDelta);
+            uint256 p0MonSpeed = uint256(
+                int256(b.teams[0][state.activeMonIndex[0]].speed)
+                    + state.monStates[0][state.activeMonIndex[0]].speedDelta
+            );
+            uint256 p1MonSpeed = uint256(
+                int256(b.teams[1][state.activeMonIndex[1]].speed)
+                    + state.monStates[1][state.activeMonIndex[1]].speedDelta
+            );
             if (p0MonSpeed > p1MonSpeed) {
                 return 0;
             } else if (p0MonSpeed < p1MonSpeed) {
@@ -144,7 +145,7 @@ contract DefaultValidator is IValidator {
     function validateGameOver(Battle calldata b, BattleState calldata state) external pure returns (address) {
         // A game is over if all of a player's mons are knocked out
         uint256[2] memory playerIndex = [uint256(0), uint256(1)];
-        for (uint i; i < playerIndex.length; ++i) {
+        for (uint256 i; i < playerIndex.length; ++i) {
             uint256 numMonsKnockedOut;
             for (uint256 j; j < MONS_PER_TEAM; ++j) {
                 if (state.monStates[playerIndex[i]][j].isKnockedOut) {
@@ -154,8 +155,7 @@ contract DefaultValidator is IValidator {
             if (numMonsKnockedOut == MONS_PER_TEAM) {
                 if (playerIndex[i] == 0) {
                     return b.p1;
-                }
-                else {
+                } else {
                     return b.p0;
                 }
             }
@@ -165,10 +165,10 @@ contract DefaultValidator is IValidator {
 
     // Clear out temporary battle effects
     function modifyMonStateAfterSwitch(MonState calldata mon) external pure returns (MonState memory) {
-        // Keep hp delta, knocked out flag, and extra data but reset all other state changes
+        // Keep hp delta, stamina delta, knocked out flag, and extra data but reset all other state changes
         return MonState({
             hpDelta: mon.hpDelta,
-            staminaDelta: 0,
+            staminaDelta: mon.staminaDelta,
             speedDelta: 0,
             attackDelta: 0,
             defenceDelta: 0,

@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "./Structs.sol";
 
 interface IValidator {
-
     function numPlayers() external pure returns (uint256);
 
     // Validates that e.g. there are 6 mons per team w/ 4 moves each

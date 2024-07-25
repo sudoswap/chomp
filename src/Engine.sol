@@ -49,13 +49,13 @@ contract Engine {
         battles[battleKey] = battle;
 
         // Initialize empty mon state, move history, and active mon index for each team
-        for (uint i; i < battle.validator.numPlayers(); ++i) {
+        for (uint256 i; i < battle.validator.numPlayers(); ++i) {
             battleStates[battleKey].monStates.push();
             battleStates[battleKey].moveHistory.push();
             battleStates[battleKey].activeMonIndex.push();
 
             // Initialize empty mon delta states for each mon on the team
-            for (uint j; j < battle.teams[i].length; ++j) {
+            for (uint256 j; j < battle.teams[i].length; ++j) {
                 battleStates[battleKey].monStates[i].push();
             }
         }
@@ -155,8 +155,8 @@ contract Engine {
         else {
             (MonState[][] memory monStates) = moveSet.move(battle, state, move.extraData, rng);
             uint256 numPlayerStates = monStates.length;
-            for (uint i; i < numPlayerStates; ++i) {
-                for (uint j; j < monStates[i].length; ++j) {
+            for (uint256 i; i < numPlayerStates; ++i) {
+                for (uint256 j; j < monStates[i].length; ++j) {
                     state.monStates[i][j] = monStates[i][j];
                 }
             }
@@ -170,7 +170,8 @@ contract Engine {
         RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
         uint256 monToSwitchIndex = abi.decode(move.extraData, (uint256));
         MonState memory currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
-        state.monStates[playerIndex][state.activeMonIndex[playerIndex]] = battle.validator.modifyMonStateAfterSwitch(currentMonState);
+        state.monStates[playerIndex][state.activeMonIndex[playerIndex]] =
+            battle.validator.modifyMonStateAfterSwitch(currentMonState);
         state.activeMonIndex[playerIndex] = monToSwitchIndex;
     }
 
@@ -179,8 +180,7 @@ contract Engine {
         if (state.monStates[playerIndex][state.activeMonIndex[playerIndex]].isKnockedOut) {
             state.pAllowanceFlag = playerIndex;
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
@@ -230,7 +230,7 @@ contract Engine {
             }
 
             // TODO: Before turn effects, e.g. items, battlefield moves, recurring move effects, etc
-            
+
             // Execute priority player's move
             // Check for game over
             // If game over, then end execution, let game be endable
@@ -266,7 +266,7 @@ contract Engine {
             }
 
             // TODO: update end of turn effects for both mons
-            
+
             // Progress turn index
             state.turnId += 1;
         }

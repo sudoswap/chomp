@@ -13,7 +13,6 @@ struct Battle {
     address p1;
     IValidator validator;
     Mon[][] teams;
-    bytes extraData;
 }
 
 struct BattleState {
@@ -24,7 +23,8 @@ struct BattleState {
     RevealedMove[][] moveHistory;
     uint256[] pRNGStream;
     address winner;
-    bytes extraData;
+    IEffect[] globalEffects;
+    bytes[] extraDataForGlobalEffects;
 }
 
 struct Mon {
@@ -36,7 +36,6 @@ struct Mon {
     uint256 specialAttack;
     uint256 specialDefence;
     Move[] moves;
-    bytes extraData;
 }
 
 struct MonState {
@@ -48,7 +47,6 @@ struct MonState {
     int256 specialAttackDelta;
     int256 specialDefenceDelta;
     bool isKnockedOut; // Is either 0 or 1
-    bytes extraData;
     IMonEffect[] targetedEffects;
     bytes[] extraDataForTargetedEffects;
 }

@@ -175,7 +175,9 @@ contract DefaultValidator is IValidator {
             specialAttackDelta: 0,
             specialDefenceDelta: 0,
             isKnockedOut: mon.isKnockedOut,
-            extraData: mon.extraData
+            extraData: mon.extraData,
+            targetedEffects: mon.targetedEffects,
+            extraDataForTargetedEffects: mon.extraDataForTargetedEffects
         });
     }
 }

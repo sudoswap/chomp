@@ -170,8 +170,10 @@ contract Engine {
         RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
         uint256 monToSwitchIndex = abi.decode(move.extraData, (uint256));
         MonState memory currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
+        
         state.monStates[playerIndex][state.activeMonIndex[playerIndex]] =
             battle.validator.modifyMonStateAfterSwitch(currentMonState);
+
         state.activeMonIndex[playerIndex] = monToSwitchIndex;
     }
 

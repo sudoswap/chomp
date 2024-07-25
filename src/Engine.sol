@@ -5,7 +5,9 @@ import "./Structs.sol";
 import "./Constants.sol";
 import "./IMoveSet.sol";
 
-contract Engine {
+import {IEngine} from "./IEngine.sol";
+
+contract Engine is IEngine {
     mapping(bytes32 => uint256) public pairHashNonces;
     mapping(bytes32 battleKey => Battle) public battles;
     mapping(bytes32 battleKey => BattleState) public battleStates;
@@ -28,6 +30,14 @@ contract Engine {
             revert NotP0OrP1();
         }
         _;
+    }
+
+    function getBattle(bytes32 battleKey) external view returns (Battle memory) {
+        return battles[battleKey];
+    }
+
+    function getBattleState(bytes32 battleKey) external view returns (BattleState memory) {
+        return battleStates[battleKey];
     }
 
     function start(Battle calldata battle) external {
@@ -121,7 +131,7 @@ contract Engine {
 
         // validate that the commited moves are legal
         // (e.g. there is enough stamina, move is not disabled, etc.)
-        if (!battle.validator.validateMove(battle, state, moveIndex, msg.sender, extraData)) {
+        if (!battle.validator.validateMove(battleKey, moveIndex, msg.sender, extraData)) {
             revert InvalidMove();
         }
 
@@ -153,7 +163,7 @@ contract Engine {
         }
         // Execute the move and then copy state deltas over
         else {
-            (MonState[][] memory monStates) = moveSet.move(battle, state, move.extraData, rng);
+            (MonState[][] memory monStates) = moveSet.move(battleKey, move.extraData, rng);
             uint256 numPlayerStates = monStates.length;
             for (uint256 i; i < numPlayerStates; ++i) {
                 for (uint256 j; j < monStates[i].length; ++j) {
@@ -164,15 +174,16 @@ contract Engine {
     }
 
     function _handleSwitch(bytes32 battleKey, uint256 playerIndex) internal {
-        Battle memory battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
         uint256 turnId = state.turnId;
         RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
         uint256 monToSwitchIndex = abi.decode(move.extraData, (uint256));
-        MonState memory currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
+        MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
         
-        state.monStates[playerIndex][state.activeMonIndex[playerIndex]] =
-            battle.validator.modifyMonStateAfterSwitch(currentMonState);
+        // TODO: clear out effects and handle clearing out temp deltas on stats
+
+        // state.monStates[playerIndex][state.activeMonIndex[playerIndex]] =
+        //     battle.validator.modifyMonStateAfterSwitch(currentMonState);
 
         state.activeMonIndex[playerIndex] = monToSwitchIndex;
     }
@@ -188,7 +199,7 @@ contract Engine {
     }
 
     function execute(bytes32 battleKey) external {
-        Battle memory battle = battles[battleKey];
+        Battle storage battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
 
         uint256 turnId = state.turnId;
@@ -225,7 +236,7 @@ contract Engine {
             state.pRNGStream.push(rng);
 
             // Calculate the priority and non-priority player indices
-            uint256 priorityPlayerIndex = battle.validator.computePriorityPlayerIndex(battle, state, rng);
+            uint256 priorityPlayerIndex = battle.validator.computePriorityPlayerIndex(battleKey, rng);
             uint256 otherPlayerIndex;
             if (priorityPlayerIndex == 0) {
                 otherPlayerIndex = 1;
@@ -246,7 +257,7 @@ contract Engine {
             // Check for end of turn effects
 
             _handlePlayerMove(battleKey, rng, priorityPlayerIndex);
-            address gameResult = battle.validator.validateGameOver(battle, state);
+            address gameResult = battle.validator.validateGameOver(battleKey);
             if (gameResult != address(0)) {
                 state.winner = gameResult;
                 return;
@@ -257,7 +268,7 @@ contract Engine {
                 return;
             }
             _handlePlayerMove(battleKey, rng, otherPlayerIndex);
-            gameResult = battle.validator.validateGameOver(battle, state);
+            gameResult = battle.validator.validateGameOver(battleKey);
             if (gameResult != address(0)) {
                 state.winner = gameResult;
                 return;

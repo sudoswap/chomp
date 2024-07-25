@@ -6,9 +6,17 @@ import "./Structs.sol";
 import "./IMoveSet.sol";
 import "./Constants.sol";
 
+import {IEngine} from "./IEngine.sol";
+
 contract DefaultValidator is IValidator {
+
     uint256 constant MONS_PER_TEAM = 6;
     uint256 constant MOVES_PER_MON = 4;
+    IEngine immutable ENGINE;
+
+    constructor (IEngine _ENGINE) {
+        ENGINE = _ENGINE;
+    }
 
     function numPlayers() external pure returns (uint256) {
         return 2;
@@ -40,12 +48,15 @@ contract DefaultValidator is IValidator {
 
     // Validates that you can't switch to the same mon, you have enough stamina, the move isn't disabled, etc.
     function validateMove(
-        Battle calldata b,
-        BattleState calldata state,
+        bytes32 battleKey,
         uint256 moveIndex,
         address player,
         bytes calldata extraData
-    ) external pure returns (bool) {
+    ) external view returns (bool) {
+
+        Battle memory b = ENGINE.getBattle(battleKey);
+        BattleState memory state = ENGINE.getBattleState(battleKey);
+
         // Enforce a switch IF:
         // - if it is the zeroth turn
         // - if the active mon is knocked out,
@@ -88,12 +99,12 @@ contract DefaultValidator is IValidator {
         int256 monStaminaDelta = state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta;
         uint256 monBaseStamina = b.teams[playerIndex][state.activeMonIndex[playerIndex]].stamina;
         uint256 monCurrentStamina = uint256(int256(monBaseStamina) + monStaminaDelta);
-        if (moveSet.stamina(b, state) > monCurrentStamina) {
+        if (moveSet.stamina(battleKey) > monCurrentStamina) {
             return false;
         }
 
         // Lastly, we check the move itself to see if it enforces any other specific conditions
-        if (!moveSet.isValidTarget(b, state)) {
+        if (!moveSet.isValidTarget(battleKey)) {
             return false;
         }
 
@@ -101,18 +112,21 @@ contract DefaultValidator is IValidator {
     }
 
     // Returns which player should move first
-    function computePriorityPlayerIndex(Battle calldata b, BattleState calldata state, uint256 rng)
+    function computePriorityPlayerIndex(bytes32 battleKey, uint256 rng)
         external
-        pure
+        view
         returns (uint256)
     {
+        Battle memory b = ENGINE.getBattle(battleKey);
+        BattleState memory state = ENGINE.getBattleState(battleKey);
+
         RevealedMove memory p0Move = state.moveHistory[0][state.turnId];
         RevealedMove memory p1Move = state.moveHistory[1][state.turnId];
 
         IMoveSet p0MoveSet = b.teams[0][state.activeMonIndex[0]].moves[p0Move.moveIndex].moveSet;
-        uint256 p0Priority = p0MoveSet.priority(b, state);
+        uint256 p0Priority = p0MoveSet.priority(battleKey);
         IMoveSet p1MoveSet = b.teams[1][state.activeMonIndex[1]].moves[p1Move.moveIndex].moveSet;
-        uint256 p1Priority = p1MoveSet.priority(b, state);
+        uint256 p1Priority = p1MoveSet.priority(battleKey);
 
         // Determine priority based on (in descending order of importance):
         // - the higher priority tier
@@ -142,7 +156,11 @@ contract DefaultValidator is IValidator {
     }
 
     // Validates that the game is over, returns address(0) if no winner, otherwise returns the winner
-    function validateGameOver(Battle calldata b, BattleState calldata state) external pure returns (address) {
+    function validateGameOver(bytes32 battleKey) external view returns (address) {
+
+        Battle memory b = ENGINE.getBattle(battleKey);
+        BattleState memory state = ENGINE.getBattleState(battleKey);
+
         // A game is over if all of a player's mons are knocked out
         uint256[2] memory playerIndex = [uint256(0), uint256(1)];
         for (uint256 i; i < playerIndex.length; ++i) {
@@ -161,23 +179,5 @@ contract DefaultValidator is IValidator {
             }
         }
         return address(0);
-    }
-
-    // Clear out temporary battle effects
-    function modifyMonStateAfterSwitch(MonState calldata mon) external pure returns (MonState memory) {
-        // Keep hp delta, stamina delta, knocked out flag, and extra data but reset all other state changes
-        return MonState({
-            hpDelta: mon.hpDelta,
-            staminaDelta: mon.staminaDelta,
-            speedDelta: 0,
-            attackDelta: 0,
-            defenceDelta: 0,
-            specialAttackDelta: 0,
-            specialDefenceDelta: 0,
-            isKnockedOut: mon.isKnockedOut,
-            extraData: mon.extraData,
-            targetedEffects: mon.targetedEffects,
-            extraDataForTargetedEffects: mon.extraDataForTargetedEffects
-        });
     }
 }

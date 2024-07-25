@@ -72,10 +72,10 @@ contract Engine {
         }
 
         // cannot commit if the battle state says it's only for one player
-        uint256 pAllowanceFlag = state.pAllowanceFlag;
-        if (pAllowanceFlag == 1 && msg.sender != battle.p0) {
+        uint256 playerSwitchForTurnFlag = state.playerSwitchForTurnFlag;
+        if (playerSwitchForTurnFlag == 1 && msg.sender != battle.p0) {
             revert OnlyP0Allowed();
-        } else if (pAllowanceFlag == 2 && msg.sender != battle.p1) {
+        } else if (playerSwitchForTurnFlag == 2 && msg.sender != battle.p1) {
             revert OnlyP1Allowed();
         }
 
@@ -105,7 +105,7 @@ contract Engine {
         // (only if it is a turn where both players need to select an action)
         uint256 currentPlayerIndex;
         uint256 otherPlayerIndex;
-        if (state.pAllowanceFlag == 0) {
+        if (state.playerSwitchForTurnFlag == 0) {
             address otherPlayer;
             if (msg.sender == battle.p0) {
                 otherPlayer = battle.p1;
@@ -131,7 +131,7 @@ contract Engine {
         );
 
         // store empty move for other player if it's a turn where only a single player has to make a move
-        if (state.pAllowanceFlag == 1 || state.pAllowanceFlag == 2) {
+        if (state.playerSwitchForTurnFlag == 1 || state.playerSwitchForTurnFlag == 2) {
             battleStates[battleKey].moveHistory[otherPlayerIndex].push(
                 RevealedMove({moveIndex: NO_OP_MOVE_INDEX, salt: "", extraData: ""})
             );
@@ -178,7 +178,7 @@ contract Engine {
     function _checkForKnockoutAndForceSwitch(bytes32 battleKey, uint256 playerIndex) internal returns (bool) {
         BattleState storage state = battleStates[battleKey];
         if (state.monStates[playerIndex][state.activeMonIndex[playerIndex]].isKnockedOut) {
-            state.pAllowanceFlag = playerIndex;
+            state.playerSwitchForTurnFlag = playerIndex;
             return true;
         } else {
             return false;
@@ -193,12 +193,12 @@ contract Engine {
 
         // If only a single player has a move to submit, then we don't trigger any effects
         // (Basically this only handles switching mons for now)
-        if (state.pAllowanceFlag == 1 || state.pAllowanceFlag == 2) {
+        if (state.playerSwitchForTurnFlag == 1 || state.playerSwitchForTurnFlag == 2) {
             // Push 0 to rng stream as only single player is switching, to keep in line with turnId
             state.pRNGStream.push(0);
 
             // Get the player index (offset by one)
-            uint256 playerIndex = state.pAllowanceFlag - 1;
+            uint256 playerIndex = state.playerSwitchForTurnFlag - 1;
             RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
 
             if (move.moveIndex == SWITCH_MOVE_INDEX) {

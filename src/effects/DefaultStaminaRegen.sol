@@ -32,15 +32,15 @@ contract DefaultStaminaRegen is IEffect {
         bytes memory,
         uint256[][] memory
     ) external pure returns (MonState[][] memory, bytes memory) {
-        if (state.pAllowanceFlag == 0) {
+        if (state.playerSwitchForTurnFlag == 0) {
             state.monStates[0] = _regenStaminaDelta(state, 0);
             state.monStates[1] = _regenStaminaDelta(state, 1);
         }
         // Otherwise, if the state player allowance flag is set, only update the stamina delta of the non-swapped-in mon
-        else if (state.pAllowanceFlag == 1) {
+        else if (state.playerSwitchForTurnFlag == 1) {
             state.monStates[1] = _regenStaminaDelta(state, 1);
         }
-        else if (state.pAllowanceFlag == 2) {
+        else if (state.playerSwitchForTurnFlag == 2) {
             state.monStates[0] = _regenStaminaDelta(state, 0);
         }
         return (state.monStates, "");

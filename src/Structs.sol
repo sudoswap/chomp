@@ -16,7 +16,7 @@ struct Battle {
 
 struct BattleState {
     uint256 turnId;
-    uint256 pAllowanceFlag;
+    uint256 playerSwitchForTurnFlag;
     MonState[][] monStates;
     uint256[] activeMonIndex;
     RevealedMove[][] moveHistory;

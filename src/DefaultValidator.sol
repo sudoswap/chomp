@@ -9,17 +9,12 @@ import "./Constants.sol";
 import {IEngine} from "./IEngine.sol";
 
 contract DefaultValidator is IValidator {
-
     uint256 constant MONS_PER_TEAM = 6;
     uint256 constant MOVES_PER_MON = 4;
     IEngine immutable ENGINE;
 
-    constructor (IEngine _ENGINE) {
+    constructor(IEngine _ENGINE) {
         ENGINE = _ENGINE;
-    }
-
-    function numPlayers() external pure returns (uint256) {
-        return 2;
     }
 
     // Validates that e.g. there are 6 mons per team w/ 4 moves each
@@ -47,13 +42,11 @@ contract DefaultValidator is IValidator {
     }
 
     // Validates that you can't switch to the same mon, you have enough stamina, the move isn't disabled, etc.
-    function validateMove(
-        bytes32 battleKey,
-        uint256 moveIndex,
-        address player,
-        bytes calldata extraData
-    ) external view returns (bool) {
-
+    function validateMove(bytes32 battleKey, uint256 moveIndex, address player, bytes calldata extraData)
+        external
+        view
+        returns (bool)
+    {
         Battle memory b = ENGINE.getBattle(battleKey);
         BattleState memory state = ENGINE.getBattleState(battleKey);
 
@@ -112,11 +105,7 @@ contract DefaultValidator is IValidator {
     }
 
     // Returns which player should move first
-    function computePriorityPlayerIndex(bytes32 battleKey, uint256 rng)
-        external
-        view
-        returns (uint256)
-    {
+    function computePriorityPlayerIndex(bytes32 battleKey, uint256 rng) external view returns (uint256) {
         Battle memory b = ENGINE.getBattle(battleKey);
         BattleState memory state = ENGINE.getBattleState(battleKey);
 
@@ -156,13 +145,16 @@ contract DefaultValidator is IValidator {
     }
 
     // Validates that the game is over, returns address(0) if no winner, otherwise returns the winner
-    function validateGameOver(bytes32 battleKey) external view returns (address) {
-
+    function validateGameOver(bytes32 battleKey, uint256 priorityPlayerIndex) external view returns (address) {
         Battle memory b = ENGINE.getBattle(battleKey);
         BattleState memory state = ENGINE.getBattleState(battleKey);
 
         // A game is over if all of a player's mons are knocked out
         uint256[2] memory playerIndex = [uint256(0), uint256(1)];
+        if (priorityPlayerIndex == 1) {
+            playerIndex = [uint256(1), uint256(0)];
+        }
+
         for (uint256 i; i < playerIndex.length; ++i) {
             uint256 numMonsKnockedOut;
             for (uint256 j; j < MONS_PER_TEAM; ++j) {

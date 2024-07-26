@@ -4,10 +4,7 @@ pragma solidity ^0.8.0;
 import {IMoveSet} from "./IMoveSet.sol";
 import {IValidator} from "./IValidator.sol";
 import {IEffect} from "./effects/IEffect.sol";
-import {IMonEffect} from "./effects/IMonEffect.sol";
 
-// battle vars are split into immutable and mutable parts
-// active mon and team stats are variable, the rest are not
 struct Battle {
     address p0;
     address p1;
@@ -47,7 +44,7 @@ struct MonState {
     int256 specialAttackDelta;
     int256 specialDefenceDelta;
     bool isKnockedOut; // Is either 0 or 1
-    IMonEffect[] targetedEffects;
+    IEffect[] targetedEffects;
     bytes[] extraDataForTargetedEffects;
 }
 

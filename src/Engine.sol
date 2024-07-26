@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 import "./Structs.sol";
 import "./Constants.sol";
 import "./IMoveSet.sol";
+import "./Enums.sol";
 
 import {IEngine} from "./IEngine.sol";
-import {IMonEffect} from "./effects/IMonEffect.sol";
 
 contract Engine is IEngine {
     mapping(bytes32 => uint256) public pairHashNonces;
@@ -60,7 +60,7 @@ contract Engine is IEngine {
         battles[battleKey] = battle;
 
         // Initialize empty mon state, move history, and active mon index for each team
-        for (uint256 i; i < battle.validator.numPlayers(); ++i) {
+        for (uint256 i; i < 2; ++i) {
             battleStates[battleKey].monStates.push();
             battleStates[battleKey].moveHistory.push();
             battleStates[battleKey].activeMonIndex.push();
@@ -149,79 +149,6 @@ contract Engine is IEngine {
         }
     }
 
-    function _handlePlayerMove(bytes32 battleKey, uint256 rng, uint256 playerIndex) internal {
-        Battle memory battle = battles[battleKey];
-        BattleState storage state = battleStates[battleKey];
-        uint256 turnId = state.turnId;
-        RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
-        IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex].moveSet;
-
-        // handle a switch, a no-op, or execute the moveset
-        if (move.moveIndex == SWITCH_MOVE_INDEX) {
-            _handleSwitch(battleKey, playerIndex);
-        } else if (move.moveIndex == NO_OP_MOVE_INDEX) {
-            // do nothing (e.g. just recover stamina)
-        }
-        // Execute the move and then copy state deltas over
-        else {
-            (MonState[][] memory monStates) = moveSet.move(battleKey, move.extraData, rng);
-            uint256 numPlayerStates = monStates.length;
-            for (uint256 i; i < numPlayerStates; ++i) {
-                for (uint256 j; j < monStates[i].length; ++j) {
-                    state.monStates[i][j] = monStates[i][j];
-                }
-            }
-        }
-    }
-
-    function _handleSwitch(bytes32 battleKey, uint256 playerIndex) internal {
-        BattleState storage state = battleStates[battleKey];
-        uint256 turnId = state.turnId;
-        RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
-        uint256 monToSwitchIndex = abi.decode(move.extraData, (uint256));
-        MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
-        IMonEffect[] storage effects = currentMonState.targetedEffects;
-        bytes[] storage extraData = currentMonState.extraDataForTargetedEffects;
-        uint i = 0;
-
-        // Go through each effect to see if it should be cleared after a switch, 
-        // If so, remove the effect and the extra data
-        while (i < effects.length) {
-            if (effects[i].shouldClearAfterMonSwitch()) {
-                
-                // effects and extra data should be synced
-                effects[i] = effects[effects.length - 1];
-                effects.pop();
-
-                extraData[i] = extraData[effects.length - 1];
-                extraData.pop();
-            }
-            else {
-                ++i;
-            }
-        }
-
-        // Clear out deltas on mon stats
-        currentMonState.attackDelta = 0;
-        currentMonState.specialAttackDelta = 0;
-        currentMonState.defenceDelta = 0;
-        currentMonState.specialDefenceDelta = 0;
-        currentMonState.speedDelta = 0;
-
-        // Update to new active mon (we assume validate already resolved and gives us a valid target)
-        state.activeMonIndex[playerIndex] = monToSwitchIndex;
-    }
-
-    function _checkForKnockoutAndForceSwitch(bytes32 battleKey, uint256 playerIndex) internal returns (bool) {
-        BattleState storage state = battleStates[battleKey];
-        if (state.monStates[playerIndex][state.activeMonIndex[playerIndex]].isKnockedOut) {
-            state.playerSwitchForTurnFlag = playerIndex;
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     function execute(bytes32 battleKey) external {
         Battle storage battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
@@ -244,11 +171,29 @@ contract Engine is IEngine {
 
             // Progress turn index
             state.turnId += 1;
-
-            // TODO: run end of turn effects
-            // TODO: update stamina for active mon for the side that DID NOT switch
         }
         // Otherwise, we need to run priority calculations and update the game state for both players
+        /*
+            Flow of battle:
+            - Grab moves and calculate pseudo RNG
+            - Determine priority player
+            - Run round start global effects
+            - Run round start targeted effects for p0 and p1
+            - Execute priority player's move
+            - Check for game over 
+            - Check for KO, if so:
+                - Run end of turn effects
+                - Check for game over
+                - Return correct player switch flag
+            - Execute non priority player's move
+            - Check for game over
+            - Check for KO, if so:
+                - Run end of turn effects
+                - Check for game over
+                - Return correct player switch flag
+            - Run end of turn effects
+            - Check for game over
+        */
         else {
             // Validate both moves have been revealed for the current turn
             // (accessing the values will revert if they haven't been set)
@@ -266,46 +211,260 @@ contract Engine is IEngine {
                 otherPlayerIndex = 1;
             }
 
-            // TODO: Before turn effects, e.g. items, battlefield moves, recurring move effects, etc
+            // Run beginning of round effects
+            _runEffects(battleKey, rng, 2, Round.Start);
+            _runEffects(battleKey, rng, priorityPlayerIndex, Round.Start);
+            _runEffects(battleKey, rng, otherPlayerIndex, Round.Start);
 
             // Execute priority player's move
-            // Check for game over
-            // If game over, then end execution, let game be endable
-            // Check for knockout
-            // If knocked out, then transition to a new state where the knocked out player can switch
-            // Execute non-prioirty player's move
-            // Check for game over
-            // If game over, then end execution, let game be endable
-            // Check for knockout
-            // If knocked out, then transition to a new state where the knocked out player can switch
-            // Check for end of turn effects
-
             _handlePlayerMove(battleKey, rng, priorityPlayerIndex);
-            address gameResult = battle.validator.validateGameOver(battleKey);
+
+            // Check for game over
+            address gameResult = battle.validator.validateGameOver(battleKey, priorityPlayerIndex);
             if (gameResult != address(0)) {
                 state.winner = gameResult;
-                return;
-            }
-            bool shouldForceSwitch;
-            shouldForceSwitch = _checkForKnockoutAndForceSwitch(battleKey, otherPlayerIndex);
-            if (shouldForceSwitch) {
-                return;
-            }
-            _handlePlayerMove(battleKey, rng, otherPlayerIndex);
-            gameResult = battle.validator.validateGameOver(battleKey);
-            if (gameResult != address(0)) {
-                state.winner = gameResult;
-                return;
-            }
-            shouldForceSwitch = _checkForKnockoutAndForceSwitch(battleKey, priorityPlayerIndex);
-            if (shouldForceSwitch) {
                 return;
             }
 
-            // TODO: update end of turn effects for both mons
+            // Check for knockout or subsequent game over for either player after handling move (conditional on a KO)
+            uint256 playerSwitchForTurnFlag;
+            bool executedEndOfRoundEffects;
+            (playerSwitchForTurnFlag, gameResult, executedEndOfRoundEffects) =
+                _checkForKnockoutAndAdvanceIfNeeded(battleKey, priorityPlayerIndex, rng);
+            if (gameResult != address(0)) {
+                state.winner = gameResult;
+                return;
+            } else if (executedEndOfRoundEffects) {
+                state.playerSwitchForTurnFlag = playerSwitchForTurnFlag;
+                state.turnId += 1;
+                return;
+            }
+
+            // Execute non-priority player's move
+            _handlePlayerMove(battleKey, rng, otherPlayerIndex);
+
+            // Check for game over
+            gameResult = battle.validator.validateGameOver(battleKey, priorityPlayerIndex);
+            if (gameResult != address(0)) {
+                state.winner = gameResult;
+                return;
+            }
+
+            // Afterwards, check again for knockout or subsequent game over for either player after handling move
+            (playerSwitchForTurnFlag, gameResult, executedEndOfRoundEffects) =
+                _checkForKnockoutAndAdvanceIfNeeded(battleKey, priorityPlayerIndex, rng);
+            if (gameResult != address(0)) {
+                state.winner = gameResult;
+                return;
+            } else if (executedEndOfRoundEffects) {
+                state.playerSwitchForTurnFlag = playerSwitchForTurnFlag;
+                state.turnId += 1;
+                return;
+            }
+
+            // If we don't need to force a switch, and it's not game over:
+            // Run effects for global, p0 active mon, and p1 active mon
+            // Then check for game over / knockout again
+            _runEffects(battleKey, rng, 0, Round.End);
+            _runEffects(battleKey, rng, 1, Round.End);
+            _runEffects(battleKey, rng, 2, Round.End);
+
+            // One last time, check again for knockout or subsequent game over for either player after handling effects
+            (playerSwitchForTurnFlag, gameResult, executedEndOfRoundEffects) =
+                _checkForKnockoutAndAdvanceIfNeeded(battleKey, priorityPlayerIndex, rng);
+            if (gameResult != address(0)) {
+                state.winner = gameResult;
+                return;
+            } else if (executedEndOfRoundEffects) {
+                state.playerSwitchForTurnFlag = playerSwitchForTurnFlag;
+                state.turnId += 1;
+                return;
+            }
 
             // Progress turn index
             state.turnId += 1;
+        }
+    }
+
+    function _checkForKnockoutAndAdvanceIfNeeded(bytes32 battleKey, uint256 priorityPlayerIndex, uint256 rng)
+        internal
+        returns (uint256 playerSwitchForTurnFlag, address gameResult, bool executedRoundEndEffects)
+    {
+        Battle memory battle = battles[battleKey];
+        BattleState storage state = battleStates[battleKey];
+        uint256 otherPlayerIndex = priorityPlayerIndex + 1 % 2;
+
+        bool isPriorityPlayerActiveMonKnockedOut =
+            state.monStates[priorityPlayerIndex][state.activeMonIndex[priorityPlayerIndex]].isKnockedOut;
+        bool isNonPriorityPlayerActiveMonKnockedOut =
+            state.monStates[otherPlayerIndex][state.activeMonIndex[otherPlayerIndex]].isKnockedOut;
+
+        // IF there is a knockout, then continue to run end of round effects and then recheck knockout flags
+        if (isPriorityPlayerActiveMonKnockedOut || isNonPriorityPlayerActiveMonKnockedOut) {
+            if (isPriorityPlayerActiveMonKnockedOut && !isNonPriorityPlayerActiveMonKnockedOut) {
+                // Run end of round effects for non priority active mon
+                _runEffects(battleKey, rng, 2, Round.End);
+                _runEffects(battleKey, rng, otherPlayerIndex, Round.End);
+                executedRoundEndEffects = true;
+            } else if (!isPriorityPlayerActiveMonKnockedOut && isNonPriorityPlayerActiveMonKnockedOut) {
+                // Run end of round effects for non priority active mon
+                _runEffects(battleKey, rng, 2, Round.End);
+                _runEffects(battleKey, rng, priorityPlayerIndex, Round.End);
+                executedRoundEndEffects = true;
+            }
+
+            // In both cases, we now recheck the knockout flags after updating end of round effects
+            isPriorityPlayerActiveMonKnockedOut =
+                state.monStates[priorityPlayerIndex][state.activeMonIndex[priorityPlayerIndex]].isKnockedOut;
+            isNonPriorityPlayerActiveMonKnockedOut =
+                state.monStates[otherPlayerIndex][state.activeMonIndex[otherPlayerIndex]].isKnockedOut;
+
+            // If a both mons are KO'ed, we have to first check for game over
+            // Either way, if both mons are KO'ed, we don't set priorityPlayerIndex and instead rely on validateMove for the next round
+            // Otherwise, it's still the case that only one of the active mons is KO'ed, so we set priorityPlayerIndex
+            if (isPriorityPlayerActiveMonKnockedOut && isNonPriorityPlayerActiveMonKnockedOut) {
+                gameResult = battle.validator.validateGameOver(battleKey, priorityPlayerIndex);
+            }
+            // If there was still just one knockout, we set the correct playerSwitchForTurnFlag value (shift player index up by 1)
+            if (isPriorityPlayerActiveMonKnockedOut) {
+                playerSwitchForTurnFlag = priorityPlayerIndex + 1;
+            } else if (isNonPriorityPlayerActiveMonKnockedOut) {
+                playerSwitchForTurnFlag = otherPlayerIndex + 1;
+            }
+        }
+    }
+
+    function _handleSwitch(bytes32 battleKey, uint256 playerIndex) internal {
+        BattleState storage state = battleStates[battleKey];
+        uint256 turnId = state.turnId;
+        RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
+        uint256 monToSwitchIndex = abi.decode(move.extraData, (uint256));
+        MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
+        IEffect[] storage effects = currentMonState.targetedEffects;
+        bytes[] storage extraData = currentMonState.extraDataForTargetedEffects;
+        uint256 i = 0;
+
+        // Go through each effect to see if it should be cleared after a switch,
+        // If so, remove the effect and the extra data
+        while (i < effects.length) {
+            if (effects[i].shouldClearAfterMonSwitch()) {
+                // effects and extra data should be synced
+                effects[i] = effects[effects.length - 1];
+                effects.pop();
+
+                extraData[i] = extraData[effects.length - 1];
+                extraData.pop();
+            } else {
+                ++i;
+            }
+        }
+
+        // Clear out deltas on mon stats
+        currentMonState.attackDelta = 0;
+        currentMonState.specialAttackDelta = 0;
+        currentMonState.defenceDelta = 0;
+        currentMonState.specialDefenceDelta = 0;
+        currentMonState.speedDelta = 0;
+
+        // Update to new active mon (we assume validate already resolved and gives us a valid target)
+        state.activeMonIndex[playerIndex] = monToSwitchIndex;
+    }
+
+    function _handlePlayerMove(bytes32 battleKey, uint256 rng, uint256 playerIndex) internal {
+        Battle memory battle = battles[battleKey];
+        BattleState storage state = battleStates[battleKey];
+        uint256 turnId = state.turnId;
+        RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
+        IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex].moveSet;
+
+        // handle a switch, a no-op, or execute the moveset
+        if (move.moveIndex == SWITCH_MOVE_INDEX) {
+            _handleSwitch(battleKey, playerIndex);
+        } else if (move.moveIndex == NO_OP_MOVE_INDEX) {
+            // do nothing (e.g. just recover stamina)
+        }
+        // Execute the move and then set updated state, active mons, and effects/data
+        else {
+            (
+                MonState[][] memory monStates,
+                uint256[] memory activeMons,
+                IEffect[][] memory newEffects,
+                bytes[][] memory extraDataForEffects
+            ) = moveSet.move(battleKey, move.extraData, rng);
+
+            // Assign the new mon states to storage
+            state.monStates = monStates;
+
+            // Assign the new active mon IDs to storage
+            state.activeMonIndex = activeMons;
+
+            for (uint256 targetIndex; targetIndex < 3; ++targetIndex) {
+                IEffect[] storage effects;
+                bytes[] storage extraData;
+
+                // Grab storage reference to the correct effects/extra data array
+                if (targetIndex == 2) {
+                    effects = state.globalEffects;
+                    extraData = state.extraDataForGlobalEffects;
+                } else {
+                    effects = state.monStates[targetIndex][state.activeMonIndex[targetIndex]].targetedEffects;
+                    extraData =
+                        state.monStates[targetIndex][state.activeMonIndex[targetIndex]].extraDataForTargetedEffects;
+                }
+
+                // Attach each new effect if it is valid to register
+                if (newEffects[targetIndex].length > 0) {
+                    for (uint256 j; j < newEffects[targetIndex].length; ++j) {
+                        if (newEffects[targetIndex][j].isValidToRegister(battleKey, targetIndex)) {
+                            effects.push(newEffects[targetIndex][j]);
+                            extraData.push(extraDataForEffects[targetIndex][j]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Iterates through all effects and handles them
+    // Removes them if necessary, and also updates extra data if needed
+    function _runEffects(bytes32 battleKey, uint256 rng, uint256 targetIndex, Round round) internal {
+        BattleState storage state = battleStates[battleKey];
+        IEffect[] storage effects;
+        bytes[] storage extraData;
+
+        // Switch between global or targeted effects array
+        if (targetIndex == 2) {
+            effects = state.globalEffects;
+            extraData = state.extraDataForGlobalEffects;
+        } else {
+            effects = state.monStates[targetIndex][state.activeMonIndex[targetIndex]].targetedEffects;
+            extraData = state.monStates[targetIndex][state.activeMonIndex[targetIndex]].extraDataForTargetedEffects;
+        }
+
+        uint256 i;
+        while (i < effects.length) {
+            if (effects[i].shouldRunAtRound(round)) {
+                (MonState[][] memory updatedMonStates, bytes memory updatedExtraData, bool removeAfterHandle) =
+                    effects[i].runEffect(battleKey, rng, extraData[i], 0);
+
+                // If we remove the effect after doing it, then we clear and update the array/extra data
+                if (removeAfterHandle) {
+                    effects[i] = effects[effects.length - 1];
+                    effects.pop();
+
+                    extraData[i] = extraData[effects.length - 1];
+                    extraData.pop();
+                }
+                // Otherwise, we update the extra data if e.g. the effect needs to modify state
+                else {
+                    extraData[i] = updatedExtraData;
+                }
+
+                // Either way, in both cases, we then update the mon states
+                state.monStates = updatedMonStates;
+            } else {
+                ++i;
+            }
         }
     }
 

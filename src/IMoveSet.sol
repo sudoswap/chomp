@@ -4,6 +4,10 @@ pragma solidity ^0.8.0;
 import "./Structs.sol";
 
 interface IMoveSet {
+
+    // TODO: consider adding an enum for higher level move types
+    // TODO: consider adding an enum for types (in general)
+
     function move(bytes32 battleKey, bytes calldata extraData, uint256 rng)
         external
         pure

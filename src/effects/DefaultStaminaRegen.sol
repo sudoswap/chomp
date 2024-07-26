@@ -6,6 +6,10 @@ import "../Structs.sol";
 
 contract DefaultStaminaRegen is IEffect {
 
+    function name() external pure returns (bytes32) {
+        return 'DefaultStaminaRegen';
+    }
+
     // Irrelevant, as it will be registered at the beginning of the battle
     function isValidToRegister(Battle calldata, BattleState calldata, uint256[][] calldata)
         external

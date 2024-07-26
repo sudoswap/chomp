@@ -4,6 +4,10 @@ pragma solidity ^0.8.0;
 import "../Structs.sol";
 
 interface IEffect {
+
+    // Identifier (32 ASCII words)
+    function name() external returns (bytes32);
+
     // Whether or not an effect can be registered
     function isValidToRegister(Battle memory battle, BattleState memory state, uint256[][] memory target)
         external

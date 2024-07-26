@@ -7,6 +7,6 @@ interface IMonEffect is IEffect {
 
     // Whether or not the effect should clear itself when the mon is being switched out
     // (not valid for global effects, please disregard)
-    function shouldClearAfterSwitch() external returns (bool);
+    function shouldClearAfterMonSwitch() external returns (bool);
 
 }

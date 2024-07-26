@@ -6,6 +6,7 @@ import "./Constants.sol";
 import "./IMoveSet.sol";
 
 import {IEngine} from "./IEngine.sol";
+import {IMonEffect} from "./effects/IMonEffect.sol";
 
 contract Engine is IEngine {
     mapping(bytes32 => uint256) public pairHashNonces;
@@ -179,12 +180,35 @@ contract Engine is IEngine {
         RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
         uint256 monToSwitchIndex = abi.decode(move.extraData, (uint256));
         MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
-        
-        // TODO: clear out effects and handle clearing out temp deltas on stats
+        IMonEffect[] storage effects = currentMonState.targetedEffects;
+        bytes[] storage extraData = currentMonState.extraDataForTargetedEffects;
+        uint i = 0;
 
-        // state.monStates[playerIndex][state.activeMonIndex[playerIndex]] =
-        //     battle.validator.modifyMonStateAfterSwitch(currentMonState);
+        // Go through each effect to see if it should be cleared after a switch, 
+        // If so, remove the effect and the extra data
+        while (i < effects.length) {
+            if (effects[i].shouldClearAfterMonSwitch()) {
+                
+                // effects and extra data should be synced
+                effects[i] = effects[effects.length - 1];
+                effects.pop();
 
+                extraData[i] = extraData[effects.length - 1];
+                extraData.pop();
+            }
+            else {
+                ++i;
+            }
+        }
+
+        // Clear out deltas on mon stats
+        currentMonState.attackDelta = 0;
+        currentMonState.specialAttackDelta = 0;
+        currentMonState.defenceDelta = 0;
+        currentMonState.specialDefenceDelta = 0;
+        currentMonState.speedDelta = 0;
+
+        // Update to new active mon (we assume validate already resolved and gives us a valid target)
         state.activeMonIndex[playerIndex] = monToSwitchIndex;
     }
 
@@ -210,7 +234,7 @@ contract Engine is IEngine {
             // Push 0 to rng stream as only single player is switching, to keep in line with turnId
             state.pRNGStream.push(0);
 
-            // Get the player index (offset by one)
+            // Get the player index (offset the switchForTurnFlag value by one)
             uint256 playerIndex = state.playerSwitchForTurnFlag - 1;
             RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
 

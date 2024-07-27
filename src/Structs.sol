@@ -33,7 +33,8 @@ struct Mon {
     uint256 defence;
     uint256 specialAttack;
     uint256 specialDefence;
-    Type monType;
+    Type type1;
+    Type type2;
     Move[] moves;
 }
 

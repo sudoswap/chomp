@@ -11,12 +11,13 @@ enum Type {
     Ice,
     Nature,
     Lightning,
-    Mythical,
+    Mythic,
     Air,
     Mind,
     Cyber,
     Wild,
-    Cosmic
+    Cosmic,
+    None
 }
 
 enum Round {

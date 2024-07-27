@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import {IMoveSet} from "./IMoveSet.sol";
+import {IMoveSet} from "./moves/IMoveSet.sol";
 import {IValidator} from "./IValidator.sol";
 import {IEffect} from "./effects/IEffect.sol";
+import {Type} from "./Enums.sol";
 
 struct Battle {
     address p0;
@@ -32,6 +33,7 @@ struct Mon {
     uint256 defence;
     uint256 specialAttack;
     uint256 specialDefence;
+    Type monType;
     Move[] moves;
 }
 

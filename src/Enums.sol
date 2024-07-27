@@ -23,3 +23,8 @@ enum Round {
     Start,
     End
 }
+
+enum AttackSupertype {
+    Physical,
+    Special
+}

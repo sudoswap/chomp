@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import "./Structs.sol";
-import "./Enums.sol";
+import "../Structs.sol";
+import "../Enums.sol";
 
-import {IEffect} from "./effects/IEffect.sol";
+import {IEffect} from "../effects/IEffect.sol";
 
 interface IMoveSet {
     function move(bytes32 battleKey, bytes calldata extraData, uint256 rng)

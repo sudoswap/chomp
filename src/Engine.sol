@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./Structs.sol";
 import "./Constants.sol";
-import "./IMoveSet.sol";
+import "./moves/IMoveSet.sol";
 import "./Enums.sol";
 
 import {IEngine} from "./IEngine.sol";

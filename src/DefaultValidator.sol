@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./IValidator.sol";
 import "./Structs.sol";
-import "./IMoveSet.sol";
+import "./moves/IMoveSet.sol";
 import "./Constants.sol";
 
 import {IEngine} from "./IEngine.sol";

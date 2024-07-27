@@ -13,8 +13,11 @@ Desired Features Missing:
         - parting shot
         - destiny bond
         - substitute
+
+- handle typing advantage chart
 ---------------------------------------------------------------------
 
 Specific TODOs:
-- create interface for IEffect, which registers, updates, and removes
-- create interface for IEffectQueue which allows us to iterate through all effects and update them
+
+- Create moves/mons so we can start testing
+- Basic abstract move contracts for Damaging moves, need damage calculation lib

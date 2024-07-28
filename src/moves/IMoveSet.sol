@@ -13,7 +13,9 @@ interface IMoveSet {
             MonState[][] memory monStates,
             uint256[] memory activeMons,
             IEffect[][] memory newEffects,
-            bytes[][] memory extraDataForEffects
+            bytes[][] memory extraDataForEffects,
+            bytes32 globalK,
+            bytes32 globalV
         );
     function priority(bytes32 battleKey) external view returns (uint256);
     function stamina(bytes32 battleKey) external view returns (uint256);

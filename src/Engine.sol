@@ -13,6 +13,7 @@ contract Engine is IEngine {
     mapping(bytes32 battleKey => Battle) public battles;
     mapping(bytes32 battleKey => BattleState) public battleStates;
     mapping(bytes32 battleKey => mapping(address player => Commitment)) public commitments;
+    mapping(bytes32 battleKey => mapping(bytes32 => bytes32)) public globalKV;
 
     error NotP0OrP1();
     error AlreadyCommited();
@@ -39,6 +40,10 @@ contract Engine is IEngine {
 
     function getBattleState(bytes32 battleKey) external view returns (BattleState memory) {
         return battleStates[battleKey];
+    }
+
+    function getGlobalKV(bytes32 battleKey, bytes32 key) external view returns (bytes32) {
+        return globalKV[battleKey][key];
     }
 
     function start(Battle calldata battle) external {
@@ -389,7 +394,9 @@ contract Engine is IEngine {
                 MonState[][] memory monStates,
                 uint256[] memory activeMons,
                 IEffect[][] memory newEffects,
-                bytes[][] memory extraDataForEffects
+                bytes[][] memory extraDataForEffects,
+                bytes32 globalK,
+                bytes32 globalV
             ) = moveSet.move(battleKey, playerIndex, move.extraData, rng);
 
             // Assign the new mon states to storage
@@ -424,6 +431,11 @@ contract Engine is IEngine {
                         }
                     }
                 }
+            }
+
+            // Assign the global key value (if any)
+            if (globalK != "") {
+                globalKV[battleKey][globalK] = globalV;
             }
         }
     }

@@ -9,17 +9,24 @@ import "./Constants.sol";
 import {IEngine} from "./IEngine.sol";
 
 contract DefaultValidator is IValidator {
-    
-    uint256 constant MONS_PER_TEAM = 6;
-    uint256 constant MOVES_PER_MON = 4;
+
+    struct Args {
+        uint256 MONS_PER_TEAM;
+        uint256 MOVES_PER_MON;
+    }
+
+    uint256 immutable MONS_PER_TEAM;
+    uint256 immutable MOVES_PER_MON;
     IEngine immutable ENGINE;
 
-    constructor(IEngine _ENGINE) {
+    constructor(IEngine _ENGINE, Args memory args) {
         ENGINE = _ENGINE;
+        MONS_PER_TEAM = args.MONS_PER_TEAM;
+        MOVES_PER_MON = args.MOVES_PER_MON;
     }
 
     // Validates that e.g. there are 6 mons per team w/ 4 moves each
-    function validateGameStart(Battle calldata b, address gameStartCaller) external pure returns (bool) {
+    function validateGameStart(Battle calldata b, address gameStartCaller) external view returns (bool) {
         // game can only start if p0 or p1 calls game start
         // later can change so that matchmaking needs to happen beforehand
         // otherwise users can be griefed into matches they didn't want to join

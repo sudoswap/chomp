@@ -8,7 +8,7 @@ import {IEngine} from "../IEngine.sol";
 import {ITypeCalculator} from "../types/ITypeCalculator.sol";
 
 abstract contract AttackCalculator {
-    uint256 constant MOVE_VARIANCE = 10;
+    uint256 constant MOVE_VARIANCE = 0;
 
     IEngine immutable ENGINE;
     ITypeCalculator immutable TYPE_CALCULATOR;
@@ -27,8 +27,11 @@ abstract contract AttackCalculator {
         Type attackType,
         AttackSupertype attackSupertype,
         uint256 rng
-    ) public view returns (MonState[][] memory, uint256[] memory, IEffect[][] memory, bytes[][] memory) {
-        
+    )
+        public
+        view
+        returns (MonState[][] memory, uint256[] memory, IEffect[][] memory, bytes[][] memory, bytes32, bytes32)
+    {
         BattleState memory state = ENGINE.getBattleState(battleKey);
         IEffect[][] memory emptyEffects = new IEffect[][](0);
         bytes[][] memory emptyData = new bytes[][](0);
@@ -36,7 +39,7 @@ abstract contract AttackCalculator {
         // Accuracy check short circuit
         uint256 accuracyCheck = rng % 100;
         if (accuracyCheck > accuracy) {
-            return (state.monStates, state.activeMonIndex, emptyEffects, emptyData);
+            return (state.monStates, state.activeMonIndex, emptyEffects, emptyData, "", "");
         }
 
         uint256 damage;
@@ -71,22 +74,29 @@ abstract contract AttackCalculator {
                 typeMultiplier = typeMultiplier * secondaryTypeMultiplier;
             }
 
-            uint256 rngScaling = rng % MOVE_VARIANCE;
+            uint256 rngScaling = 0;
+            if (MOVE_VARIANCE > 0) {
+                rngScaling = rng % (MOVE_VARIANCE + 1);
+            }
+
             damage = (basePower * attackStat * (100 - rngScaling) * typeMultiplier) / (defenceStat * 100);
         }
 
         // Update stamina delta for the attacker mon
         MonState[][] memory updatedStates = state.monStates;
-        updatedStates[attackerPlayerIndex][state.activeMonIndex[attackerPlayerIndex]].staminaDelta -= int256(staminaCost);
+        updatedStates[attackerPlayerIndex][state.activeMonIndex[attackerPlayerIndex]].staminaDelta -=
+            int256(staminaCost);
 
         // Do damage calc and check for KO on defending mon
         updatedStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta -= int256(damage);
 
-        if (updatedStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta + int256(defenderMon.hp) <= 0) {
+        if (
+            updatedStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta
+                + int256(defenderMon.hp) <= 0
+        ) {
             updatedStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].isKnockedOut = true;
-
         }
 
-        return (state.monStates, state.activeMonIndex, emptyEffects, emptyData);
+        return (state.monStates, state.activeMonIndex, emptyEffects, emptyData, "", "");
     }
 }

@@ -46,7 +46,7 @@ contract Engine is IEngine {
         return globalKV[battleKey][key];
     }
 
-    function start(Battle calldata battle) external {
+    function start(Battle calldata battle) external returns (bytes32) {
         // validate battle
         if (!battle.validator.validateGameStart(battle, msg.sender)) {
             revert InvalidBattleConfig();
@@ -75,6 +75,8 @@ contract Engine is IEngine {
                 battleStates[battleKey].monStates[i].push();
             }
         }
+
+        return battleKey;
     }
 
     function commitMove(bytes32 battleKey, bytes32 moveHash) external onlyPlayer(battleKey) {
@@ -380,7 +382,7 @@ contract Engine is IEngine {
         BattleState storage state = battleStates[battleKey];
         uint256 turnId = state.turnId;
         RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
-        IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex].moveSet;
+        IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex];
 
         // handle a switch, a no-op, or execute the moveset
         if (move.moveIndex == SWITCH_MOVE_INDEX) {

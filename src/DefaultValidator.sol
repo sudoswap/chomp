@@ -88,7 +88,7 @@ contract DefaultValidator is IValidator {
         }
 
         // A move cannot be selected if its stamina costs more than the mon's current stamina
-        IMoveSet moveSet = b.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[moveIndex].moveSet;
+        IMoveSet moveSet = b.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[moveIndex];
 
         // Cannot go past the first 4 moves, or the switch move index or the no op
         if (moveIndex != NO_OP_MOVE_INDEX && moveIndex != SWITCH_MOVE_INDEX) {
@@ -120,9 +120,9 @@ contract DefaultValidator is IValidator {
         RevealedMove memory p0Move = state.moveHistory[0][state.turnId];
         RevealedMove memory p1Move = state.moveHistory[1][state.turnId];
 
-        IMoveSet p0MoveSet = b.teams[0][state.activeMonIndex[0]].moves[p0Move.moveIndex].moveSet;
+        IMoveSet p0MoveSet = b.teams[0][state.activeMonIndex[0]].moves[p0Move.moveIndex];
         uint256 p0Priority = p0MoveSet.priority(battleKey);
-        IMoveSet p1MoveSet = b.teams[1][state.activeMonIndex[1]].moves[p1Move.moveIndex].moveSet;
+        IMoveSet p1MoveSet = b.teams[1][state.activeMonIndex[1]].moves[p1Move.moveIndex];
         uint256 p1Priority = p1MoveSet.priority(battleKey);
 
         // Determine priority based on (in descending order of importance):

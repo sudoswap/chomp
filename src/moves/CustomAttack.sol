@@ -11,25 +11,28 @@ import {IMoveSet} from "./IMoveSet.sol";
 import {AttackCalculator} from "./AttackCalculator.sol";
 
 contract CustomAttack is AttackCalculator, IMoveSet {
-
     struct Args {
+        Type TYPE;
         uint256 BASE_POWER;
         uint256 ACCURACY;
         uint256 STAMINA_COST;
+        uint256 PRIORITY;
     }
 
     Type immutable TYPE;
     uint256 immutable BASE_POWER;
     uint256 immutable ACCURACY;
     uint256 immutable STAMINA_COST;
+    uint256 immutable PRIORITY;
 
-    constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR, Type _TYPE, Args memory args)
+    constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR, Args memory args)
         AttackCalculator(_ENGINE, _TYPE_CALCULATOR)
     {
-        TYPE = _TYPE;
+        TYPE = args.TYPE;
         BASE_POWER = args.BASE_POWER;
         ACCURACY = args.ACCURACY;
         STAMINA_COST = args.STAMINA_COST;
+        PRIORITY = args.PRIORITY;
     }
 
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng)
@@ -42,8 +45,8 @@ contract CustomAttack is AttackCalculator, IMoveSet {
         );
     }
 
-    function priority(bytes32) external pure returns (uint256) {
-        return 1;
+    function priority(bytes32) external view returns (uint256) {
+        return PRIORITY;
     }
 
     function stamina(bytes32) external view returns (uint256) {

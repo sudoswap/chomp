@@ -35,7 +35,7 @@ struct Mon {
     uint256 specialDefence;
     Type type1;
     Type type2;
-    Move[] moves;
+    IMoveSet[] moves;
 }
 
 struct MonState {
@@ -49,11 +49,6 @@ struct MonState {
     bool isKnockedOut; // Is either 0 or 1
     IEffect[] targetedEffects;
     bytes[] extraDataForTargetedEffects;
-}
-
-struct Move {
-    IMoveSet moveSet;
-    uint256 moveId;
 }
 
 struct Commitment {

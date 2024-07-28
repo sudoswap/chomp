@@ -7,17 +7,16 @@ import "../Enums.sol";
 import {IEffect} from "../effects/IEffect.sol";
 
 interface IMoveSet {
-    function move(bytes32 battleKey, bytes calldata extraData, uint256 rng)
+    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData, uint256 rng)
         external
-        pure
         returns (
-            MonState[][] memory monStates, // Convention is index 0 is p0 effects, 1 is p1 effects, and 2 is global effects
+            MonState[][] memory monStates,
             uint256[] memory activeMons,
-            IEffect[][] memory effects,
+            IEffect[][] memory newEffects,
             bytes[][] memory extraDataForEffects
         );
-    function priority(bytes32 battleKey) external pure returns (uint256);
-    function stamina(bytes32 battleKey) external pure returns (uint256);
-    function moveType(bytes32 battleKey) external pure returns (Type);
-    function isValidTarget(bytes32 battleKey) external pure returns (bool);
+    function priority(bytes32 battleKey) external view returns (uint256);
+    function stamina(bytes32 battleKey) external view returns (uint256);
+    function moveType(bytes32 battleKey) external view returns (Type);
+    function isValidTarget(bytes32 battleKey) external view returns (bool);
 }

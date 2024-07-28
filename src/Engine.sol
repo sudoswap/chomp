@@ -390,7 +390,7 @@ contract Engine is IEngine {
                 uint256[] memory activeMons,
                 IEffect[][] memory newEffects,
                 bytes[][] memory extraDataForEffects
-            ) = moveSet.move(battleKey, move.extraData, rng);
+            ) = moveSet.move(battleKey, playerIndex, move.extraData, rng);
 
             // Assign the new mon states to storage
             state.monStates = monStates;
@@ -398,26 +398,29 @@ contract Engine is IEngine {
             // Assign the new active mon IDs to storage
             state.activeMonIndex = activeMons;
 
-            for (uint256 targetIndex; targetIndex < 3; ++targetIndex) {
-                IEffect[] storage effects;
-                bytes[] storage extraData;
+            // Assign new effects (if any)
+            if (newEffects.length > 0) {
+                for (uint256 targetIndex; targetIndex < 3; ++targetIndex) {
+                    IEffect[] storage effects;
+                    bytes[] storage extraData;
 
-                // Grab storage reference to the correct effects/extra data array
-                if (targetIndex == 2) {
-                    effects = state.globalEffects;
-                    extraData = state.extraDataForGlobalEffects;
-                } else {
-                    effects = state.monStates[targetIndex][state.activeMonIndex[targetIndex]].targetedEffects;
-                    extraData =
-                        state.monStates[targetIndex][state.activeMonIndex[targetIndex]].extraDataForTargetedEffects;
-                }
+                    // Grab storage reference to the correct effects/extra data array
+                    if (targetIndex == 2) {
+                        effects = state.globalEffects;
+                        extraData = state.extraDataForGlobalEffects;
+                    } else {
+                        effects = state.monStates[targetIndex][state.activeMonIndex[targetIndex]].targetedEffects;
+                        extraData =
+                            state.monStates[targetIndex][state.activeMonIndex[targetIndex]].extraDataForTargetedEffects;
+                    }
 
-                // Attach each new effect if it is valid to register
-                if (newEffects[targetIndex].length > 0) {
-                    for (uint256 j; j < newEffects[targetIndex].length; ++j) {
-                        if (newEffects[targetIndex][j].isValidToRegister(battleKey, targetIndex)) {
-                            effects.push(newEffects[targetIndex][j]);
-                            extraData.push(extraDataForEffects[targetIndex][j]);
+                    // Attach each new effect if it is valid to register
+                    if (newEffects[targetIndex].length > 0) {
+                        for (uint256 j; j < newEffects[targetIndex].length; ++j) {
+                            if (newEffects[targetIndex][j].isValidToRegister(battleKey, targetIndex)) {
+                                effects.push(newEffects[targetIndex][j]);
+                                extraData.push(extraDataForEffects[targetIndex][j]);
+                            }
                         }
                     }
                 }

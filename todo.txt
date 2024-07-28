@@ -14,10 +14,14 @@ Desired Features Missing:
         - destiny bond
         - substitute
 
-- handle typing advantage chart
 ---------------------------------------------------------------------
 
 Specific TODOs:
 
 - Create moves/mons so we can start testing
-- Basic abstract move contracts for Damaging moves, need damage calculation lib
+    - make specific list of moves to implement
+
+- Create mon registry
+    - create some mons
+
+- Create test scaffold to start testing

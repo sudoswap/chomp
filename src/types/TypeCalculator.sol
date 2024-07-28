@@ -5,10 +5,10 @@ import "../Structs.sol";
 import "../Enums.sol";
 
 import {IEngine} from "../IEngine.sol";
+import {ITypeCalculator} from "./ITypeCalculator.sol";
 
-contract TypeCalculator {
-
-    uint256[16][16] public typeChart;
+contract TypeCalculator is ITypeCalculator {
+    uint256[15][15] public typeChart;
 
     constructor() {
         typeChart[uint256(Type.Yin)][uint256(Type.Yin)] = 1;

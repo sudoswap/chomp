@@ -9,6 +9,7 @@ import "./Constants.sol";
 import {IEngine} from "./IEngine.sol";
 
 contract DefaultValidator is IValidator {
+    
     uint256 constant MONS_PER_TEAM = 6;
     uint256 constant MOVES_PER_MON = 4;
     IEngine immutable ENGINE;

@@ -60,10 +60,7 @@ contract DefaultValidator is IValidator {
 
         // Enforce a switch IF:
         // - if it is the zeroth turn
-        // - if the active mon is knocked out,
-        // AND:
-        // - the new mon has to be not knocked out
-        bool isTurnZero = state.turnId == 0;
+        // - if the active mon is knocked out
         uint256 playerIndex;
         if (player == b.p1) {
             playerIndex = 0;
@@ -71,24 +68,14 @@ contract DefaultValidator is IValidator {
             playerIndex = 1;
         }
         {
+            bool isTurnZero = state.turnId == 0;
             bool isActiveMonKnockedOut = state.monStates[playerIndex][state.activeMonIndex[playerIndex]].isKnockedOut;
             if (isTurnZero || isActiveMonKnockedOut) {
                 if (moveIndex != SWITCH_MOVE_INDEX) {
                     return false;
                 }
-                uint256 monToSwitchIndex = abi.decode(extraData, (uint256));
-                if (monToSwitchIndex >= MONS_PER_TEAM) {
-                    return false;
-                }
-                bool isNewMonKnockedOut = state.monStates[playerIndex][monToSwitchIndex].isKnockedOut;
-                if (isNewMonKnockedOut) {
-                    return false;
-                }
             }
         }
-
-        // A move cannot be selected if its stamina costs more than the mon's current stamina
-        IMoveSet moveSet = b.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[moveIndex];
 
         // Cannot go past the first 4 moves, or the switch move index or the no op
         if (moveIndex != NO_OP_MOVE_INDEX && moveIndex != SWITCH_MOVE_INDEX) {
@@ -96,7 +83,25 @@ contract DefaultValidator is IValidator {
                 return false;
             }
         }
+        // If it is no op move, it's valid as long as we don't force a switch
+        else if (moveIndex == NO_OP_MOVE_INDEX) {
+            return true;
+        }
+        // If it is a switch move, then it's valid as long as the new mon isn't knocked out
+        else if (moveIndex == SWITCH_MOVE_INDEX) {
+            uint256 monToSwitchIndex = abi.decode(extraData, (uint256));
+            if (monToSwitchIndex >= MONS_PER_TEAM) {
+                return false;
+            }
+            bool isNewMonKnockedOut = state.monStates[playerIndex][monToSwitchIndex].isKnockedOut;
+            if (isNewMonKnockedOut) {
+                return false;
+            }
+            return true;
+        }
 
+        // Otherwise, a move cannot be selected if its stamina costs more than the mon's current stamina
+        IMoveSet moveSet = b.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[moveIndex];
         int256 monStaminaDelta = state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta;
         uint256 monBaseStamina = b.teams[playerIndex][state.activeMonIndex[playerIndex]].stamina;
         uint256 monCurrentStamina = uint256(int256(monBaseStamina) + monStaminaDelta);

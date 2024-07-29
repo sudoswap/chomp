@@ -83,9 +83,18 @@ contract Engine is IEngine {
         Battle memory battle = battles[battleKey];
         BattleState memory state = battleStates[battleKey];
 
-        // validate no commitment exists for this turn
+        // validate no commitment already exists for this turn
         uint256 turnId = state.turnId;
-        if (commitments[battleKey][msg.sender].turnId == turnId) {
+
+        // if it's the zeroth turn, require that no hash is set
+        if (turnId == 0) {
+            if (commitments[battleKey][msg.sender].moveHash != bytes32(0)) {
+                revert AlreadyCommited();
+            }
+        }
+        // otherwise, just check if the turn id (which we overwrite each turn) is in sync
+        // (if we already committed this turn, then the turn id should match)
+        else if (commitments[battleKey][msg.sender].turnId == turnId) {
             revert AlreadyCommited();
         }
 

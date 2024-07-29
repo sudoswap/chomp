@@ -100,11 +100,36 @@ contract GameTest is Test {
     }
 
     function test_canStartBattle() public {
+        _startDummyBattle();
+    }
+
+    function test_canStartBattleMustChooseSwap() public {
+
         bytes32 battleKey = _startDummyBattle();
 
         // Let Alice commit to choosing switch
         bytes32 salt = "";
         bytes memory extraData = abi.encode(0);
         bytes32 moveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, extraData));
+        vm.startPrank(ALICE);
+        engine.commitMove(battleKey, moveHash);
+
+        // Ensure Alice cannot reveal yet because Bob has not committed
+        vm.expectRevert(Engine.RevealBeforeOtherCommit.selector);
+
+        // TODO: fix for turn zero move selections
+        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+
+        // Let Bob commit to choosing move index of 0 instead
+        uint256 moveIndex = 0;
+        moveHash = keccak256(abi.encodePacked(moveIndex, salt, ""));
+        vm.startPrank(BOB);
+        engine.commitMove(battleKey, moveHash);
+
+        // Ensure that Bob cannot reveal because validation will fail
+
+        // Ensure that Bob cannot re-commit because he has already committed
+
+        // Check that Alice can still reveal
     }
 }

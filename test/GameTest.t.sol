@@ -57,11 +57,11 @@ contract GameTest is Test {
     }
 
     /**
-     * Battle initiated, stored to state
+     * Battle initiated, stored to state [x]
      * - 2 players can start a battle
      *     - both players need to select a swap as their first move
      *
-     * Battle initiated, MUST select swap
+     * Battle initiated, MUST select swap [ ]
      * - 2 players can start a battle
      *     - after selecting mons
      *     - both players can call no op
@@ -69,7 +69,7 @@ contract GameTest is Test {
      *
      * (for both p0 and p1)
      *
-     * Faster Speed Wins KO/No-KO
+     * Faster Speed Wins KO/No-KO [ ]
      * - 2 players can start a battle
      *     - after selecting mons
      *     - player0's mon should move faster than player 1's mon if it's speedier
@@ -77,7 +77,7 @@ contract GameTest is Test {
      *     - player1's mon should not do damage
      *     - if player1 only has 1 mon, it should be game over
      *
-     * Faster Priority Wins KO/No-KO
+     * Faster Priority Wins KO/No-KO [ ]
      * - 2 players can start a battle
      *     - after selecting mons
      *     - player0's mon should move faster than player 1's mon if it's higher priority
@@ -87,7 +87,7 @@ contract GameTest is Test {
      *     - player1's mon should not do damage
      *     - if player1 only has 1 mon, it should be game over
      *
-     * - Execute reverts if game is already over
+     * - Execute reverts if game is already over [x]
      */
 
     // Helper function, creates a battle with two mons for Alice and Bob
@@ -172,6 +172,15 @@ contract GameTest is Test {
         engine.end(battleKey);
 
         // Assert ALICE wins
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, ALICE);
+
         // Expect revert on calling end again
+        vm.expectRevert(Engine.GameAlreadyOver.selector);
+        engine.end(battleKey);
+
+        // Expect revert on calling execute again
+        vm.expectRevert(Engine.GameAlreadyOver.selector);
+        engine.end(battleKey);
     }
 }

@@ -20,5 +20,5 @@ interface IValidator {
     function validateGameOver(bytes32 battleKey, uint256 priorityPlayerIndex) external view returns (address);
 
     // Validates that there is a valid timeout, returns address(0) if no winner, otherwise returns the winner
-    function validateTimeout(bytes32 battleKey, uint256 presumedAFKPlayerIndex) external view returns (address);
+    function validateTimeout(bytes32 battleKey, uint256 presumedAFKPlayerIndex) external returns (address);
 }

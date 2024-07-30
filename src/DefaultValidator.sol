@@ -196,37 +196,54 @@ contract DefaultValidator is IValidator {
         return address(0);
     }
 
-    // TODO:
     // A timeout is valid if
-    // - player A commits to a move but can't reveal it (because it's invalid)
-    // - player B has both committed and revealed a move
-    // - enough time has passed (player A loses due to timeout)
+    // enough time has passed AND:
+    // - honest player has both committed and revealed a move
+    // - afk player commits to a move but can't reveal it (because it's invalid)
+    // - i.e. honest player has more revealed moves
+    // -
     // - OR
-    // - player A does not commit to a move
-    // - player B has committed to a move
-    // - enough time has passed (player A loses due to timeout)
+    // -
+    // - honest player has committed to a move but cannot reveal it because afk player has not committed
+    // - afk player does not commit to a move
+    // - i.e. honest player has a commitment one turn ahead of afk player
     function validateTimeout(bytes32 battleKey, uint256 presumedAFKPlayerIndex) external view returns (address) {
         BattleState memory state = ENGINE.getBattleState(battleKey);
-
-        uint256 presumedHonestPlayerIndex = presumedAFKPlayerIndex + 1 % 2;
-
-        // If the presumed honest player has more revealed moves than the afk player, then
-        // the honest player has revealed a move while the afk player as not
-        // If it has been more than TIMEOUT_DURATION seconds since the honest player's commitment
-        // then the honest player wins
-
-        // i think we can just check the commitments as well? (ah for the second one we can)
-        // if the commitment turn ids are diff, then just check for timeout
-
-        RevealedMove[] memory movesPresumedAFKPlayerRevealed = state.moveHistory[presumedAFKPlayerIndex];
-        RevealedMove[] memory movesPresumedHonestPlayerRevealed = state.moveHistory[presumedHonestPlayerIndex];
-
-        if (movesPresumedHonestPlayerRevealed.length > movesPresumedAFKPlayerRevealed.length) {
-            
+        Battle memory b = ENGINE.getBattle(battleKey);
+        uint256 presumedHonestPlayerIndex = (presumedAFKPlayerIndex + 1) % 2;
+        address presumedHonestPlayer;
+        address presumedAFKPlayer;
+        if (presumedHonestPlayerIndex == 0) {
+            presumedHonestPlayer = b.p0;
+            presumedAFKPlayer = b.p1;
         }
+        else {
+            presumedHonestPlayer = b.p1;
+            presumedAFKPlayer = b.p0;
+        }
+        Commitment memory presumedHonestPlayerCommitment = ENGINE.getCommitment(battleKey, presumedHonestPlayer);
 
-        // If both players have 
+        // If it's been enough to check for a TIMEOUT (otherwise we don't bother at all):
+        if (presumedHonestPlayerCommitment.timestamp + TIMEOUT_DURATION <= block.timestamp) {
 
-        return address(0);
+            // If the honest player has revealed more moves than the afk player, then the honest player wins
+            RevealedMove[] memory movesPresumedAFKPlayerRevealed = state.moveHistory[presumedAFKPlayerIndex];
+            RevealedMove[] memory movesPresumedHonestPlayerRevealed = state.moveHistory[presumedHonestPlayerIndex];
+
+            if (movesPresumedHonestPlayerRevealed.length > movesPresumedAFKPlayerRevealed.length) {
+                return presumedHonestPlayer;
+            }
+
+            // If the honest player has a commitment that is ahead of the afk player (but the revealed moves are the same)
+            Commitment memory presumedAFKPlayerCommitment = ENGINE.getCommitment(battleKey, presumedAFKPlayer);
+            
+            if (presumedHonestPlayerCommitment.turnId > presumedAFKPlayerCommitment.turnId) {
+                return presumedHonestPlayer;
+            }
+            return address(0);
+        }
+        else {
+            return address(0);
+        }
     }
 }

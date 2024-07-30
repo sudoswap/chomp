@@ -44,7 +44,7 @@ abstract contract AttackCalculator {
 
         uint256 damage;
         Mon memory defenderMon;
-        uint256 defenderPlayerIndex = attackerPlayerIndex + 1 % 2;
+        uint256 defenderPlayerIndex = (attackerPlayerIndex + 1) % 2;
 
         {
             uint256 attackStat;

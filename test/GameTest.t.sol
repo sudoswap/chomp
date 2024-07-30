@@ -21,8 +21,9 @@ contract GameTest is Test {
     DefaultValidator validator;
     TypeCalculator typeCalc;
 
-    address ALICE = address(111111111111111111);
-    address BOB = address(2222222222222222222);
+    address constant ALICE = address(1);
+    address constant BOB = address(2);
+    uint256 constant TIMEOUT_DURATION = 100;
 
     Mon dummyMon;
     IMoveSet dummyAttack;
@@ -30,7 +31,7 @@ contract GameTest is Test {
     function setUp() public {
         engine = new Engine();
         validator = new DefaultValidator(
-            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: 100})
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
         typeCalc = new TypeCalculator();
         dummyAttack = new CustomAttack(
@@ -166,6 +167,11 @@ contract GameTest is Test {
         vm.expectRevert(Engine.AlreadyCommited.selector);
         engine.commitMove(battleKey, moveHash);
 
-        // TODO: check that timeout succeeds (need to add to validator/engine)
+        // Check that timeout succeeds (need to add to validator/engine)
+        vm.warp(TIMEOUT_DURATION + 1);
+        engine.end(battleKey);
+
+        // Assert ALICE wins
+        // Expect revert on calling end again
     }
 }

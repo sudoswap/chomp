@@ -26,14 +26,6 @@ contract Engine is IEngine {
     error InvalidBattleConfig();
     error GameAlreadyOver();
 
-    modifier onlyPlayer(bytes32 battleKey) {
-        Battle memory battle = battles[battleKey];
-        if (msg.sender != battle.p0 && msg.sender != battle.p1) {
-            revert NotP0OrP1();
-        }
-        _;
-    }
-
     function getBattle(bytes32 battleKey) external view returns (Battle memory) {
         return battles[battleKey];
     }
@@ -83,9 +75,14 @@ contract Engine is IEngine {
         return battleKey;
     }
 
-    function commitMove(bytes32 battleKey, bytes32 moveHash) external onlyPlayer(battleKey) {
-        Battle memory battle = battles[battleKey];
-        BattleState memory state = battleStates[battleKey];
+    function commitMove(bytes32 battleKey, bytes32 moveHash) external {
+        Battle storage battle = battles[battleKey];
+        BattleState storage state = battleStates[battleKey];
+
+        // only battle participants can commit
+        if (msg.sender != battle.p0 && msg.sender != battle.p1) {
+            revert NotP0OrP1();
+        }
 
         // validate no commitment already exists for this turn
         uint256 turnId = state.turnId;
@@ -117,14 +114,18 @@ contract Engine is IEngine {
 
     function revealMove(bytes32 battleKey, uint256 moveIndex, bytes32 salt, bytes calldata extraData)
         external
-        onlyPlayer(battleKey)
     {
         // validate preimage
-        Commitment memory commitment = commitments[battleKey][msg.sender];
-        Battle memory battle = battles[battleKey];
-        BattleState memory state = battleStates[battleKey];
+        Commitment storage commitment = commitments[battleKey][msg.sender];
+        Battle storage battle = battles[battleKey];
+        BattleState storage state = battleStates[battleKey];
         if (keccak256(abi.encodePacked(moveIndex, salt, extraData)) != commitment.moveHash) {
             revert WrongPreimage();
+        }
+
+        // only battle participants can reveal
+        if (msg.sender != battle.p0 && msg.sender != battle.p1) {
+            revert NotP0OrP1();
         }
 
         // ensure reveal happens after caller commits
@@ -182,6 +183,10 @@ contract Engine is IEngine {
         Battle storage battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
 
+        if (state.winner != address(0)) {
+            revert GameAlreadyOver();
+        }
+
         uint256 turnId = state.turnId;
 
         // If only a single player has a move to submit, then we don't trigger any effects
@@ -226,8 +231,8 @@ contract Engine is IEngine {
         else {
             // Validate both moves have been revealed for the current turn
             // (accessing the values will revert if they haven't been set)
-            RevealedMove memory p0Move = battleStates[battleKey].moveHistory[0][turnId];
-            RevealedMove memory p1Move = battleStates[battleKey].moveHistory[1][turnId];
+            RevealedMove storage p0Move = battleStates[battleKey].moveHistory[0][turnId];
+            RevealedMove storage p1Move = battleStates[battleKey].moveHistory[1][turnId];
 
             // Update the PRNG hash to include the newest value
             uint256 rng = uint256(keccak256(abi.encode(p0Move.salt, p1Move.salt, blockhash(block.number - 1))));
@@ -319,9 +324,9 @@ contract Engine is IEngine {
         internal
         returns (uint256 playerSwitchForTurnFlag, address gameResult, bool executedRoundEndEffects)
     {
-        Battle memory battle = battles[battleKey];
+        Battle storage battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
-        uint256 otherPlayerIndex = priorityPlayerIndex + 1 % 2;
+        uint256 otherPlayerIndex = (priorityPlayerIndex + 1) % 2;
 
         bool isPriorityPlayerActiveMonKnockedOut =
             state.monStates[priorityPlayerIndex][state.activeMonIndex[priorityPlayerIndex]].isKnockedOut;
@@ -366,7 +371,7 @@ contract Engine is IEngine {
     function _handleSwitch(bytes32 battleKey, uint256 playerIndex) internal {
         BattleState storage state = battleStates[battleKey];
         uint256 turnId = state.turnId;
-        RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
+        RevealedMove storage move = state.moveHistory[playerIndex][turnId];
         uint256 monToSwitchIndex = abi.decode(move.extraData, (uint256));
         MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
         IEffect[] storage effects = currentMonState.targetedEffects;
@@ -400,10 +405,10 @@ contract Engine is IEngine {
     }
 
     function _handlePlayerMove(bytes32 battleKey, uint256 rng, uint256 playerIndex) internal {
-        Battle memory battle = battles[battleKey];
+        Battle storage battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
         uint256 turnId = state.turnId;
-        RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
+        RevealedMove storage move = battleStates[battleKey].moveHistory[playerIndex][turnId];
         IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex];
 
         // handle a switch, a no-op, or execute the moveset
@@ -508,6 +513,17 @@ contract Engine is IEngine {
     }
 
     function end(bytes32 battleKey) external {
-        // TODO: resolve liveness issues to forcibly end games
+        BattleState storage state = battleStates[battleKey];
+        Battle storage battle = battles[battleKey];
+        if (state.winner != address(0)) {
+            revert GameAlreadyOver();
+        }
+        for (uint i; i < 2; ++i) {
+            address afkResult = battle.validator.validateTimeout(battleKey, i);
+            if (afkResult != address(0)) {
+                state.winner = afkResult;
+                return;
+            }
+        }
     }
 }

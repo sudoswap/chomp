@@ -46,6 +46,10 @@ contract Engine is IEngine {
         return globalKV[battleKey][key];
     }
 
+    function getCommitment(bytes32 battleKey, address player) external view returns (Commitment memory) {
+        return commitments[battleKey][player];
+    }
+
     function start(Battle calldata battle) external returns (bytes32) {
         // validate battle
         if (!battle.validator.validateGameStart(battle, msg.sender)) {
@@ -86,7 +90,7 @@ contract Engine is IEngine {
         // validate no commitment already exists for this turn
         uint256 turnId = state.turnId;
 
-        // if it's the zeroth turn, require that no hash is set
+        // if it's the zeroth turn, require that no hash is set for the player
         if (turnId == 0) {
             if (commitments[battleKey][msg.sender].moveHash != bytes32(0)) {
                 revert AlreadyCommited();
@@ -141,8 +145,17 @@ contract Engine is IEngine {
                 otherPlayer = battle.p0;
                 currentPlayerIndex = 1;
             }
-            if (commitments[battleKey][otherPlayer].turnId != state.turnId) {
-                revert RevealBeforeOtherCommit();
+            // if it's not the zeroth turn, make sure that player cannot reveal until other player has committed
+            if (state.turnId != 0) {
+                if (commitments[battleKey][otherPlayer].turnId != state.turnId) {
+                    revert RevealBeforeOtherCommit();
+                }
+            }
+            // if it is the zeroth turn, do the same check, but check moveHash instead of turnId
+            else {
+                if (commitments[battleKey][otherPlayer].moveHash == bytes32(0)) {
+                    revert RevealBeforeOtherCommit();
+                }
             }
         }
 

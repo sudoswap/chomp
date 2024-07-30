@@ -9,20 +9,22 @@ import "./Constants.sol";
 import {IEngine} from "./IEngine.sol";
 
 contract DefaultValidator is IValidator {
-
     struct Args {
         uint256 MONS_PER_TEAM;
         uint256 MOVES_PER_MON;
+        uint256 TIMEOUT_DURATION;
     }
 
     uint256 immutable MONS_PER_TEAM;
     uint256 immutable MOVES_PER_MON;
+    uint256 immutable TIMEOUT_DURATION;
     IEngine immutable ENGINE;
 
     constructor(IEngine _ENGINE, Args memory args) {
         ENGINE = _ENGINE;
         MONS_PER_TEAM = args.MONS_PER_TEAM;
         MOVES_PER_MON = args.MOVES_PER_MON;
+        TIMEOUT_DURATION = args.TIMEOUT_DURATION;
     }
 
     // Validates that e.g. there are 6 mons per team w/ 4 moves each
@@ -88,6 +90,7 @@ contract DefaultValidator is IValidator {
             return true;
         }
         // If it is a switch move, then it's valid as long as the new mon isn't knocked out
+        // AND if the new mon isn't the same index as the existing mon
         else if (moveIndex == SWITCH_MOVE_INDEX) {
             uint256 monToSwitchIndex = abi.decode(extraData, (uint256));
             if (monToSwitchIndex >= MONS_PER_TEAM) {
@@ -96,6 +99,13 @@ contract DefaultValidator is IValidator {
             bool isNewMonKnockedOut = state.monStates[playerIndex][monToSwitchIndex].isKnockedOut;
             if (isNewMonKnockedOut) {
                 return false;
+            }
+            // If it's not the zeroth turn, we cannot switch to the same mon
+            // (exception for zeroth turn because we have not initiated a swap yet, so index 0 is fine)
+            if (state.turnId != 0) {
+                if (monToSwitchIndex == state.activeMonIndex[playerIndex]) {
+                    return false;
+                }
             }
             return true;
         }
@@ -183,6 +193,40 @@ contract DefaultValidator is IValidator {
                 }
             }
         }
+        return address(0);
+    }
+
+    // TODO:
+    // A timeout is valid if
+    // - player A commits to a move but can't reveal it (because it's invalid)
+    // - player B has both committed and revealed a move
+    // - enough time has passed (player A loses due to timeout)
+    // - OR
+    // - player A does not commit to a move
+    // - player B has committed to a move
+    // - enough time has passed (player A loses due to timeout)
+    function validateTimeout(bytes32 battleKey, uint256 presumedAFKPlayerIndex) external view returns (address) {
+        BattleState memory state = ENGINE.getBattleState(battleKey);
+
+        uint256 presumedHonestPlayerIndex = presumedAFKPlayerIndex + 1 % 2;
+
+        // If the presumed honest player has more revealed moves than the afk player, then
+        // the honest player has revealed a move while the afk player as not
+        // If it has been more than TIMEOUT_DURATION seconds since the honest player's commitment
+        // then the honest player wins
+
+        // i think we can just check the commitments as well? (ah for the second one we can)
+        // if the commitment turn ids are diff, then just check for timeout
+
+        RevealedMove[] memory movesPresumedAFKPlayerRevealed = state.moveHistory[presumedAFKPlayerIndex];
+        RevealedMove[] memory movesPresumedHonestPlayerRevealed = state.moveHistory[presumedHonestPlayerIndex];
+
+        if (movesPresumedHonestPlayerRevealed.length > movesPresumedAFKPlayerRevealed.length) {
+            
+        }
+
+        // If both players have 
+
         return address(0);
     }
 }

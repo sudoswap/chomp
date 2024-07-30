@@ -29,7 +29,9 @@ contract GameTest is Test {
 
     function setUp() public {
         engine = new Engine();
-        validator = new DefaultValidator(engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1}));
+        validator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: 100})
+        );
         typeCalc = new TypeCalculator();
         dummyAttack = new CustomAttack(
             engine,
@@ -103,8 +105,18 @@ contract GameTest is Test {
         _startDummyBattle();
     }
 
+    /*
+        Tests the following behaviors:
+        - battle creation does not revert
+        - cannot reveal before other player has committed
+        - cannot reveal before commit
+        - cannot reveal correct preimage, invalid due to validator
+        - cannot reveal incorrect preimage
+        - cannot commit twice
+        - cannot execute without both reveals
+        - cannot commit new move, even after committing/revealing existing move if execute is not called
+    */
     function test_canStartBattleMustChooseSwap() public {
-
         bytes32 battleKey = _startDummyBattle();
 
         // Let Alice commit to choosing switch
@@ -116,20 +128,44 @@ contract GameTest is Test {
 
         // Ensure Alice cannot reveal yet because Bob has not committed
         vm.expectRevert(Engine.RevealBeforeOtherCommit.selector);
+        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
 
-        // TODO: fix for turn zero move selections
+        // Ensure Bob cannot reveal before choosing a move
+        // (on turn 0, this will be a Wrong Preimage error as finding the hash to bytes32(0) is intractable)
+        vm.startPrank(BOB);
+        vm.expectRevert(Engine.WrongPreimage.selector);
         engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
 
         // Let Bob commit to choosing move index of 0 instead
         uint256 moveIndex = 0;
         moveHash = keccak256(abi.encodePacked(moveIndex, salt, ""));
-        vm.startPrank(BOB);
         engine.commitMove(battleKey, moveHash);
 
-        // Ensure that Bob cannot reveal because validation will fail
+        // Ensure that Bob cannot reveal correctly because validation will fail
+        // (move index MUST be SWITCH_INDEX on turn 0)
+        vm.expectRevert(Engine.InvalidMove.selector);
+        engine.revealMove(battleKey, moveIndex, salt, "");
+
+        // Ensure that Bob cannot reveal incorrectly because the preimage will fail
+        vm.expectRevert(Engine.WrongPreimage.selector);
+        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
 
         // Ensure that Bob cannot re-commit because he has already committed
+        vm.expectRevert(Engine.AlreadyCommited.selector);
+        engine.commitMove(battleKey, moveHash);
 
         // Check that Alice can still reveal
+        vm.startPrank(ALICE);
+        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+
+        // Ensure that execute cannot proceed
+        vm.expectRevert();
+        engine.execute(battleKey);
+
+        // Check that Alice cannot commit a new move
+        vm.expectRevert(Engine.AlreadyCommited.selector);
+        engine.commitMove(battleKey, moveHash);
+
+        // TODO: check that timeout succeeds (need to add to validator/engine)
     }
 }

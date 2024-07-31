@@ -409,7 +409,6 @@ contract Engine is IEngine {
         BattleState storage state = battleStates[battleKey];
         uint256 turnId = state.turnId;
         RevealedMove storage move = battleStates[battleKey].moveHistory[playerIndex][turnId];
-        IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex];
 
         // handle a switch, a no-op, or execute the moveset
         if (move.moveIndex == SWITCH_MOVE_INDEX) {
@@ -419,6 +418,7 @@ contract Engine is IEngine {
         }
         // Execute the move and then set updated state, active mons, and effects/data
         else {
+            IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex];
             (
                 MonState[][] memory monStates,
                 uint256[] memory activeMons,
@@ -475,7 +475,6 @@ contract Engine is IEngine {
         BattleState storage state = battleStates[battleKey];
         IEffect[] storage effects;
         bytes[] storage extraData;
-
         // Switch between global or targeted effects array
         if (targetIndex == 2) {
             effects = state.globalEffects;

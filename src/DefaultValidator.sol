@@ -15,6 +15,8 @@ contract DefaultValidator is IValidator {
         uint256 TIMEOUT_DURATION;
     }
 
+    uint256 constant SWITCH_PRIORITY = 6;
+
     uint256 immutable MONS_PER_TEAM;
     uint256 immutable MOVES_PER_MON;
     uint256 immutable TIMEOUT_DURATION;
@@ -135,10 +137,27 @@ contract DefaultValidator is IValidator {
         RevealedMove memory p0Move = state.moveHistory[0][state.turnId];
         RevealedMove memory p1Move = state.moveHistory[1][state.turnId];
 
-        IMoveSet p0MoveSet = b.teams[0][state.activeMonIndex[0]].moves[p0Move.moveIndex];
-        uint256 p0Priority = p0MoveSet.priority(battleKey);
-        IMoveSet p1MoveSet = b.teams[1][state.activeMonIndex[1]].moves[p1Move.moveIndex];
-        uint256 p1Priority = p1MoveSet.priority(battleKey);
+        uint256 p0Priority;
+        uint256 p1Priority;
+
+        // Call the move for its priority, unless it's the switch or no op move index
+        { 
+            if (p0Move.moveIndex == SWITCH_MOVE_INDEX || p0Move.moveIndex == NO_OP_MOVE_INDEX) {
+                p0Priority = SWITCH_PRIORITY;
+            }
+            else {
+                IMoveSet p0MoveSet = b.teams[0][state.activeMonIndex[0]].moves[p0Move.moveIndex];
+                p0Priority = p0MoveSet.priority(battleKey);
+            }
+
+            if (p1Move.moveIndex == SWITCH_MOVE_INDEX || p1Move.moveIndex == NO_OP_MOVE_INDEX) {
+                p1Priority = SWITCH_PRIORITY;
+            }
+            else {
+                IMoveSet p1MoveSet = b.teams[1][state.activeMonIndex[1]].moves[p1Move.moveIndex];
+                p1Priority = p1MoveSet.priority(battleKey);
+            }
+        }
 
         // Determine priority based on (in descending order of importance):
         // - the higher priority tier

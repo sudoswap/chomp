@@ -31,7 +31,7 @@ contract GameTest is Test {
     function setUp() public {
         engine = new Engine();
         validator = new DefaultValidator(
-            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION })
         );
         typeCalc = new TypeCalculator();
         dummyAttack = new CustomAttack(
@@ -182,5 +182,30 @@ contract GameTest is Test {
         // Expect revert on calling execute again
         vm.expectRevert(Engine.GameAlreadyOver.selector);
         engine.end(battleKey);
+    }
+
+    function test_canStartBattleBothPlayersNoOpAfterSwap() public {
+
+        bytes32 battleKey = _startDummyBattle();
+
+        // Let Alice commit to choosing switch
+        bytes32 salt = "";
+        bytes memory extraData = abi.encode(0);
+        bytes32 moveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, extraData));
+        vm.startPrank(ALICE);
+        engine.commitMove(battleKey, moveHash);
+
+        // Let Bob commit to choosing switch as well
+        vm.startPrank(BOB);
+        engine.commitMove(battleKey, moveHash);
+
+        // Let Alice and Bob both confirm
+        vm.startPrank(ALICE);
+        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+        vm.startPrank(BOB);
+        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+
+        // Advance game state
+        engine.execute(battleKey);
     }
 }

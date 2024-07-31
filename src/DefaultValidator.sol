@@ -141,19 +141,17 @@ contract DefaultValidator is IValidator {
         uint256 p1Priority;
 
         // Call the move for its priority, unless it's the switch or no op move index
-        { 
+        {
             if (p0Move.moveIndex == SWITCH_MOVE_INDEX || p0Move.moveIndex == NO_OP_MOVE_INDEX) {
                 p0Priority = SWITCH_PRIORITY;
-            }
-            else {
+            } else {
                 IMoveSet p0MoveSet = b.teams[0][state.activeMonIndex[0]].moves[p0Move.moveIndex];
                 p0Priority = p0MoveSet.priority(battleKey);
             }
 
             if (p1Move.moveIndex == SWITCH_MOVE_INDEX || p1Move.moveIndex == NO_OP_MOVE_INDEX) {
                 p1Priority = SWITCH_PRIORITY;
-            }
-            else {
+            } else {
                 IMoveSet p1MoveSet = b.teams[1][state.activeMonIndex[1]].moves[p1Move.moveIndex];
                 p1Priority = p1MoveSet.priority(battleKey);
             }
@@ -235,8 +233,7 @@ contract DefaultValidator is IValidator {
         if (presumedHonestPlayerIndex == 0) {
             presumedHonestPlayer = b.p0;
             presumedAFKPlayer = b.p1;
-        }
-        else {
+        } else {
             presumedHonestPlayer = b.p1;
             presumedAFKPlayer = b.p0;
         }
@@ -244,7 +241,6 @@ contract DefaultValidator is IValidator {
 
         // If it's been enough to check for a TIMEOUT (otherwise we don't bother at all):
         if (presumedHonestPlayerCommitment.timestamp + TIMEOUT_DURATION <= block.timestamp) {
-
             // If the honest player has revealed more moves than the afk player, then the honest player wins
             RevealedMove[] memory movesPresumedAFKPlayerRevealed = state.moveHistory[presumedAFKPlayerIndex];
             RevealedMove[] memory movesPresumedHonestPlayerRevealed = state.moveHistory[presumedHonestPlayerIndex];
@@ -255,13 +251,12 @@ contract DefaultValidator is IValidator {
 
             // If the honest player has a commitment that is ahead of the afk player (but the revealed moves are the same)
             Commitment memory presumedAFKPlayerCommitment = ENGINE.getCommitment(battleKey, presumedAFKPlayer);
-            
+
             if (presumedHonestPlayerCommitment.turnId > presumedAFKPlayerCommitment.turnId) {
                 return presumedHonestPlayer;
             }
             return address(0);
-        }
-        else {
+        } else {
             return address(0);
         }
     }

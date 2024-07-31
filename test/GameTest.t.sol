@@ -31,7 +31,7 @@ contract GameTest is Test {
     function setUp() public {
         engine = new Engine();
         validator = new DefaultValidator(
-            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION })
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
         typeCalc = new TypeCalculator();
         dummyAttack = new CustomAttack(
@@ -61,7 +61,7 @@ contract GameTest is Test {
      * - 2 players can start a battle
      *     - both players need to select a swap as their first move
      *
-     * Battle initiated, MUST select swap [ ]
+     * Battle initiated, MUST select swap [x]
      * - 2 players can start a battle
      *     - after selecting mons
      *     - both players can call no op
@@ -102,6 +102,27 @@ contract GameTest is Test {
         Battle memory dummyBattle = Battle({p0: ALICE, p1: BOB, validator: validator, teams: dummyTeams});
         vm.startPrank(ALICE);
         return engine.start(dummyBattle);
+    }
+
+    function _commitAndRevealForAliceAndBob(
+        bytes32 battleKey,
+        uint256 aliceMoveIndex,
+        uint256 bobMoveIndex,
+        bytes memory aliceExtraData,
+        bytes memory bobExtraData
+    ) internal {
+        bytes32 salt = "";
+        bytes memory extraData = "";
+        bytes32 aliceMoveHash = keccak256(abi.encodePacked(aliceMoveIndex, salt, aliceExtraData));
+        bytes32 bobMoveHash = keccak256(abi.encodePacked(aliceMoveIndex, salt, bobExtraData));
+        vm.startPrank(ALICE);
+        engine.commitMove(battleKey, aliceMoveHash);
+        vm.startPrank(BOB);
+        engine.commitMove(battleKey, bobMoveHash);
+        vm.startPrank(ALICE);
+        engine.revealMove(battleKey, aliceMoveIndex, salt, aliceExtraData);
+        vm.startPrank(BOB);
+        engine.revealMove(battleKey, bobMoveIndex, salt, bobExtraData);
     }
 
     function test_canStartBattle() public {
@@ -187,7 +208,6 @@ contract GameTest is Test {
     }
 
     function test_canStartBattleBothPlayersNoOpAfterSwap() public {
-
         bytes32 battleKey = _startDummyBattle();
 
         // Let Alice commit to choosing switch
@@ -230,5 +250,62 @@ contract GameTest is Test {
         // Turn ID should now be 2
         BattleState memory state = engine.getBattleState(battleKey);
         assertEq(state.turnId, 2);
+    }
+
+    function test_FasterSpeedKOs() public {
+
+        // Initialize fast and slow mons
+        IMoveSet normalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 0, PRIORITY: 0})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = normalAttack;
+        Mon memory fastMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+        Mon memory slowMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 1,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory fastTeam = new Mon[](1);
+        fastTeam[0] = fastMon;
+        Mon[] memory slowTeam = new Mon[](1);
+        slowTeam[0] = slowMon;
+        teams[0] = fastTeam;
+        teams[1] = slowTeam;
+        Battle memory battle = Battle({p0: ALICE, p1: BOB, validator: validator, teams: teams});
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitAndRevealForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0));
+
+        // Advance game state
+        engine.execute(battleKey);
+
+        // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
+        // (Alice should win because her mon is faster)
+        _commitAndRevealForAliceAndBob(battleKey, 0, 0, "", "");
     }
 }

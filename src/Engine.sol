@@ -112,9 +112,7 @@ contract Engine is IEngine {
             Commitment({moveHash: moveHash, turnId: turnId, timestamp: block.timestamp});
     }
 
-    function revealMove(bytes32 battleKey, uint256 moveIndex, bytes32 salt, bytes calldata extraData)
-        external
-    {
+    function revealMove(bytes32 battleKey, uint256 moveIndex, bytes32 salt, bytes calldata extraData) external {
         // validate preimage
         Commitment storage commitment = commitments[battleKey][msg.sender];
         Battle storage battle = battles[battleKey];
@@ -517,7 +515,7 @@ contract Engine is IEngine {
         if (state.winner != address(0)) {
             revert GameAlreadyOver();
         }
-        for (uint i; i < 2; ++i) {
+        for (uint256 i; i < 2; ++i) {
             address afkResult = battle.validator.validateTimeout(battleKey, i);
             if (afkResult != address(0)) {
                 state.winner = afkResult;

@@ -38,7 +38,7 @@ abstract contract AttackCalculator {
 
         // Accuracy check short circuit
         uint256 accuracyCheck = rng % 100;
-        if (accuracyCheck > accuracy) {
+        if (accuracyCheck >= (100 - accuracy)) {
             return (state.monStates, state.activeMonIndex, emptyEffects, emptyData, "", "");
         }
 

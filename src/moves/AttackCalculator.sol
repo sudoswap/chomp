@@ -27,18 +27,13 @@ abstract contract AttackCalculator {
         Type attackType,
         AttackSupertype attackSupertype,
         uint256 rng
-    )
-        public
-        view
-        returns (MonState[][] memory, uint256[] memory, IEffect[][] memory, bytes[][] memory, bytes32, bytes32)
-    {
+    ) public returns (MonState[][] memory, uint256[] memory, IEffect[][] memory, bytes[][] memory, bytes32, bytes32) {
         BattleState memory state = ENGINE.getBattleState(battleKey);
         IEffect[][] memory emptyEffects = new IEffect[][](0);
         bytes[][] memory emptyData = new bytes[][](0);
 
-        // Accuracy check short circuit
-        uint256 accuracyCheck = rng % 100;
-        if (accuracyCheck >= (100 - accuracy)) {
+        // Do accuracy check first to decide whether or not to short circuit
+        if ((rng % 100) >= accuracy) {
             return (state.monStates, state.activeMonIndex, emptyEffects, emptyData, "", "");
         }
 
@@ -97,6 +92,6 @@ abstract contract AttackCalculator {
             updatedStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].isKnockedOut = true;
         }
 
-        return (state.monStates, state.activeMonIndex, emptyEffects, emptyData, "", "");
+        return (updatedStates, state.activeMonIndex, emptyEffects, emptyData, "", "");
     }
 }

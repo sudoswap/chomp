@@ -57,6 +57,8 @@ contract GameTest is Test {
     }
 
     /**
+     * Tests:
+     *
      * Battle initiated, stored to state [x]
      * - 2 players can start a battle
      *     - both players need to select a swap as their first move
@@ -123,6 +125,7 @@ contract GameTest is Test {
         engine.revealMove(battleKey, aliceMoveIndex, salt, aliceExtraData);
         vm.startPrank(BOB);
         engine.revealMove(battleKey, bobMoveIndex, salt, bobExtraData);
+        engine.execute(battleKey);
     }
 
     function test_canStartBattle() public {
@@ -253,7 +256,6 @@ contract GameTest is Test {
     }
 
     function test_FasterSpeedKOs() public {
-
         // Initialize fast and slow mons
         IMoveSet normalAttack = new CustomAttack(
             engine,
@@ -301,11 +303,12 @@ contract GameTest is Test {
         // First move of the game has to be selecting their mons (both index 0)
         _commitAndRevealForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0));
 
-        // Advance game state
-        engine.execute(battleKey);
-
         // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
         // (Alice should win because her mon is faster)
         _commitAndRevealForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Assert Alice wins
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, ALICE);
     }
 }

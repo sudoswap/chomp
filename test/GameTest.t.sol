@@ -88,6 +88,8 @@ contract GameTest is Test {
      *     - if player1 only has 1 mon, it should be game over
      *
      * - Execute reverts if game is already over [x]
+     *
+     * - Global Stamina Recovery effect works as expected [ ]
      */
 
     // Helper function, creates a battle with two mons for Alice and Bob
@@ -199,7 +201,7 @@ contract GameTest is Test {
         vm.startPrank(BOB);
         engine.commitMove(battleKey, moveHash);
 
-        // Let Alice and Bob both confirm
+        // Let Alice and Bob both reveal
         vm.startPrank(ALICE);
         engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
         vm.startPrank(BOB);
@@ -207,5 +209,26 @@ contract GameTest is Test {
 
         // Advance game state
         engine.execute(battleKey);
+
+        // Let Alice and Bob each commit to a no op
+        extraData = "";
+        moveHash = keccak256(abi.encodePacked(NO_OP_MOVE_INDEX, salt, extraData));
+        vm.startPrank(ALICE);
+        engine.commitMove(battleKey, moveHash);
+        vm.startPrank(BOB);
+        engine.commitMove(battleKey, moveHash);
+
+        // Let Alice and Bob both reveal
+        vm.startPrank(ALICE);
+        engine.revealMove(battleKey, NO_OP_MOVE_INDEX, salt, extraData);
+        vm.startPrank(BOB);
+        engine.revealMove(battleKey, NO_OP_MOVE_INDEX, salt, extraData);
+
+        // Advance game state
+        engine.execute(battleKey);
+
+        // Turn ID should now be 2
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.turnId, 2);
     }
 }

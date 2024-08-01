@@ -168,14 +168,10 @@ contract DefaultValidator is IValidator {
         } else if (p0Priority < p1Priority) {
             return 1;
         } else {
-            uint256 p0MonSpeed = uint256(
-                int256(teams[0][activeMonIndex[0]].speed)
-                    + monStates[0][activeMonIndex[0]].speedDelta
-            );
-            uint256 p1MonSpeed = uint256(
-                int256(teams[1][activeMonIndex[1]].speed)
-                    + monStates[1][activeMonIndex[1]].speedDelta
-            );
+            uint256 p0MonSpeed =
+                uint256(int256(teams[0][activeMonIndex[0]].speed) + monStates[0][activeMonIndex[0]].speedDelta);
+            uint256 p1MonSpeed =
+                uint256(int256(teams[1][activeMonIndex[1]].speed) + monStates[1][activeMonIndex[1]].speedDelta);
             if (p0MonSpeed > p1MonSpeed) {
                 return 0;
             } else if (p0MonSpeed < p1MonSpeed) {

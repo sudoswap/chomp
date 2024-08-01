@@ -1,27 +1,25 @@
-Desired Features Missing:
-
-- add held items to monData (later)
-    - static and triggered
-- add abilities to monData (later)
-    - static and triggered
+Feature thinking:
 
 - make/take model for starting matches (e.g. p1 starts a challenge, p2 can accept)
     - let users specify if they want to be filled against anyone or a specific person
+
+- add held items to monData
+    - static and triggered
+
+- add abilities to monData
+    - static and triggered
 
 - to think about move implementations:
     - tricky moves to use as examples for edge cases:
         - parting shot
         - destiny bond
         - substitute
+        - volt switch
+        - barrier/frost veil
 
----------------------------------------------------------------------
-
-Specific TODOs:
-
-- Create moves/mons so we can start testing
-    - make specific list of moves to implement
-
-- Create mon registry
-    - create some mons
-
-- Create test scaffold to start testing
+    - categorizing move types
+        - normal damaging moves (trade-off between accuracy and damage)
+        - normal damaging move + % to inflict additional effect (status, stat boost, stamina, etc.)
+        - stat boost (2 stages to any one stat) / (1 stage to two stats)
+        - healing (reduced healing over time)
+        - environmental (hazards/weather/etc.)

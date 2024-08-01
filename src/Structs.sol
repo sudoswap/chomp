@@ -4,12 +4,14 @@ pragma solidity ^0.8.0;
 import {IMoveSet} from "./moves/IMoveSet.sol";
 import {IValidator} from "./IValidator.sol";
 import {IEffect} from "./effects/IEffect.sol";
+import {IRandomnessOracle} from "./rng/IRandomnessOracle.sol";
 import {Type} from "./Enums.sol";
 
 struct Battle {
     address p0;
     address p1;
     IValidator validator;
+    IRandomnessOracle rngOracle;
     Mon[][] teams;
 }
 

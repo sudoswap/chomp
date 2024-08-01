@@ -27,47 +27,54 @@ contract Engine is IEngine {
     error GameAlreadyOver();
 
     /**
-     - Getters to simplify read access for other components
+     * - Getters to simplify read access for other components
      */
-
     function getBattle(bytes32 battleKey) external view returns (Battle memory) {
         return battles[battleKey];
     }
-    function getTeamsForBattle(bytes32 battleKey) external view returns (Mon[][] memory){
+
+    function getTeamsForBattle(bytes32 battleKey) external view returns (Mon[][] memory) {
         return battles[battleKey].teams;
     }
+
     function getPlayersForBattle(bytes32 battleKey) external view returns (address[] memory) {
         address[] memory players = new address[](2);
         players[0] = battles[battleKey].p0;
         players[1] = battles[battleKey].p1;
         return players;
     }
+
     function getBattleState(bytes32 battleKey) external view returns (BattleState memory) {
         return battleStates[battleKey];
     }
+
     function getMoveHistoryForBattleState(bytes32 battleKey) external view returns (RevealedMove[][] memory) {
         return battleStates[battleKey].moveHistory;
     }
+
     function getMonStatesForBattleState(bytes32 battleKey) external view returns (MonState[][] memory) {
         return battleStates[battleKey].monStates;
     }
+
     function getTurnIdForBattleState(bytes32 battleKey) external view returns (uint256) {
         return battleStates[battleKey].turnId;
     }
+
     function getActiveMonIndexForBattleState(bytes32 battleKey) external view returns (uint256[] memory) {
         return battleStates[battleKey].activeMonIndex;
     }
+
     function getGlobalKV(bytes32 battleKey, bytes32 key) external view returns (bytes32) {
         return globalKV[battleKey][key];
     }
+
     function getCommitment(bytes32 battleKey, address player) external view returns (Commitment memory) {
         return commitments[battleKey][player];
     }
 
     /**
-     - Core game functions
+     * - Core game functions
      */
-
     function start(Battle calldata battle) external returns (bytes32) {
         // validate battle
         if (!battle.validator.validateGameStart(battle, msg.sender)) {
@@ -98,6 +105,9 @@ contract Engine is IEngine {
             }
         }
 
+        // Set flag to be 2 which means both players act
+        battleStates[battleKey].playerSwitchForTurnFlag = 2;
+
         return battleKey;
     }
 
@@ -126,10 +136,9 @@ contract Engine is IEngine {
         }
 
         // cannot commit if the battle state says it's only for one player
-        uint256 playerSwitchForTurnFlag = state.playerSwitchForTurnFlag;
-        if (playerSwitchForTurnFlag == 1 && msg.sender != battle.p0) {
+        if (state.playerSwitchForTurnFlag == 0 && msg.sender != battle.p0) {
             revert OnlyP0Allowed();
-        } else if (playerSwitchForTurnFlag == 2 && msg.sender != battle.p1) {
+        } else if (state.playerSwitchForTurnFlag == 1 && msg.sender != battle.p1) {
             revert OnlyP1Allowed();
         }
 
@@ -157,19 +166,22 @@ contract Engine is IEngine {
             revert WrongTurnId();
         }
 
-        // ensure reveal happens after opponent commits
-        // (only if it is a turn where both players need to select an action)
         uint256 currentPlayerIndex;
         uint256 otherPlayerIndex;
-        if (state.playerSwitchForTurnFlag == 0) {
-            address otherPlayer;
-            if (msg.sender == battle.p0) {
-                otherPlayer = battle.p1;
-                otherPlayerIndex = 1;
-            } else {
-                otherPlayer = battle.p0;
-                currentPlayerIndex = 1;
-            }
+        address otherPlayer;
+
+        // Set current and other player based on the caller
+        if (msg.sender == battle.p0) {
+            otherPlayer = battle.p1;
+            otherPlayerIndex = 1;
+        } else {
+            otherPlayer = battle.p0;
+            currentPlayerIndex = 1;
+        }
+
+        // ensure reveal happens after opponent commits
+        // (only if it is a turn where both players need to select an action)
+        if (state.playerSwitchForTurnFlag == 2) {
             // if it's not the zeroth turn, make sure that player cannot reveal until other player has committed
             if (state.turnId != 0) {
                 if (commitments[battleKey][otherPlayer].turnId != state.turnId) {
@@ -196,7 +208,7 @@ contract Engine is IEngine {
         );
 
         // store empty move for other player if it's a turn where only a single player has to make a move
-        if (state.playerSwitchForTurnFlag == 1 || state.playerSwitchForTurnFlag == 2) {
+        if (state.playerSwitchForTurnFlag == 0 || state.playerSwitchForTurnFlag == 1) {
             battleStates[battleKey].moveHistory[otherPlayerIndex].push(
                 RevealedMove({moveIndex: NO_OP_MOVE_INDEX, salt: "", extraData: ""})
             );
@@ -215,20 +227,24 @@ contract Engine is IEngine {
 
         // If only a single player has a move to submit, then we don't trigger any effects
         // (Basically this only handles switching mons for now)
-        if (state.playerSwitchForTurnFlag == 1 || state.playerSwitchForTurnFlag == 2) {
+        if (state.playerSwitchForTurnFlag == 0 || state.playerSwitchForTurnFlag == 1) {
             // Push 0 to rng stream as only single player is switching, to keep in line with turnId
             state.pRNGStream.push(0);
 
-            // Get the player index (offset the switchForTurnFlag value by one)
-            uint256 playerIndex = state.playerSwitchForTurnFlag - 1;
+            // Get the player index that needs to switch for this turn
+            uint256 playerIndex = state.playerSwitchForTurnFlag;
             RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
 
+            // Handle switching as a privileged move
             if (move.moveIndex == SWITCH_MOVE_INDEX) {
                 _handleSwitch(battleKey, playerIndex);
             }
 
             // Progress turn index
             state.turnId += 1;
+
+            // Return control flow to both players
+            state.playerSwitchForTurnFlag = 2;
         }
         // Otherwise, we need to run priority calculations and update the game state for both players
         /*
@@ -259,7 +275,7 @@ contract Engine is IEngine {
             RevealedMove storage p1Move = battleStates[battleKey].moveHistory[1][turnId];
 
             // Update the PRNG hash to include the newest value
-            uint256 rng = uint256(keccak256(abi.encode(p0Move.salt, p1Move.salt, blockhash(block.number - 1))));
+            uint256 rng = battle.rngOracle.getRNG(p0Move.salt, p1Move.salt);
             state.pRNGStream.push(rng);
 
             // Calculate the priority and non-priority player indices
@@ -344,7 +360,6 @@ contract Engine is IEngine {
         }
     }
 
-
     function end(bytes32 battleKey) external {
         BattleState storage state = battleStates[battleKey];
         Battle storage battle = battles[battleKey];
@@ -361,9 +376,8 @@ contract Engine is IEngine {
     }
 
     /**
-     - Internal helper functions for execute()
+     * - Internal helper functions for execute()
      */
-
     function _checkForKnockoutAndAdvanceIfNeeded(bytes32 battleKey, uint256 priorityPlayerIndex, uint256 rng)
         internal
         returns (uint256 playerSwitchForTurnFlag, address gameResult, bool executedRoundEndEffects)
@@ -405,9 +419,9 @@ contract Engine is IEngine {
             }
             // If there was still just one knockout, we set the correct playerSwitchForTurnFlag value (shift player index up by 1)
             if (isPriorityPlayerActiveMonKnockedOut) {
-                playerSwitchForTurnFlag = priorityPlayerIndex + 1;
+                playerSwitchForTurnFlag = priorityPlayerIndex;
             } else if (isNonPriorityPlayerActiveMonKnockedOut) {
-                playerSwitchForTurnFlag = otherPlayerIndex + 1;
+                playerSwitchForTurnFlag = otherPlayerIndex;
             }
         }
     }

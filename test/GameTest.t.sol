@@ -11,6 +11,8 @@ import {IValidator} from "../src/IValidator.sol";
 import {DefaultValidator} from "../src/DefaultValidator.sol";
 import {Engine} from "../src/Engine.sol";
 
+import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
+
 import {TypeCalculator} from "../src/types/TypeCalculator.sol";
 
 import {CustomAttack} from "../src/moves/CustomAttack.sol";
@@ -20,6 +22,7 @@ contract GameTest is Test {
     Engine engine;
     DefaultValidator validator;
     TypeCalculator typeCalc;
+    DefaultRandomnessOracle defaultOracle;
 
     address constant ALICE = address(1);
     address constant BOB = address(2);
@@ -29,6 +32,7 @@ contract GameTest is Test {
     IMoveSet dummyAttack;
 
     function setUp() public {
+        defaultOracle = new DefaultRandomnessOracle();
         engine = new Engine();
         validator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
@@ -58,40 +62,17 @@ contract GameTest is Test {
 
     /**
      * Tests:
-     *
      * Battle initiated, stored to state [x]
-     * - 2 players can start a battle
-     *     - both players need to select a swap as their first move
-     *
      * Battle initiated, MUST select swap [x]
-     * - 2 players can start a battle
-     *     - after selecting mons
-     *     - both players can call no op
-     *     - turn should advance to count 2
-     *
-     * (for both p0 and p1)
-     *
-     * Faster Speed Wins KO/No-KO [ ]
-     * - 2 players can start a battle
-     *     - after selecting mons
-     *     - player0's mon should move faster than player 1's mon if it's speedier
-     *     - player0's mon should do damage (assume KO)
-     *     - player1's mon should not do damage
-     *     - if player1 only has 1 mon, it should be game over
-     *
-     * Faster Priority Wins KO/No-KO [ ]
-     * - 2 players can start a battle
-     *     - after selecting mons
-     *     - player0's mon should move faster than player 1's mon if it's higher priority
-     *     (regardless of p0 mon vs p1 mon speed)
-     *
-     *     - player0's mon should do damage (assume KO)
-     *     - player1's mon should not do damage
-     *     - if player1 only has 1 mon, it should be game over
-     *
-     * - Execute reverts if game is already over [x]
-     *
-     * - Global Stamina Recovery effect works as expected [ ]
+     * Faster Speed Wins KO, leads to game over if team size = 1 [x]
+     * Faster Speed Wins KO, leads to forced switch if team size is >= 2 [ ]
+     * Faster Priority Wins KO, leads to game over if team size = 1 [x]
+     * Faster Priority Wins KO, leads to forced switch if team size is >= 2 [ ]
+     * Execute reverts if game is already over [x]
+     * Global Stamina Recovery effect works as expected [ ]
+     * Accuracy works as expected (i.e. controls damage or no damage) [ ]
+     * Stamina works as expected (i.e. controls whether or not a move can be used, deltas are updated) [ ]
+     * Effects work as expected (create a damage over time effect, check that Effect can KO) [ ]
      */
 
     // Helper function, creates a battle with two mons for Alice and Bob
@@ -101,12 +82,13 @@ contract GameTest is Test {
         dummyTeam[0] = dummyMon;
         dummyTeams[0] = dummyTeam;
         dummyTeams[1] = dummyTeam;
-        Battle memory dummyBattle = Battle({p0: ALICE, p1: BOB, validator: validator, teams: dummyTeams});
+        Battle memory dummyBattle =
+            Battle({p0: ALICE, p1: BOB, validator: validator, teams: dummyTeams, rngOracle: defaultOracle});
         vm.startPrank(ALICE);
         return engine.start(dummyBattle);
     }
 
-    function _commitAndRevealForAliceAndBob(
+    function _commitRevealExecuteForAliceAndBob(
         bytes32 battleKey,
         uint256 aliceMoveIndex,
         uint256 bobMoveIndex,
@@ -114,7 +96,6 @@ contract GameTest is Test {
         bytes memory bobExtraData
     ) internal {
         bytes32 salt = "";
-        bytes memory extraData = "";
         bytes32 aliceMoveHash = keccak256(abi.encodePacked(aliceMoveIndex, salt, aliceExtraData));
         bytes32 bobMoveHash = keccak256(abi.encodePacked(aliceMoveIndex, salt, bobExtraData));
         vm.startPrank(ALICE);
@@ -255,12 +236,12 @@ contract GameTest is Test {
         assertEq(state.turnId, 2);
     }
 
-    function test_FasterSpeedKOs() public {
+    function test_FasterSpeedKOsGameOver() public {
         // Initialize fast and slow mons
         IMoveSet normalAttack = new CustomAttack(
             engine,
             typeCalc,
-            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 0, PRIORITY: 0})
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 0})
         );
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
@@ -295,20 +276,219 @@ contract GameTest is Test {
         slowTeam[0] = slowMon;
         teams[0] = fastTeam;
         teams[1] = slowTeam;
-        Battle memory battle = Battle({p0: ALICE, p1: BOB, validator: validator, teams: teams});
+        Battle memory battle =
+            Battle({p0: ALICE, p1: BOB, validator: validator, teams: teams, rngOracle: defaultOracle});
 
         vm.startPrank(ALICE);
         bytes32 battleKey = engine.start(battle);
 
         // First move of the game has to be selecting their mons (both index 0)
-        _commitAndRevealForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0));
+        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0));
 
         // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
         // (Alice should win because her mon is faster)
-        _commitAndRevealForAliceAndBob(battleKey, 0, 0, "", "");
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
 
         // Assert Alice wins
         BattleState memory state = engine.getBattleState(battleKey);
         assertEq(state.winner, ALICE);
+
+        // Assert that the staminaDelta was set correctly
+        assertEq(state.monStates[0][0].staminaDelta, -1);
+    }
+
+    function test_FasterPriorityKOsGameOver() public {
+        // Initialize fast and slow mons
+        IMoveSet slowAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 0})
+        );
+        IMoveSet fastAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        IMoveSet[] memory slowMoves = new IMoveSet[](1);
+        slowMoves[0] = slowAttack;
+        IMoveSet[] memory fastMoves = new IMoveSet[](1);
+        fastMoves[0] = fastAttack;
+        Mon memory fastMon = Mon({
+            hp: 10,
+            stamina: 2,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: slowMoves
+        });
+        Mon memory slowMon = Mon({
+            hp: 10,
+            stamina: 2,
+            speed: 1,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: fastMoves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory fastTeam = new Mon[](1);
+        fastTeam[0] = fastMon;
+        Mon[] memory slowTeam = new Mon[](1);
+        slowTeam[0] = slowMon;
+        teams[0] = fastTeam;
+        teams[1] = slowTeam;
+        Battle memory battle =
+            Battle({p0: ALICE, p1: BOB, validator: validator, teams: teams, rngOracle: defaultOracle});
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0));
+
+        // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Assert Bob wins as he has faster priority on a slower mon
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, BOB);
+
+        // Assert that the staminaDelta was set correctly for Bob's mon
+        assertEq(state.monStates[1][0].staminaDelta, -1);
+    }
+
+    // Will be used to check that we correctly force a switch
+    // if we knock out a mon (with higher priority), and there are mons remaining
+    // End result is it Bob in the lead with 2 mons vs 1 mon for Alice
+    function _setup2v2FasterPriorityBattle() internal returns (bytes32) {
+        // Initialize fast and slow mons
+        IMoveSet slowAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 0})
+        );
+        IMoveSet fastAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        IMoveSet[] memory slowMoves = new IMoveSet[](1);
+        slowMoves[0] = slowAttack;
+        IMoveSet[] memory fastMoves = new IMoveSet[](1);
+        fastMoves[0] = fastAttack;
+        Mon memory fastMon = Mon({
+            hp: 10,
+            stamina: 2,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: slowMoves
+        });
+        Mon memory slowMon = Mon({
+            hp: 10,
+            stamina: 2,
+            speed: 1,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: fastMoves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory fastTeam = new Mon[](2);
+        fastTeam[0] = fastMon;
+        fastTeam[1] = fastMon;
+        Mon[] memory slowTeam = new Mon[](2);
+        slowTeam[0] = slowMon;
+        slowTeam[1] = slowMon;
+        teams[0] = fastTeam;
+        teams[1] = slowTeam;
+
+        DefaultValidator twoMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        Battle memory battle =
+            Battle({p0: ALICE, p1: BOB, validator: twoMonValidator, teams: teams, rngOracle: defaultOracle});
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0));
+
+        // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        return battleKey;
+    }
+
+    function test_FasterPriorityKOsForcesSwitch() public {
+        bytes32 battleKey = _setup2v2FasterPriorityBattle();
+
+        // Check that Alice (p0) now has the playerSwitch flag set
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.playerSwitchForTurnFlag, 0);
+
+        // Alice now switches to mon index 1, Bob does not choose
+        vm.startPrank(ALICE);
+        bytes32 aliceMoveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, bytes32(""), abi.encode(1)));
+        engine.commitMove(battleKey, aliceMoveHash);
+
+        // Assert that Bob cannot commit anything because of the turn flag
+        // (we just reuse Alice's move hash bc it doesn't matter)
+        vm.startPrank(BOB);
+        vm.expectRevert(Engine.OnlyP0Allowed.selector);
+        engine.commitMove(battleKey, aliceMoveHash);
+
+        // Reveal Alice's move, and advance game state
+        vm.startPrank(ALICE);
+        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, bytes32(""), abi.encode(1));
+        engine.execute(battleKey);
+
+        // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Assert Bob wins as he has faster priority on a slower mon
+        state = engine.getBattleState(battleKey);
+        assertEq(state.winner, BOB);
+
+        // Assert that the staminaDelta was set correctly for Bob's mon
+        // (we used two attacks of 1 stamina, so -2)
+        assertEq(state.monStates[1][0].staminaDelta, -2);
+    }
+    
+    function test_FasterPriorityKOsForcesSwitchCorrectlyFailsOnInvalidSwitch() public {
+        bytes32 battleKey = _setup2v2FasterPriorityBattle();
+
+        // Check that Alice (p0) now has the playerSwitch flag set
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.playerSwitchForTurnFlag, 0);
+
+        // Alice now switches (invalidly) to mon index 0, Bob does not choose
+        vm.startPrank(ALICE);
+        bytes32 aliceMoveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, bytes32(""), abi.encode(1)));
+        engine.commitMove(battleKey, aliceMoveHash);
+
+        // Reveal Alice's move, and assert that we cannot advance the game state
+        vm.startPrank(ALICE);
+        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, bytes32(""), abi.encode(0));
+        vm.expectRevert(Engine.InvalidMove.selector);
+        engine.execute(battleKey);
+
+        // TODO: assert that Bob is able to end the game in his favor
     }
 }

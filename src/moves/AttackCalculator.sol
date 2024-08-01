@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import "../Structs.sol";
 import "../Enums.sol";
+import "../Structs.sol";
 
 import {IEngine} from "../IEngine.sol";
 import {ITypeCalculator} from "../types/ITypeCalculator.sol";
@@ -27,7 +27,11 @@ abstract contract AttackCalculator {
         Type attackType,
         AttackSupertype attackSupertype,
         uint256 rng
-    ) public view returns (MonState[][] memory, uint256[] memory, IEffect[][] memory, bytes[][] memory, bytes32, bytes32) {
+    )
+        public
+        view
+        returns (MonState[][] memory, uint256[] memory, IEffect[][] memory, bytes[][] memory, bytes32, bytes32)
+    {
         BattleState memory state = ENGINE.getBattleState(battleKey);
         IEffect[][] memory emptyEffects = new IEffect[][](0);
         bytes[][] memory emptyData = new bytes[][](0);

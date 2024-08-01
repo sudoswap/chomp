@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import "./Structs.sol";
 import "./Constants.sol";
-import "./moves/IMoveSet.sol";
+
 import "./Enums.sol";
+import "./Structs.sol";
+import "./moves/IMoveSet.sol";
 
 import {IEngine} from "./IEngine.sol";
 

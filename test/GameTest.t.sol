@@ -3,13 +3,13 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
 
-import "../src/Structs.sol";
-import "../src/Enums.sol";
 import "../src/Constants.sol";
+import "../src/Enums.sol";
+import "../src/Structs.sol";
 
-import {IValidator} from "../src/IValidator.sol";
 import {DefaultValidator} from "../src/DefaultValidator.sol";
 import {Engine} from "../src/Engine.sol";
+import {IValidator} from "../src/IValidator.sol";
 
 import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
 
@@ -178,7 +178,7 @@ contract GameTest is Test {
         vm.warp(TIMEOUT_DURATION + 1);
         engine.end(battleKey);
 
-        // Assert ALICE wins
+        // Assert Alice wins
         BattleState memory state = engine.getBattleState(battleKey);
         assertEq(state.winner, ALICE);
 
@@ -283,7 +283,9 @@ contract GameTest is Test {
         bytes32 battleKey = engine.start(battle);
 
         // First move of the game has to be selecting their mons (both index 0)
-        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0));
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
 
         // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
         // (Alice should win because her mon is faster)
@@ -351,7 +353,9 @@ contract GameTest is Test {
         bytes32 battleKey = engine.start(battle);
 
         // First move of the game has to be selecting their mons (both index 0)
-        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0));
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
 
         // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
         _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
@@ -428,7 +432,9 @@ contract GameTest is Test {
         bytes32 battleKey = engine.start(battle);
 
         // First move of the game has to be selecting their mons (both index 0)
-        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0));
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
 
         // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
         _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
@@ -470,7 +476,7 @@ contract GameTest is Test {
         // (we used two attacks of 1 stamina, so -2)
         assertEq(state.monStates[1][0].staminaDelta, -2);
     }
-    
+
     function test_FasterPriorityKOsForcesSwitchCorrectlyFailsOnInvalidSwitch() public {
         bytes32 battleKey = _setup2v2FasterPriorityBattle();
 
@@ -478,17 +484,30 @@ contract GameTest is Test {
         BattleState memory state = engine.getBattleState(battleKey);
         assertEq(state.playerSwitchForTurnFlag, 0);
 
-        // Alice now switches (invalidly) to mon index 0, Bob does not choose
+        // Alice now switches (invalidly) to mon index 0
         vm.startPrank(ALICE);
-        bytes32 aliceMoveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, bytes32(""), abi.encode(1)));
+        bytes32 aliceMoveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, bytes32(""), abi.encode(0)));
         engine.commitMove(battleKey, aliceMoveHash);
 
-        // Reveal Alice's move, and assert that we cannot advance the game state
+        // Attempt to reveal Alice's move, and assert that we cannot advance the game state
         vm.startPrank(ALICE);
-        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, bytes32(""), abi.encode(0));
         vm.expectRevert(Engine.InvalidMove.selector);
+        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, bytes32(""), abi.encode(0));
+
+        // Attempt to forcibly advance the game state
+        vm.expectRevert();
         engine.execute(battleKey);
 
-        // TODO: assert that Bob is able to end the game in his favor
+        // TODO: in cases where the player who has priority to switch commits an invalid state transition
+        // the other player needs a way to prove this somehow to the validator
+        // e.g the validator could look at the player switch flag to check instead of just looking at move history
+
+        // Check that timeout succeeds for Bob in this case
+        vm.warp(TIMEOUT_DURATION + 1);
+        engine.end(battleKey);
+
+        // Assert Bob wins
+        state = engine.getBattleState(battleKey);
+        assertEq(state.winner, BOB);
     }
 }

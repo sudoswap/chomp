@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import "../Structs.sol";
 import "../Enums.sol";
+import "../Structs.sol";
 
 import {IEngine} from "../IEngine.sol";
 import {ITypeCalculator} from "../types/ITypeCalculator.sol";
 
-import {IMoveSet} from "./IMoveSet.sol";
 import {AttackCalculator} from "./AttackCalculator.sol";
+import {IMoveSet} from "./IMoveSet.sol";
 
 contract CustomAttack is AttackCalculator, IMoveSet {
     struct Args {

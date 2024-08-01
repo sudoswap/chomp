@@ -59,21 +59,22 @@ contract DefaultValidator is IValidator {
         view
         returns (bool)
     {
-        Battle memory b = ENGINE.getBattle(battleKey);
-        BattleState memory state = ENGINE.getBattleState(battleKey);
+        Mon[][] memory teams = ENGINE.getTeamsForBattle(battleKey);
+        MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
+        uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
 
         // Enforce a switch IF:
         // - if it is the zeroth turn
         // - if the active mon is knocked out
         uint256 playerIndex;
-        if (player == b.p1) {
+        if (player == ENGINE.getPlayersForBattle(battleKey)[1]) {
             playerIndex = 0;
         } else {
             playerIndex = 1;
         }
         {
-            bool isTurnZero = state.turnId == 0;
-            bool isActiveMonKnockedOut = state.monStates[playerIndex][state.activeMonIndex[playerIndex]].isKnockedOut;
+            bool isTurnZero = ENGINE.getTurnIdForBattleState(battleKey) == 0;
+            bool isActiveMonKnockedOut = monStates[playerIndex][activeMonIndex[playerIndex]].isKnockedOut;
             if (isTurnZero || isActiveMonKnockedOut) {
                 if (moveIndex != SWITCH_MOVE_INDEX) {
                     return false;
@@ -98,14 +99,14 @@ contract DefaultValidator is IValidator {
             if (monToSwitchIndex >= MONS_PER_TEAM) {
                 return false;
             }
-            bool isNewMonKnockedOut = state.monStates[playerIndex][monToSwitchIndex].isKnockedOut;
+            bool isNewMonKnockedOut = monStates[playerIndex][monToSwitchIndex].isKnockedOut;
             if (isNewMonKnockedOut) {
                 return false;
             }
             // If it's not the zeroth turn, we cannot switch to the same mon
             // (exception for zeroth turn because we have not initiated a swap yet, so index 0 is fine)
-            if (state.turnId != 0) {
-                if (monToSwitchIndex == state.activeMonIndex[playerIndex]) {
+            if (ENGINE.getTurnIdForBattleState(battleKey) != 0) {
+                if (monToSwitchIndex == activeMonIndex[playerIndex]) {
                     return false;
                 }
             }
@@ -113,9 +114,9 @@ contract DefaultValidator is IValidator {
         }
 
         // Otherwise, a move cannot be selected if its stamina costs more than the mon's current stamina
-        IMoveSet moveSet = b.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[moveIndex];
-        int256 monStaminaDelta = state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta;
-        uint256 monBaseStamina = b.teams[playerIndex][state.activeMonIndex[playerIndex]].stamina;
+        IMoveSet moveSet = teams[playerIndex][activeMonIndex[playerIndex]].moves[moveIndex];
+        int256 monStaminaDelta = monStates[playerIndex][activeMonIndex[playerIndex]].staminaDelta;
+        uint256 monBaseStamina = teams[playerIndex][activeMonIndex[playerIndex]].stamina;
         uint256 monCurrentStamina = uint256(int256(monBaseStamina) + monStaminaDelta);
         if (moveSet.stamina(battleKey) > monCurrentStamina) {
             return false;
@@ -131,11 +132,12 @@ contract DefaultValidator is IValidator {
 
     // Returns which player should move first
     function computePriorityPlayerIndex(bytes32 battleKey, uint256 rng) external view returns (uint256) {
-        Battle memory b = ENGINE.getBattle(battleKey);
-        BattleState memory state = ENGINE.getBattleState(battleKey);
-
-        RevealedMove memory p0Move = state.moveHistory[0][state.turnId];
-        RevealedMove memory p1Move = state.moveHistory[1][state.turnId];
+        Mon[][] memory teams = ENGINE.getTeamsForBattle(battleKey);
+        MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
+        uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
+        RevealedMove[][] memory moveHistory = ENGINE.getMoveHistoryForBattleState(battleKey);
+        RevealedMove memory p0Move = moveHistory[0][ENGINE.getTurnIdForBattleState(battleKey)];
+        RevealedMove memory p1Move = moveHistory[1][ENGINE.getTurnIdForBattleState(battleKey)];
 
         uint256 p0Priority;
         uint256 p1Priority;
@@ -145,14 +147,14 @@ contract DefaultValidator is IValidator {
             if (p0Move.moveIndex == SWITCH_MOVE_INDEX || p0Move.moveIndex == NO_OP_MOVE_INDEX) {
                 p0Priority = SWITCH_PRIORITY;
             } else {
-                IMoveSet p0MoveSet = b.teams[0][state.activeMonIndex[0]].moves[p0Move.moveIndex];
+                IMoveSet p0MoveSet = teams[0][activeMonIndex[0]].moves[p0Move.moveIndex];
                 p0Priority = p0MoveSet.priority(battleKey);
             }
 
             if (p1Move.moveIndex == SWITCH_MOVE_INDEX || p1Move.moveIndex == NO_OP_MOVE_INDEX) {
                 p1Priority = SWITCH_PRIORITY;
             } else {
-                IMoveSet p1MoveSet = b.teams[1][state.activeMonIndex[1]].moves[p1Move.moveIndex];
+                IMoveSet p1MoveSet = teams[1][activeMonIndex[1]].moves[p1Move.moveIndex];
                 p1Priority = p1MoveSet.priority(battleKey);
             }
         }
@@ -167,12 +169,12 @@ contract DefaultValidator is IValidator {
             return 1;
         } else {
             uint256 p0MonSpeed = uint256(
-                int256(b.teams[0][state.activeMonIndex[0]].speed)
-                    + state.monStates[0][state.activeMonIndex[0]].speedDelta
+                int256(teams[0][activeMonIndex[0]].speed)
+                    + monStates[0][activeMonIndex[0]].speedDelta
             );
             uint256 p1MonSpeed = uint256(
-                int256(b.teams[1][state.activeMonIndex[1]].speed)
-                    + state.monStates[1][state.activeMonIndex[1]].speedDelta
+                int256(teams[1][activeMonIndex[1]].speed)
+                    + monStates[1][activeMonIndex[1]].speedDelta
             );
             if (p0MonSpeed > p1MonSpeed) {
                 return 0;
@@ -186,27 +188,26 @@ contract DefaultValidator is IValidator {
 
     // Validates that the game is over, returns address(0) if no winner, otherwise returns the winner
     function validateGameOver(bytes32 battleKey, uint256 priorityPlayerIndex) external view returns (address) {
-        Battle memory b = ENGINE.getBattle(battleKey);
-        BattleState memory state = ENGINE.getBattleState(battleKey);
+        address[] memory players = ENGINE.getPlayersForBattle(battleKey);
+        MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
 
         // A game is over if all of a player's mons are knocked out
         uint256[2] memory playerIndex = [uint256(0), uint256(1)];
         if (priorityPlayerIndex == 1) {
             playerIndex = [uint256(1), uint256(0)];
         }
-
         for (uint256 i; i < playerIndex.length; ++i) {
             uint256 numMonsKnockedOut;
             for (uint256 j; j < MONS_PER_TEAM; ++j) {
-                if (state.monStates[playerIndex[i]][j].isKnockedOut) {
+                if (monStates[playerIndex[i]][j].isKnockedOut) {
                     numMonsKnockedOut += 1;
                 }
             }
             if (numMonsKnockedOut == MONS_PER_TEAM) {
                 if (playerIndex[i] == 0) {
-                    return b.p1;
+                    return players[1];
                 } else {
-                    return b.p0;
+                    return players[0];
                 }
             }
         }
@@ -226,24 +227,25 @@ contract DefaultValidator is IValidator {
     // - i.e. honest player has a commitment one turn ahead of afk player
     function validateTimeout(bytes32 battleKey, uint256 presumedAFKPlayerIndex) external view returns (address) {
         BattleState memory state = ENGINE.getBattleState(battleKey);
-        Battle memory b = ENGINE.getBattle(battleKey);
+        RevealedMove[][] memory moveHistory = ENGINE.getMoveHistoryForBattleState(battleKey);
+        address[] memory players = ENGINE.getPlayersForBattle(battleKey);
         uint256 presumedHonestPlayerIndex = (presumedAFKPlayerIndex + 1) % 2;
         address presumedHonestPlayer;
         address presumedAFKPlayer;
         if (presumedHonestPlayerIndex == 0) {
-            presumedHonestPlayer = b.p0;
-            presumedAFKPlayer = b.p1;
+            presumedHonestPlayer = players[0];
+            presumedAFKPlayer = players[1];
         } else {
-            presumedHonestPlayer = b.p1;
-            presumedAFKPlayer = b.p0;
+            presumedHonestPlayer = players[1];
+            presumedAFKPlayer = players[0];
         }
         Commitment memory presumedHonestPlayerCommitment = ENGINE.getCommitment(battleKey, presumedHonestPlayer);
 
         // If it's been enough to check for a TIMEOUT (otherwise we don't bother at all):
         if (presumedHonestPlayerCommitment.timestamp + TIMEOUT_DURATION <= block.timestamp) {
             // If the honest player has revealed more moves than the afk player, then the honest player wins
-            RevealedMove[] memory movesPresumedAFKPlayerRevealed = state.moveHistory[presumedAFKPlayerIndex];
-            RevealedMove[] memory movesPresumedHonestPlayerRevealed = state.moveHistory[presumedHonestPlayerIndex];
+            RevealedMove[] memory movesPresumedAFKPlayerRevealed = moveHistory[presumedAFKPlayerIndex];
+            RevealedMove[] memory movesPresumedHonestPlayerRevealed = moveHistory[presumedHonestPlayerIndex];
 
             if (movesPresumedHonestPlayerRevealed.length > movesPresumedAFKPlayerRevealed.length) {
                 return presumedHonestPlayer;

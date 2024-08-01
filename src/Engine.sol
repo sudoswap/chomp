@@ -26,21 +26,47 @@ contract Engine is IEngine {
     error InvalidBattleConfig();
     error GameAlreadyOver();
 
+    /**
+     - Getters to simplify read access for other components
+     */
+
     function getBattle(bytes32 battleKey) external view returns (Battle memory) {
         return battles[battleKey];
     }
-
+    function getTeamsForBattle(bytes32 battleKey) external view returns (Mon[][] memory){
+        return battles[battleKey].teams;
+    }
+    function getPlayersForBattle(bytes32 battleKey) external view returns (address[] memory) {
+        address[] memory players = new address[](2);
+        players[0] = battles[battleKey].p0;
+        players[1] = battles[battleKey].p1;
+        return players;
+    }
     function getBattleState(bytes32 battleKey) external view returns (BattleState memory) {
         return battleStates[battleKey];
     }
-
+    function getMoveHistoryForBattleState(bytes32 battleKey) external view returns (RevealedMove[][] memory) {
+        return battleStates[battleKey].moveHistory;
+    }
+    function getMonStatesForBattleState(bytes32 battleKey) external view returns (MonState[][] memory) {
+        return battleStates[battleKey].monStates;
+    }
+    function getTurnIdForBattleState(bytes32 battleKey) external view returns (uint256) {
+        return battleStates[battleKey].turnId;
+    }
+    function getActiveMonIndexForBattleState(bytes32 battleKey) external view returns (uint256[] memory) {
+        return battleStates[battleKey].activeMonIndex;
+    }
     function getGlobalKV(bytes32 battleKey, bytes32 key) external view returns (bytes32) {
         return globalKV[battleKey][key];
     }
-
     function getCommitment(bytes32 battleKey, address player) external view returns (Commitment memory) {
         return commitments[battleKey][player];
     }
+
+    /**
+     - Core game functions
+     */
 
     function start(Battle calldata battle) external returns (bytes32) {
         // validate battle
@@ -318,6 +344,26 @@ contract Engine is IEngine {
         }
     }
 
+
+    function end(bytes32 battleKey) external {
+        BattleState storage state = battleStates[battleKey];
+        Battle storage battle = battles[battleKey];
+        if (state.winner != address(0)) {
+            revert GameAlreadyOver();
+        }
+        for (uint256 i; i < 2; ++i) {
+            address afkResult = battle.validator.validateTimeout(battleKey, i);
+            if (afkResult != address(0)) {
+                state.winner = afkResult;
+                return;
+            }
+        }
+    }
+
+    /**
+     - Internal helper functions for execute()
+     */
+
     function _checkForKnockoutAndAdvanceIfNeeded(bytes32 battleKey, uint256 priorityPlayerIndex, uint256 rng)
         internal
         returns (uint256 playerSwitchForTurnFlag, address gameResult, bool executedRoundEndEffects)
@@ -505,21 +551,6 @@ contract Engine is IEngine {
                 state.monStates = updatedMonStates;
             } else {
                 ++i;
-            }
-        }
-    }
-
-    function end(bytes32 battleKey) external {
-        BattleState storage state = battleStates[battleKey];
-        Battle storage battle = battles[battleKey];
-        if (state.winner != address(0)) {
-            revert GameAlreadyOver();
-        }
-        for (uint256 i; i < 2; ++i) {
-            address afkResult = battle.validator.validateTimeout(battleKey, i);
-            if (afkResult != address(0)) {
-                state.winner = afkResult;
-                return;
             }
         }
     }

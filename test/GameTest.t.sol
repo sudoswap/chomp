@@ -368,7 +368,7 @@ contract GameTest is Test {
         assertEq(state.monStates[1][0].staminaDelta, -1);
     }
 
-    // Will be used to check that we correctly force a switch
+    // Helper function used to check that we correctly force a switch in priority matchups
     // if we knock out a mon (with higher priority), and there are mons remaining
     // End result is it Bob in the lead with 2 mons vs 1 mon for Alice
     function _setup2v2FasterPriorityBattle() internal returns (bytes32) {
@@ -477,7 +477,7 @@ contract GameTest is Test {
         assertEq(state.monStates[1][0].staminaDelta, -2);
     }
 
-    function test_FasterPriorityKOsForcesSwitchCorrectlyFailsOnInvalidSwitch() public {
+    function test_FasterPriorityKOsForcesSwitchCorrectlyFailsOnInvalidSwitchReveal() public {
         bytes32 battleKey = _setup2v2FasterPriorityBattle();
 
         // Check that Alice (p0) now has the playerSwitch flag set
@@ -498,9 +498,27 @@ contract GameTest is Test {
         vm.expectRevert();
         engine.execute(battleKey);
 
-        // TODO: in cases where the player who has priority to switch commits an invalid state transition
-        // the other player needs a way to prove this somehow to the validator
-        // e.g the validator could look at the player switch flag to check instead of just looking at move history
+        // Check that timeout succeeds for Bob in this case
+        vm.warp(TIMEOUT_DURATION + 1);
+        engine.end(battleKey);
+
+        // Assert Bob wins
+        state = engine.getBattleState(battleKey);
+        assertEq(state.winner, BOB);
+    }
+
+    function test_FasterPriorityKOsForcesSwitchCorrectlyFailsOnInvalidSwitchNoCommit() public {
+        bytes32 battleKey = _setup2v2FasterPriorityBattle();
+
+        // Check that Alice (p0) now has the playerSwitch flag set
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.playerSwitchForTurnFlag, 0);
+
+        // Attempt to forcibly advance the game state
+        vm.expectRevert();
+        engine.execute(battleKey);
+
+        // Assume Alice AFKs
 
         // Check that timeout succeeds for Bob in this case
         vm.warp(TIMEOUT_DURATION + 1);

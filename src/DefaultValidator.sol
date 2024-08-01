@@ -222,7 +222,6 @@ contract DefaultValidator is IValidator {
     // - afk player does not commit to a move
     // - i.e. honest player has a commitment one turn ahead of afk player
     function validateTimeout(bytes32 battleKey, uint256 presumedAFKPlayerIndex) external view returns (address) {
-        BattleState memory state = ENGINE.getBattleState(battleKey);
         RevealedMove[][] memory moveHistory = ENGINE.getMoveHistoryForBattleState(battleKey);
         address[] memory players = ENGINE.getPlayersForBattle(battleKey);
         uint256 presumedHonestPlayerIndex = (presumedAFKPlayerIndex + 1) % 2;
@@ -239,23 +238,44 @@ contract DefaultValidator is IValidator {
 
         // If it's been enough to check for a TIMEOUT (otherwise we don't bother at all):
         if (presumedHonestPlayerCommitment.timestamp + TIMEOUT_DURATION <= block.timestamp) {
-            // If the honest player has revealed more moves than the afk player, then the honest player wins
+
             RevealedMove[] memory movesPresumedAFKPlayerRevealed = moveHistory[presumedAFKPlayerIndex];
             RevealedMove[] memory movesPresumedHonestPlayerRevealed = moveHistory[presumedHonestPlayerIndex];
 
-            if (movesPresumedHonestPlayerRevealed.length > movesPresumedAFKPlayerRevealed.length) {
-                return presumedHonestPlayer;
-            }
-
-            // If the honest player has a commitment that is ahead of the afk player (but the revealed moves are the same)
             Commitment memory presumedAFKPlayerCommitment = ENGINE.getCommitment(battleKey, presumedAFKPlayer);
 
-            if (presumedHonestPlayerCommitment.turnId > presumedAFKPlayerCommitment.turnId) {
-                return presumedHonestPlayer;
+            // If it's a turn where both players have to make a move:
+            uint256 playerSwitchForTurnFlag = ENGINE.getPlayerSwitchForTurnFlagForBattleState(battleKey);
+            if (playerSwitchForTurnFlag == 2) {
+
+                // If the honest player has revealed more moves than the afk player, then the honest player wins
+                if (movesPresumedHonestPlayerRevealed.length > movesPresumedAFKPlayerRevealed.length) {
+                    return presumedHonestPlayer;
+                }
+                
+                // If the honest player has a commitment that is ahead of the afk player (but the revealed moves are the same)
+                // then the honest player wins
+                if (presumedHonestPlayerCommitment.turnId > presumedAFKPlayerCommitment.turnId) {
+                    return presumedHonestPlayer;
+                }
             }
-            return address(0);
-        } else {
-            return address(0);
+            // Otherwise, if it's a turn where the presumed AFK player has to make a move
+            else if (presumedAFKPlayerIndex == playerSwitchForTurnFlag) {
+
+                uint256 globalTurnId = ENGINE.getTurnIdForBattleState(battleKey);
+
+                // If the player who is supposed to reveal has not revealed (i.e. the turn id is behind), then the other player wins
+                if (movesPresumedAFKPlayerRevealed.length < (globalTurnId+1)) {
+                    return presumedHonestPlayer;
+                }
+
+                if (presumedAFKPlayerCommitment.turnId < globalTurnId) {
+                    return presumedHonestPlayer;
+
+                }
+
+            }
         }
+        return address(0);
     }
 }

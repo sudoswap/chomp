@@ -13,6 +13,7 @@ interface IEngine {
     function getMonStatesForBattleState(bytes32 battleKey) external view returns (MonState[][] memory);
     function getTurnIdForBattleState(bytes32 battleKey) external view returns (uint256);
     function getActiveMonIndexForBattleState(bytes32 battleKey) external view returns (uint256[] memory);
+    function getPlayerSwitchForTurnFlagForBattleState(bytes32 battleKey) external view returns (uint256);
 
     function getGlobalKV(bytes32 battleKey, bytes32 key) external view returns (bytes32);
     function getCommitment(bytes32 battleKey, address player) external view returns (Commitment memory);

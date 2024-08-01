@@ -65,6 +65,10 @@ contract Engine is IEngine {
         return battleStates[battleKey].activeMonIndex;
     }
 
+    function getPlayerSwitchForTurnFlagForBattleState(bytes32 battleKey) external view returns (uint256) {
+        return battleStates[battleKey].playerSwitchForTurnFlag;
+    }
+
     function getGlobalKV(bytes32 battleKey, bytes32 key) external view returns (bytes32) {
         return globalKV[battleKey][key];
     }

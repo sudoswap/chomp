@@ -65,12 +65,15 @@ contract GameTest is Test {
      * Battle initiated, stored to state [x]
      * Battle initiated, MUST select swap [x]
      * Faster Speed Wins KO, leads to game over if team size = 1 [x]
-     * Faster Speed Wins KO, leads to forced switch if team size is >= 2 [ ]
      * Faster Priority Wins KO, leads to game over if team size = 1 [x]
-     * Faster Priority Wins KO, leads to forced switch if team size is >= 2 [ ]
+     * Faster Priority Wins KO, leads to forced switch if team size is >= 2 [x]
      * Execute reverts if game is already over [x]
+     * Switches are forced correctly on KO [x]
+     * Faster Speed Wins KO, leads to forced switch if team size is >= 2 [ ]
+     * Non-KO moves lead to subsequent move for both players [ ]
+     * Switching executes at correct priority [ ]
      * Global Stamina Recovery effect works as expected [ ]
-     * Accuracy works as expected (i.e. controls damage or no damage) [ ]
+     * Accuracy works as expected (i.e. controls damage or no damage, modify oracle) [ ]
      * Stamina works as expected (i.e. controls whether or not a move can be used, deltas are updated) [ ]
      * Effects work as expected (create a damage over time effect, check that Effect can KO) [ ]
      */
@@ -371,7 +374,7 @@ contract GameTest is Test {
     // Helper function used to check that we correctly force a switch in priority matchups
     // if we knock out a mon (with higher priority), and there are mons remaining
     // End result is it Bob in the lead with 2 mons vs 1 mon for Alice
-    function _setup2v2FasterPriorityBattle() internal returns (bytes32) {
+    function _setup2v2FasterPriorityBattleAndForceSwitch() internal returns (bytes32) {
         // Initialize fast and slow mons
         IMoveSet slowAttack = new CustomAttack(
             engine,
@@ -443,7 +446,7 @@ contract GameTest is Test {
     }
 
     function test_FasterPriorityKOsForcesSwitch() public {
-        bytes32 battleKey = _setup2v2FasterPriorityBattle();
+        bytes32 battleKey = _setup2v2FasterPriorityBattleAndForceSwitch();
 
         // Check that Alice (p0) now has the playerSwitch flag set
         BattleState memory state = engine.getBattleState(battleKey);
@@ -478,7 +481,7 @@ contract GameTest is Test {
     }
 
     function test_FasterPriorityKOsForcesSwitchCorrectlyFailsOnInvalidSwitchReveal() public {
-        bytes32 battleKey = _setup2v2FasterPriorityBattle();
+        bytes32 battleKey = _setup2v2FasterPriorityBattleAndForceSwitch();
 
         // Check that Alice (p0) now has the playerSwitch flag set
         BattleState memory state = engine.getBattleState(battleKey);
@@ -508,7 +511,7 @@ contract GameTest is Test {
     }
 
     function test_FasterPriorityKOsForcesSwitchCorrectlyFailsOnInvalidSwitchNoCommit() public {
-        bytes32 battleKey = _setup2v2FasterPriorityBattle();
+        bytes32 battleKey = _setup2v2FasterPriorityBattleAndForceSwitch();
 
         // Check that Alice (p0) now has the playerSwitch flag set
         BattleState memory state = engine.getBattleState(battleKey);
@@ -527,5 +530,58 @@ contract GameTest is Test {
         // Assert Bob wins
         state = engine.getBattleState(battleKey);
         assertEq(state.winner, BOB);
+    }
+
+    function test_NonKOSubsequentMoves() public {
+         // Initialize fast and slow mons
+        IMoveSet normalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 0})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = normalAttack;
+        Mon memory normalMon = Mon({
+            hp: 10,
+            stamina: 2, // need to have enough stamina for 2 moves
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory team = new Mon[](1);
+        team[0] = normalMon;
+        teams[0] = team;
+        teams[1] = team;
+        Battle memory battle =
+            Battle({p0: ALICE, p1: BOB, validator: validator, teams: teams, rngOracle: defaultOracle});
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
+        // (No mons are knocked out yet)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Let Alice and Bob commit and reveal to both choosing attack again
+        // (Now Alice should win because her mon is faster)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Assert Alice wins
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, ALICE);
+
+        // Assert that the staminaDelta was set correctly (2 moves spent)
+        assertEq(state.monStates[0][0].staminaDelta, -2);
     }
 }

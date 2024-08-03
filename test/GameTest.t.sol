@@ -70,7 +70,7 @@ contract GameTest is Test {
      * Execute reverts if game is already over [x]
      * Switches are forced correctly on KO [x]
      * Faster Speed Wins KO, leads to forced switch if team size is >= 2 [ ]
-     * Non-KO moves lead to subsequent move for both players [ ]
+     * Non-KO moves lead to subsequent move for both players [x]
      * Switching executes at correct priority [ ]
      * Global Stamina Recovery effect works as expected [ ]
      * Accuracy works as expected (i.e. controls damage or no damage, modify oracle) [ ]
@@ -100,7 +100,7 @@ contract GameTest is Test {
     ) internal {
         bytes32 salt = "";
         bytes32 aliceMoveHash = keccak256(abi.encodePacked(aliceMoveIndex, salt, aliceExtraData));
-        bytes32 bobMoveHash = keccak256(abi.encodePacked(aliceMoveIndex, salt, bobExtraData));
+        bytes32 bobMoveHash = keccak256(abi.encodePacked(bobMoveIndex, salt, bobExtraData));
         vm.startPrank(ALICE);
         engine.commitMove(battleKey, aliceMoveHash);
         vm.startPrank(BOB);
@@ -154,7 +154,7 @@ contract GameTest is Test {
 
         // Ensure that Bob cannot reveal correctly because validation will fail
         // (move index MUST be SWITCH_INDEX on turn 0)
-        vm.expectRevert(Engine.InvalidMove.selector);
+        vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", BOB));
         engine.revealMove(battleKey, moveIndex, salt, "");
 
         // Ensure that Bob cannot reveal incorrectly because the preimage will fail
@@ -240,7 +240,7 @@ contract GameTest is Test {
     }
 
     function test_FasterSpeedKOsGameOver() public {
-        // Initialize fast and slow mons
+        // Initialize mons
         IMoveSet normalAttack = new CustomAttack(
             engine,
             typeCalc,
@@ -494,7 +494,7 @@ contract GameTest is Test {
 
         // Attempt to reveal Alice's move, and assert that we cannot advance the game state
         vm.startPrank(ALICE);
-        vm.expectRevert(Engine.InvalidMove.selector);
+        vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
         engine.revealMove(battleKey, SWITCH_MOVE_INDEX, bytes32(""), abi.encode(0));
 
         // Attempt to forcibly advance the game state
@@ -583,5 +583,59 @@ contract GameTest is Test {
 
         // Assert that the staminaDelta was set correctly (2 moves spent)
         assertEq(state.monStates[0][0].staminaDelta, -2);
+    }
+
+    function test_switchPriorityIsFasterThanMove() public {
+        // Initialize mons and moves
+        IMoveSet normalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 0})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = normalAttack;
+        Mon memory normalMon = Mon({
+            hp: 10,
+            stamina: 2, // need to have enough stamina for 2 moves
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory team = new Mon[](2);
+        team[0] = normalMon;
+        team[1] = normalMon;
+        teams[0] = team;
+        teams[1] = team;
+        DefaultValidator twoMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+        Battle memory battle =
+            Battle({p0: ALICE, p1: BOB, validator: twoMonValidator, teams: teams, rngOracle: defaultOracle});
+
+        // Staert the battle
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Second move, have Alice swap out to mon at index 1, have Bob use attack
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, 0, abi.encode(1), ""
+        );
+
+        // Assert that mon index for Alice is 1
+        // Assert that the mon state for Alice has -5 applied to the switched in mon
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.activeMonIndex[0], 1);
+        assertEq(state.monStates[0][1].hpDelta, -5);
     }
 }

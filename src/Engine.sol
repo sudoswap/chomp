@@ -21,7 +21,7 @@ contract Engine is IEngine {
     error RevealBeforeOtherCommit();
     error WrongTurnId();
     error WrongPreimage();
-    error InvalidMove();
+    error InvalidMove(address player);
     error OnlyP0Allowed();
     error OnlyP1Allowed();
     error InvalidBattleConfig();
@@ -204,7 +204,7 @@ contract Engine is IEngine {
         // validate that the commited moves are legal
         // (e.g. there is enough stamina, move is not disabled, etc.)
         if (!battle.validator.validateMove(battleKey, moveIndex, msg.sender, extraData)) {
-            revert InvalidMove();
+            revert InvalidMove(msg.sender);
         }
 
         // store revealed move and extra data for the current player

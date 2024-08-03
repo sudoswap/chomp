@@ -441,27 +441,29 @@ contract Engine is IEngine {
         bytes[] storage extraData = currentMonState.extraDataForTargetedEffects;
         uint256 i = 0;
 
+        // If the current mon is not knocked out:
         // Go through each effect to see if it should be cleared after a switch,
         // If so, remove the effect and the extra data
-        while (i < effects.length) {
-            if (effects[i].shouldClearAfterMonSwitch()) {
-                // effects and extra data should be synced
-                effects[i] = effects[effects.length - 1];
-                effects.pop();
+        if (! currentMonState.isKnockedOut) {
+            while (i < effects.length) {
+                if (effects[i].shouldClearAfterMonSwitch()) {
+                    // effects and extra data should be synced
+                    effects[i] = effects[effects.length - 1];
+                    effects.pop();
 
-                extraData[i] = extraData[effects.length - 1];
-                extraData.pop();
-            } else {
-                ++i;
+                    extraData[i] = extraData[effects.length - 1];
+                    extraData.pop();
+                } else {
+                    ++i;
+                }
             }
+            // Clear out deltas on mon stats
+            currentMonState.attackDelta = 0;
+            currentMonState.specialAttackDelta = 0;
+            currentMonState.defenceDelta = 0;
+            currentMonState.specialDefenceDelta = 0;
+            currentMonState.speedDelta = 0;
         }
-
-        // Clear out deltas on mon stats
-        currentMonState.attackDelta = 0;
-        currentMonState.specialAttackDelta = 0;
-        currentMonState.defenceDelta = 0;
-        currentMonState.specialDefenceDelta = 0;
-        currentMonState.speedDelta = 0;
 
         // Update to new active mon (we assume validate already resolved and gives us a valid target)
         state.activeMonIndex[playerIndex] = monToSwitchIndex;

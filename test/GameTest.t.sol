@@ -71,7 +71,7 @@ contract GameTest is Test {
      * Switches are forced correctly on KO [x]
      * Faster Speed Wins KO, leads to forced switch if team size is >= 2 [ ]
      * Non-KO moves lead to subsequent move for both players [x]
-     * Switching executes at correct priority [ ]
+     * Switching executes at correct priority [x]
      * Global Stamina Recovery effect works as expected [ ]
      * Accuracy works as expected (i.e. controls damage or no damage, modify oracle) [ ]
      * Stamina works as expected (i.e. controls whether or not a move can be used, deltas are updated) [ ]
@@ -744,5 +744,9 @@ contract GameTest is Test {
         // check that now they have the priority flag again
         BattleState memory state = engine.getBattleState(battleKey);
         assertEq(state.playerSwitchForTurnFlag, 0);
+    }
+
+    function test_defaultStaminaRegenEffect() public {
+        
     }
 }

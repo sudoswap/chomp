@@ -2,11 +2,11 @@
 pragma solidity ^0.8.0;
 
 import "./Constants.sol";
-import "./IValidator.sol";
 import "./Structs.sol";
 import "./moves/IMoveSet.sol";
 
 import {IEngine} from "./IEngine.sol";
+import {IValidator} from "./IValidator.sol";
 
 contract DefaultValidator is IValidator {
     struct Args {
@@ -14,8 +14,6 @@ contract DefaultValidator is IValidator {
         uint256 MOVES_PER_MON;
         uint256 TIMEOUT_DURATION;
     }
-
-    uint256 constant SWITCH_PRIORITY = 6;
 
     uint256 immutable MONS_PER_TEAM;
     uint256 immutable MOVES_PER_MON;
@@ -130,58 +128,6 @@ contract DefaultValidator is IValidator {
         return true;
     }
 
-    // Returns which player should move first
-    function computePriorityPlayerIndex(bytes32 battleKey, uint256 rng) external view returns (uint256) {
-        Mon[][] memory teams = ENGINE.getTeamsForBattle(battleKey);
-        MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
-        uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
-        RevealedMove[][] memory moveHistory = ENGINE.getMoveHistoryForBattleState(battleKey);
-        RevealedMove memory p0Move = moveHistory[0][ENGINE.getTurnIdForBattleState(battleKey)];
-        RevealedMove memory p1Move = moveHistory[1][ENGINE.getTurnIdForBattleState(battleKey)];
-
-        uint256 p0Priority;
-        uint256 p1Priority;
-
-        // Call the move for its priority, unless it's the switch or no op move index
-        {
-            if (p0Move.moveIndex == SWITCH_MOVE_INDEX || p0Move.moveIndex == NO_OP_MOVE_INDEX) {
-                p0Priority = SWITCH_PRIORITY;
-            } else {
-                IMoveSet p0MoveSet = teams[0][activeMonIndex[0]].moves[p0Move.moveIndex];
-                p0Priority = p0MoveSet.priority(battleKey);
-            }
-
-            if (p1Move.moveIndex == SWITCH_MOVE_INDEX || p1Move.moveIndex == NO_OP_MOVE_INDEX) {
-                p1Priority = SWITCH_PRIORITY;
-            } else {
-                IMoveSet p1MoveSet = teams[1][activeMonIndex[1]].moves[p1Move.moveIndex];
-                p1Priority = p1MoveSet.priority(battleKey);
-            }
-        }
-
-        // Determine priority based on (in descending order of importance):
-        // - the higher priority tier
-        // - within same priority, the higher speed
-        // - if both are tied, use the rng value
-        if (p0Priority > p1Priority) {
-            return 0;
-        } else if (p0Priority < p1Priority) {
-            return 1;
-        } else {
-            uint256 p0MonSpeed =
-                uint256(int256(teams[0][activeMonIndex[0]].speed) + monStates[0][activeMonIndex[0]].speedDelta);
-            uint256 p1MonSpeed =
-                uint256(int256(teams[1][activeMonIndex[1]].speed) + monStates[1][activeMonIndex[1]].speedDelta);
-            if (p0MonSpeed > p1MonSpeed) {
-                return 0;
-            } else if (p0MonSpeed < p1MonSpeed) {
-                return 1;
-            } else {
-                return rng % 2;
-            }
-        }
-    }
-
     // Validates that the game is over, returns address(0) if no winner, otherwise returns the winner
     function validateGameOver(bytes32 battleKey, uint256 priorityPlayerIndex) external view returns (address) {
         address[] memory players = ENGINE.getPlayersForBattle(battleKey);
@@ -238,7 +184,6 @@ contract DefaultValidator is IValidator {
 
         // If it's been enough to check for a TIMEOUT (otherwise we don't bother at all):
         if (presumedHonestPlayerCommitment.timestamp + TIMEOUT_DURATION <= block.timestamp) {
-
             RevealedMove[] memory movesPresumedAFKPlayerRevealed = moveHistory[presumedAFKPlayerIndex];
             RevealedMove[] memory movesPresumedHonestPlayerRevealed = moveHistory[presumedHonestPlayerIndex];
 
@@ -247,12 +192,11 @@ contract DefaultValidator is IValidator {
             // If it's a turn where both players have to make a move:
             uint256 playerSwitchForTurnFlag = ENGINE.getPlayerSwitchForTurnFlagForBattleState(battleKey);
             if (playerSwitchForTurnFlag == 2) {
-
                 // If the honest player has revealed more moves than the afk player, then the honest player wins
                 if (movesPresumedHonestPlayerRevealed.length > movesPresumedAFKPlayerRevealed.length) {
                     return presumedHonestPlayer;
                 }
-                
+
                 // If the honest player has a commitment that is ahead of the afk player (but the revealed moves are the same)
                 // then the honest player wins
                 if (presumedHonestPlayerCommitment.turnId > presumedAFKPlayerCommitment.turnId) {
@@ -261,19 +205,16 @@ contract DefaultValidator is IValidator {
             }
             // Otherwise, if it's a turn where the presumed AFK player has to make a move
             else if (presumedAFKPlayerIndex == playerSwitchForTurnFlag) {
-
                 uint256 globalTurnId = ENGINE.getTurnIdForBattleState(battleKey);
 
                 // If the player who is supposed to reveal has not revealed (i.e. the turn id is behind), then the other player wins
-                if (movesPresumedAFKPlayerRevealed.length < (globalTurnId+1)) {
+                if (movesPresumedAFKPlayerRevealed.length < (globalTurnId + 1)) {
                     return presumedHonestPlayer;
                 }
 
                 if (presumedAFKPlayerCommitment.turnId < globalTurnId) {
                     return presumedHonestPlayer;
-
                 }
-
             }
         }
         return address(0);

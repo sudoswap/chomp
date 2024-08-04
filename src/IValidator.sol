@@ -13,9 +13,6 @@ interface IValidator {
         view
         returns (bool);
 
-    // Computes which player (p1 or p2) should move first
-    function computePriorityPlayerIndex(bytes32 battleKey, uint256 rng) external view returns (uint256);
-
     // Validates that the game is over, returns address(0) if no winner, otherwise returns the winner
     function validateGameOver(bytes32 battleKey, uint256 priorityPlayerIndex) external view returns (address);
 

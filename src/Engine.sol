@@ -10,6 +10,8 @@ import "./moves/IMoveSet.sol";
 import {IEngine} from "./IEngine.sol";
 
 contract Engine is IEngine {
+    uint256 constant SWITCH_PRIORITY = 6;
+
     mapping(bytes32 => uint256) public pairHashNonces;
     mapping(bytes32 battleKey => Battle) public battles;
     mapping(bytes32 battleKey => BattleState) public battleStates;
@@ -284,7 +286,7 @@ contract Engine is IEngine {
             state.pRNGStream.push(rng);
 
             // Calculate the priority and non-priority player indices
-            uint256 priorityPlayerIndex = battle.validator.computePriorityPlayerIndex(battleKey, rng);
+            uint256 priorityPlayerIndex = _computePriorityPlayerIndex(battleKey, rng);
             uint256 otherPlayerIndex;
             if (priorityPlayerIndex == 0) {
                 otherPlayerIndex = 1;
@@ -444,7 +446,7 @@ contract Engine is IEngine {
         // If the current mon is not knocked out:
         // Go through each effect to see if it should be cleared after a switch,
         // If so, remove the effect and the extra data
-        if (! currentMonState.isKnockedOut) {
+        if (!currentMonState.isKnockedOut) {
             while (i < effects.length) {
                 if (effects[i].shouldClearAfterMonSwitch()) {
                     // effects and extra data should be synced
@@ -572,6 +574,60 @@ contract Engine is IEngine {
                 state.monStates = updatedMonStates;
             } else {
                 ++i;
+            }
+        }
+    }
+
+    function _computePriorityPlayerIndex(bytes32 battleKey, uint256 rng) internal view returns (uint256) {
+        Battle storage battle = battles[battleKey];
+        BattleState storage state = battleStates[battleKey];
+
+        RevealedMove memory p0Move = state.moveHistory[0][state.turnId];
+        RevealedMove memory p1Move = state.moveHistory[1][state.turnId];
+
+        uint256 p0Priority;
+        uint256 p1Priority;
+
+        // Call the move for its priority, unless it's the switch or no op move index
+        {
+            if (p0Move.moveIndex == SWITCH_MOVE_INDEX || p0Move.moveIndex == NO_OP_MOVE_INDEX) {
+                p0Priority = SWITCH_PRIORITY;
+            } else {
+                IMoveSet p0MoveSet = battle.teams[0][state.activeMonIndex[0]].moves[p0Move.moveIndex];
+                p0Priority = p0MoveSet.priority(battleKey);
+            }
+
+            if (p1Move.moveIndex == SWITCH_MOVE_INDEX || p1Move.moveIndex == NO_OP_MOVE_INDEX) {
+                p1Priority = SWITCH_PRIORITY;
+            } else {
+                IMoveSet p1MoveSet = battle.teams[1][state.activeMonIndex[1]].moves[p1Move.moveIndex];
+                p1Priority = p1MoveSet.priority(battleKey);
+            }
+        }
+
+        // Determine priority based on (in descending order of importance):
+        // - the higher priority tier
+        // - within same priority, the higher speed
+        // - if both are tied, use the rng value
+        if (p0Priority > p1Priority) {
+            return 0;
+        } else if (p0Priority < p1Priority) {
+            return 1;
+        } else {
+            uint256 p0MonSpeed = uint256(
+                int256(battle.teams[0][state.activeMonIndex[0]].speed)
+                    + state.monStates[0][state.activeMonIndex[0]].speedDelta
+            );
+            uint256 p1MonSpeed = uint256(
+                int256(battle.teams[1][state.activeMonIndex[1]].speed)
+                    + state.monStates[1][state.activeMonIndex[1]].speedDelta
+            );
+            if (p0MonSpeed > p1MonSpeed) {
+                return 0;
+            } else if (p0MonSpeed < p1MonSpeed) {
+                return 1;
+            } else {
+                return rng % 2;
             }
         }
     }

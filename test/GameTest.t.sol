@@ -71,7 +71,7 @@ contract GameTest is Test {
      * Switches are forced correctly on KO [x]
      * Faster Speed Wins KO, leads to forced switch if team size is >= 2 [ ]
      * Non-KO moves lead to subsequent move for both players [x]
-     * Switching executes at correct priority [ ]
+     * Switching executes at correct priority [x]
      * Global Stamina Recovery effect works as expected [ ]
      * Accuracy works as expected (i.e. controls damage or no damage, modify oracle) [ ]
      * Stamina works as expected (i.e. controls whether or not a move can be used, deltas are updated) [ ]
@@ -533,7 +533,7 @@ contract GameTest is Test {
     }
 
     function test_NonKOSubsequentMoves() public {
-         // Initialize fast and slow mons
+        // Initialize fast and slow mons
         IMoveSet normalAttack = new CustomAttack(
             engine,
             typeCalc,
@@ -628,9 +628,7 @@ contract GameTest is Test {
         );
 
         // Second move, have Alice swap out to mon at index 1, have Bob use attack
-        _commitRevealExecuteForAliceAndBob(
-            battleKey, SWITCH_MOVE_INDEX, 0, abi.encode(1), ""
-        );
+        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, 0, abi.encode(1), "");
 
         // Assert that mon index for Alice is 1
         // Assert that the mon state for Alice has -5 applied to the switched in mon
@@ -682,9 +680,7 @@ contract GameTest is Test {
         );
 
         // Second move, have Alice swap out to mon at index 1, have Bob use fast attack
-        _commitRevealExecuteForAliceAndBob(
-            battleKey, SWITCH_MOVE_INDEX, 0, abi.encode(1), ""
-        );
+        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, 0, abi.encode(1), "");
 
         // Assert that mon index for Alice is 1
         // Assert that the mon state for Alice has -5 applied to the previous mon
@@ -735,14 +731,14 @@ contract GameTest is Test {
             battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
         );
 
-        // Second move, have Alice swap out to mon at index 1, have Bob use fast attack which supersedes Switch 
-        _commitRevealExecuteForAliceAndBob(
-            battleKey, SWITCH_MOVE_INDEX, 0, abi.encode(1), ""
-        );
+        // Second move, have Alice swap out to mon at index 1, have Bob use fast attack which supersedes Switch
+        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, 0, abi.encode(1), "");
 
-        // Given that it's a KO (even though Alice chose switch), 
+        // Given that it's a KO (even though Alice chose switch),
         // check that now they have the priority flag again
         BattleState memory state = engine.getBattleState(battleKey);
         assertEq(state.playerSwitchForTurnFlag, 0);
     }
+
+    function test_defaultStaminaRegenEffect() public {}
 }

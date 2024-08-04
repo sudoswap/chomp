@@ -37,6 +37,7 @@ contract CustomAttack is AttackCalculator, IMoveSet {
 
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng)
         external
+        view
         returns (MonState[][] memory, uint256[] memory, IEffect[][] memory, bytes[][] memory, bytes32, bytes32)
     {
         return calculateDamage(

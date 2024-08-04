@@ -11,6 +11,7 @@ import {DefaultValidator} from "../src/DefaultValidator.sol";
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
 
+import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
 
 import {TypeCalculator} from "../src/types/TypeCalculator.sol";
@@ -85,8 +86,14 @@ contract GameTest is Test {
         dummyTeam[0] = dummyMon;
         dummyTeams[0] = dummyTeam;
         dummyTeams[1] = dummyTeam;
-        Battle memory dummyBattle =
-            Battle({p0: ALICE, p1: BOB, validator: validator, teams: dummyTeams, rngOracle: defaultOracle});
+        Battle memory dummyBattle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            teams: dummyTeams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
         vm.startPrank(ALICE);
         return engine.start(dummyBattle);
     }
@@ -279,8 +286,14 @@ contract GameTest is Test {
         slowTeam[0] = slowMon;
         teams[0] = fastTeam;
         teams[1] = slowTeam;
-        Battle memory battle =
-            Battle({p0: ALICE, p1: BOB, validator: validator, teams: teams, rngOracle: defaultOracle});
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
 
         vm.startPrank(ALICE);
         bytes32 battleKey = engine.start(battle);
@@ -349,8 +362,14 @@ contract GameTest is Test {
         slowTeam[0] = slowMon;
         teams[0] = fastTeam;
         teams[1] = slowTeam;
-        Battle memory battle =
-            Battle({p0: ALICE, p1: BOB, validator: validator, teams: teams, rngOracle: defaultOracle});
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
 
         vm.startPrank(ALICE);
         bytes32 battleKey = engine.start(battle);
@@ -428,8 +447,14 @@ contract GameTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle =
-            Battle({p0: ALICE, p1: BOB, validator: twoMonValidator, teams: teams, rngOracle: defaultOracle});
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
 
         vm.startPrank(ALICE);
         bytes32 battleKey = engine.start(battle);
@@ -558,8 +583,14 @@ contract GameTest is Test {
         team[0] = normalMon;
         teams[0] = team;
         teams[1] = team;
-        Battle memory battle =
-            Battle({p0: ALICE, p1: BOB, validator: validator, teams: teams, rngOracle: defaultOracle});
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
 
         vm.startPrank(ALICE);
         bytes32 battleKey = engine.start(battle);
@@ -615,10 +646,16 @@ contract GameTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle =
-            Battle({p0: ALICE, p1: BOB, validator: twoMonValidator, teams: teams, rngOracle: defaultOracle});
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
 
-        // Staert the battle
+        // Start the battle
         vm.startPrank(ALICE);
         bytes32 battleKey = engine.start(battle);
 
@@ -667,10 +704,16 @@ contract GameTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle =
-            Battle({p0: ALICE, p1: BOB, validator: twoMonValidator, teams: teams, rngOracle: defaultOracle});
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
 
-        // Staert the battle
+        // Start the battle
         vm.startPrank(ALICE);
         bytes32 battleKey = engine.start(battle);
 
@@ -719,10 +762,16 @@ contract GameTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle =
-            Battle({p0: ALICE, p1: BOB, validator: twoMonValidator, teams: teams, rngOracle: defaultOracle});
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
 
-        // Staert the battle
+        // Start the battle
         vm.startPrank(ALICE);
         bytes32 battleKey = engine.start(battle);
 

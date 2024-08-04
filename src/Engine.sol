@@ -112,6 +112,15 @@ contract Engine is IEngine {
             }
         }
 
+        // Get the global effects and data to start the game if any
+        if (address(battle.ruleset) != address(0)) {
+            (IEffect[] memory effects, bytes[] memory data) = battle.ruleset.getInitialGlobalEffects();
+            if (effects.length > 0) {
+                battleStates[battleKey].globalEffects = effects;
+                battleStates[battleKey].extraDataForGlobalEffects = data;
+            }
+        }
+
         // Set flag to be 2 which means both players act
         battleStates[battleKey].playerSwitchForTurnFlag = 2;
 

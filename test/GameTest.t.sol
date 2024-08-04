@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import "forge-std/Test.sol";
+import "../lib/forge-std/src/Test.sol";
 
 import "../src/Constants.sol";
 import "../src/Enums.sol";
@@ -18,6 +18,8 @@ import {TypeCalculator} from "../src/types/TypeCalculator.sol";
 
 import {CustomAttack} from "../src/moves/CustomAttack.sol";
 import {IMoveSet} from "../src/moves/IMoveSet.sol";
+
+import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
 
 contract GameTest is Test {
     Engine engine;
@@ -789,5 +791,62 @@ contract GameTest is Test {
         assertEq(state.playerSwitchForTurnFlag, 0);
     }
 
-    function test_defaultStaminaRegenEffect() public {}
+    function test_defaultStaminaRegenEffect() public {
+        // Initialize mons and moves
+        IMoveSet superFastAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 7})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = superFastAttack;
+        Mon memory normalMon = Mon({
+            hp: 10,
+            stamina: 2, // need to have enough stamina for 2 moves
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory team = new Mon[](2);
+        team[0] = normalMon;
+        team[1] = normalMon;
+        teams[0] = team;
+        teams[1] = team;
+        DefaultValidator twoMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+        DefaultStaminaRegen regen = new DefaultStaminaRegen(engine);
+        DefaultRuleset rules = new DefaultRuleset(engine, IEffect(address(regen)));
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: rules
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
+        // (No mons are knocked out yet)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        BattleState memory state = engine.getBattleState(battleKey);
+
+        // Assert that the staminaDelta was set correctly (now back to 0)
+        assertEq(state.monStates[0][0].staminaDelta, 0);
+    }
 }

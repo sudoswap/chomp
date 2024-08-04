@@ -563,6 +563,7 @@ contract Engine is IEngine {
         uint256 i;
         while (i < effects.length) {
             if (effects[i].shouldRunAtRound(round)) {
+                // We run the effect
                 (MonState[][] memory updatedMonStates, bytes memory updatedExtraData, bool removeAfterHandle) =
                     effects[i].runEffect(battleKey, rng, extraData[i], 0);
 
@@ -577,6 +578,7 @@ contract Engine is IEngine {
                 // Otherwise, we update the extra data if e.g. the effect needs to modify state
                 else {
                     extraData[i] = updatedExtraData;
+                    ++i;
                 }
 
                 // Either way, in both cases, we then update the mon states

@@ -41,36 +41,25 @@ contract DefaultStaminaRegen is IEffect {
         view
         returns (MonState[][] memory, bytes memory, bool)
     {
-        BattleState memory state = ENGINE.getBattleState(battleKey);
-        // By default, update stamina for both active mons
-        if (state.playerSwitchForTurnFlag == 0) {
-            state.monStates[0] = _regenStaminaDelta(state, 0);
-            state.monStates[1] = _regenStaminaDelta(state, 1);
-        }
-        // Otherwise, if the state player allowance flag is set, only update the stamina delta of the non-swapped-in mon
-        else if (state.playerSwitchForTurnFlag == 1) {
-            state.monStates[1] = _regenStaminaDelta(state, 1);
-        } else if (state.playerSwitchForTurnFlag == 2) {
-            state.monStates[0] = _regenStaminaDelta(state, 0);
-        }
-        // We don't need to store data
-        return (state.monStates, "", false);
-    }
+        uint256 playerSwitchForTurnFlag = ENGINE.getPlayerSwitchForTurnFlagForBattleState(battleKey);
+        MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
+        uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
 
-    function _regenStaminaDelta(BattleState memory state, uint256 playerIndex)
-        internal
-        pure
-        returns (MonState[] memory)
-    {
-        int256 currentActiveMonStaminaDelta =
-            state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta;
-        int256 updatedActiveMonStaminaDelta = currentActiveMonStaminaDelta;
-        // Cannot go past max stamina
-        if (currentActiveMonStaminaDelta < 0) {
-            updatedActiveMonStaminaDelta = currentActiveMonStaminaDelta + 1;
+        // Update stamina for both active mons only if it's a 2 player turn
+        if (playerSwitchForTurnFlag == 2) {
+            for (uint playerIndex; playerIndex < 2; ++playerIndex) {
+                int256 currentActiveMonStaminaDelta =
+                monStates[playerIndex][activeMonIndex[playerIndex]].staminaDelta;
+                int256 updatedActiveMonStaminaDelta = currentActiveMonStaminaDelta;
+                // Cannot go past max stamina
+                if (currentActiveMonStaminaDelta < 0) {
+                    updatedActiveMonStaminaDelta = currentActiveMonStaminaDelta + 1;
+                }
+                monStates[playerIndex][activeMonIndex[playerIndex]].staminaDelta = updatedActiveMonStaminaDelta;
+            }
         }
-        MonState[] memory monState = state.monStates[playerIndex];
-        monState[state.activeMonIndex[playerIndex]].staminaDelta = updatedActiveMonStaminaDelta;
-        return monState;
+
+        // We don't need to store data
+        return (monStates, "", false);
     }
 }

@@ -25,5 +25,14 @@ Feature thinking:
         - environmental (hazards/weather/etc.)
 
 dev TODO:
-- add abiility interface (adds on switch in handler--should this just be the case for all events?)
+- change up move interface to not return modified state
+    - instead, use permissioned system to let the engine give external callers an ability to modify state during the callstack
+    - moves instead only return whether or not to force a switch, and then are expected to call the engine to mutate state
+    - saves on gas, and should make it clearer when state mutations happen, and which ones they are (more surgical)
+    - compared to returning the entire state
+
+- the switch return (each move can at most switch one mon, either the opponent's mon, or the user's mon) will be handled by the engine
+- add a new on-switch-in hook to handle both the ability, as well as global effects which run on switch in (specific mon effects can or cannot run on switch in? i guess can have both, no real difference)
+
+- add ability interface (adds on switch in handler--should this just be the case for all events?)
 - add way to handle disable as a general privileged status condition

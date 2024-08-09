@@ -52,6 +52,7 @@ struct MonState {
     int256 specialAttackDelta;
     int256 specialDefenceDelta;
     bool isKnockedOut; // Is either 0 or 1
+    bool shouldSkipTurn; // Used for effects to skip turn, or when moves become invalid (outside of user control)
     IEffect[] targetedEffects;
     bytes[] extraDataForTargetedEffects;
 }

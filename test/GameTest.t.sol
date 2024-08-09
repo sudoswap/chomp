@@ -13,6 +13,7 @@ import {IValidator} from "../src/IValidator.sol";
 
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
+import {MockRandomnessOracle} from "../src/rng/MockRandomnessOracle.sol";
 
 import {TypeCalculator} from "../src/types/TypeCalculator.sol";
 
@@ -61,6 +62,7 @@ contract GameTest is Test {
             type2: Type.None,
             moves: moves
         });
+
     }
 
     /**
@@ -75,10 +77,11 @@ contract GameTest is Test {
      * Faster Speed Wins KO, leads to forced switch if team size is >= 2 [ ]
      * Non-KO moves lead to subsequent move for both players [x]
      * Switching executes at correct priority [x]
-     * Global Stamina Recovery effect works as expected [ ]
-     * Accuracy works as expected (i.e. controls damage or no damage, modify oracle) [ ]
+     * Global Stamina Recovery effect works as expected [x]
+     * Accuracy works as expected (i.e. controls damage or no damage, modify oracle) [x]
      * Stamina works as expected (i.e. controls whether or not a move can be used, deltas are updated) [ ]
      * Effects work as expected (create a damage over time effect, check that Effect can KO) [ ]
+     * shouldSkipTurn flag works as expected (create an effect that skips move, and a move that skips move) [ ]
      */
 
     // Helper function, creates a battle with two mons for Alice and Bob
@@ -848,5 +851,172 @@ contract GameTest is Test {
 
         // Assert that the staminaDelta was set correctly (now back to 0)
         assertEq(state.monStates[0][0].staminaDelta, 0);
+    }
+
+    function test_accuracyWorksAsExpectedWithRNG() public {
+        // Deploy a custom RNG oracle that returns a fixed value
+        MockRandomnessOracle mockOracle = new MockRandomnessOracle();
+        mockOracle.setRNG(1);
+
+        // Initialize mons and moves
+        IMoveSet normalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 0})
+        );
+        IMoveSet inaccurateAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 1, STAMINA_COST: 1, PRIORITY: 0})
+        );
+        IMoveSet[] memory normalMoves = new IMoveSet[](1);
+        normalMoves[0] = normalAttack;
+        IMoveSet[] memory inaccurateMoves = new IMoveSet[](1);
+        inaccurateMoves[0] = inaccurateAttack;
+        Mon memory normalMon = Mon({
+            hp: 10,
+            stamina: 2, // need to have enough stamina for 2 moves
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: normalMoves
+        });
+        Mon memory inaccurateMon = Mon({
+            hp: 10,
+            stamina: 2, // need to have enough stamina for 2 moves
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: inaccurateMoves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory normalTeam = new Mon[](1);
+        normalTeam[0] = normalMon;
+        Mon[] memory inaccurateTeam = new Mon[](1);
+        inaccurateTeam[0] = inaccurateMon;
+        teams[0] = normalTeam;
+        teams[1] = inaccurateTeam;
+
+        // Initialize battle with custom rng oracle
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            teams: teams,
+            rngOracle: mockOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Assert that Bob's move missed (did no damage)
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][0].hpDelta, 0);
+
+        // Assert that Alice's move did damage
+        assertEq(state.monStates[1][0].hpDelta, -5);
+    }
+
+    function test_invalidMoveIfStaminaCostTooHigh() public {
+        // Initialize mons and moves
+        IMoveSet highStaminaAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 100, STAMINA_COST: 2, PRIORITY: 0})
+        );
+        IMoveSet[] memory highStaminaMoves = new IMoveSet[](1);
+        highStaminaMoves[0] = highStaminaAttack;
+        IMoveSet normalStaminaAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 0})
+        );
+        IMoveSet[] memory normalStaminaMoves = new IMoveSet[](1);
+        normalStaminaMoves[0] = normalStaminaAttack;
+        Mon memory highStaminaMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: highStaminaMoves
+        });
+        Mon memory normalStaminaMon = Mon({
+            hp: 10,
+            stamina: 2,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: normalStaminaMoves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory highStaminaTeam = new Mon[](1);
+        highStaminaTeam[0] = highStaminaMon;
+        Mon[] memory normalStaminaTeam = new Mon[](1);
+        normalStaminaTeam[0] = normalStaminaMon;
+        teams[0] = highStaminaTeam;
+        teams[1] = normalStaminaTeam;
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+        
+        vm.startPrank(ALICE);
+
+        bytes32 battleKey = engine.start(battle);
+
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Commit move index 0 for Alice
+        uint256 moveIndex = 0;
+
+        vm.startPrank(ALICE);
+        bytes32 aliceMoveHash = keccak256(abi.encodePacked(moveIndex, bytes32(""), ""));
+        engine.commitMove(battleKey, aliceMoveHash);
+
+        // Commit move index 0 for Bob
+        vm.startPrank(BOB);
+        bytes32 bobMoveHash = keccak256(abi.encodePacked(moveIndex, bytes32(""), ""));
+        engine.commitMove(battleKey, bobMoveHash);
+
+        // Reveal Alice's move (valid)
+        vm.startPrank(ALICE);
+        engine.revealMove(battleKey, moveIndex, bytes32(""), "");
+
+        // Assert that Bob cannot reveal anything because of the stamina cost
+        vm.startPrank(BOB);
+        vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", BOB));
+        engine.revealMove(battleKey, moveIndex, bytes32(""), "");
     }
 }

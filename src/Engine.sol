@@ -474,6 +474,7 @@ contract Engine is IEngine {
             currentMonState.defenceDelta = 0;
             currentMonState.specialDefenceDelta = 0;
             currentMonState.speedDelta = 0;
+            currentMonState.isKnockedOut = false;
         }
 
         // Update to new active mon (we assume validate already resolved and gives us a valid target)
@@ -486,7 +487,17 @@ contract Engine is IEngine {
         uint256 turnId = state.turnId;
         RevealedMove storage move = battleStates[battleKey].moveHistory[playerIndex][turnId];
 
-        // handle a switch, a no-op, or execute the moveset
+        {
+            // Handle shouldSkipTurn flag first and toggle it off
+            MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
+            if (currentMonState.shouldSkipTurn) {
+                currentMonState.shouldSkipTurn = false;
+                return;
+            }
+        }
+        
+        // Handle a switch or a no-op
+        // otherwise, execute the moveset
         if (move.moveIndex == SWITCH_MOVE_INDEX) {
             _handleSwitch(battleKey, playerIndex);
         } else if (move.moveIndex == NO_OP_MOVE_INDEX) {

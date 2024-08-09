@@ -23,3 +23,7 @@ Feature thinking:
         - stat boost (2 stages to any one stat) / (1 stage to two stats)
         - healing (reduced healing over time)
         - environmental (hazards/weather/etc.)
+
+dev TODO:
+- add abiility interface (adds on switch in handler--should this just be the case for all events?)
+- add way to handle disable as a general privileged status condition

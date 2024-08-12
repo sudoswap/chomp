@@ -12,6 +12,15 @@ Changes needed:
     - accordingly, updating effects / mon state will be handled through asking the engine directly
     - may need to also let the engine update moves, but this can technically be handled by removing / inserting a new instance
 
+DONE: finished making moves writable
+
+TODO:
+- add test to ensure that unauthorized writes do not succeed
+    - think a little bit more about the security aspects
+- add ability to add effects and remove effects
+- add ability to write to global kv
+- add return values to moves so they can initiate a switch if needed
+- add on-switch as trigger for effects, dovetail into abilities
 
 
 ---------------------------------------------------------------------------------------------

@@ -29,3 +29,15 @@ enum AttackSupertype {
     Physical,
     Special
 }
+
+enum MonStateIndexName {
+    HP,
+    Stamina,
+    Speed,
+    Attack,
+    Defence,
+    SpecialAttack,
+    SpecialDefence,
+    IsKnockedOut,
+    ShouldSkipTurn
+}

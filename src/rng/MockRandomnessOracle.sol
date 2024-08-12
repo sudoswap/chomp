@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import {IRandomnessOracle} from "./IRandomnessOracle.sol";
 
 contract MockRandomnessOracle is IRandomnessOracle {
-
     uint256 rng;
 
     function setRNG(uint256 a) public {

@@ -62,7 +62,6 @@ contract GameTest is Test {
             type2: Type.None,
             moves: moves
         });
-
     }
 
     /**
@@ -989,7 +988,7 @@ contract GameTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0))
         });
-        
+
         vm.startPrank(ALICE);
 
         bytes32 battleKey = engine.start(battle);

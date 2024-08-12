@@ -27,18 +27,12 @@ abstract contract AttackCalculator {
         Type attackType,
         AttackSupertype attackSupertype,
         uint256 rng
-    )
-        public
-        view
-        returns (MonState[][] memory, uint256[] memory, IEffect[][] memory, bytes[][] memory, bytes32, bytes32)
-    {
+    ) public {
         BattleState memory state = ENGINE.getBattleState(battleKey);
-        IEffect[][] memory emptyEffects = new IEffect[][](0);
-        bytes[][] memory emptyData = new bytes[][](0);
 
         // Do accuracy check first to decide whether or not to short circuit
         if ((rng % 100) >= accuracy) {
-            return (state.monStates, state.activeMonIndex, emptyEffects, emptyData, "", "");
+            return;
         }
 
         uint256 damage;
@@ -82,20 +76,25 @@ abstract contract AttackCalculator {
         }
 
         // Update stamina delta for the attacker mon
-        MonState[][] memory updatedStates = state.monStates;
-        updatedStates[attackerPlayerIndex][state.activeMonIndex[attackerPlayerIndex]].staminaDelta -=
-            int256(staminaCost);
+        ENGINE.setMonState(
+            attackerPlayerIndex,
+            state.activeMonIndex[attackerPlayerIndex],
+            MonStateIndexName.Stamina,
+            -1 * int256(staminaCost)
+        );
 
         // Do damage calc and check for KO on defending mon
-        updatedStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta -= int256(damage);
+        ENGINE.setMonState(
+            defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], MonStateIndexName.HP, -1 * int256(damage)
+        );
 
-        if (
-            updatedStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta
-                + int256(defenderMon.hp) <= 0
-        ) {
-            updatedStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].isKnockedOut = true;
+        // Check for KO and set if so on defending mon
+        int256 newTotalHealth = int256(defenderMon.hp)
+            + state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta - int256(damage);
+        if (newTotalHealth <= 0) {
+            ENGINE.setMonState(
+                defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], MonStateIndexName.IsKnockedOut, 1
+            );
         }
-
-        return (updatedStates, state.activeMonIndex, emptyEffects, emptyData, "", "");
     }
 }

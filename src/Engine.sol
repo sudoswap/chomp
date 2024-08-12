@@ -12,12 +12,14 @@ import {IEngine} from "./IEngine.sol";
 contract Engine is IEngine {
     uint256 constant SWITCH_PRIORITY = 6;
 
+    bytes32 battleKeyForWrite;
     mapping(bytes32 => uint256) public pairHashNonces;
     mapping(bytes32 battleKey => Battle) public battles;
     mapping(bytes32 battleKey => BattleState) public battleStates;
     mapping(bytes32 battleKey => mapping(address player => Commitment)) public commitments;
     mapping(bytes32 battleKey => mapping(bytes32 => bytes32)) public globalKV;
 
+    error NoWriteAllowed();
     error NotP0OrP1();
     error AlreadyCommited();
     error RevealBeforeOtherCommit();
@@ -77,6 +79,41 @@ contract Engine is IEngine {
 
     function getCommitment(bytes32 battleKey, address player) external view returns (Commitment memory) {
         return commitments[battleKey][player];
+    }
+
+    /**
+     * - Write functions for MonState, Effects, and GlobalKV
+     */
+
+    // Set mon state for a specific player for a specific variable in mon state for a specific mon
+    function setMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int256 value)
+        external
+    {
+        bytes32 battleKey = battleKeyForWrite;
+        if (battleKey == bytes32(0)) {
+            revert NoWriteAllowed();
+        }
+        BattleState storage state = battleStates[battleKey];
+        MonState storage monState = state.monStates[playerIndex][monIndex];
+        if (stateVarIndex == MonStateIndexName.HP) {
+            monState.hpDelta += value;
+        } else if (stateVarIndex == MonStateIndexName.Stamina) {
+            monState.staminaDelta += value;
+        } else if (stateVarIndex == MonStateIndexName.Speed) {
+            monState.speedDelta += value;
+        } else if (stateVarIndex == MonStateIndexName.Attack) {
+            monState.attackDelta += value;
+        } else if (stateVarIndex == MonStateIndexName.Defence) {
+            monState.defenceDelta += value;
+        } else if (stateVarIndex == MonStateIndexName.SpecialAttack) {
+            monState.specialAttackDelta += value;
+        } else if (stateVarIndex == MonStateIndexName.SpecialDefence) {
+            monState.specialDefenceDelta += value;
+        } else if (stateVarIndex == MonStateIndexName.IsKnockedOut) {
+            monState.isKnockedOut = (value % 2) == 1;
+        } else if (stateVarIndex == MonStateIndexName.ShouldSkipTurn) {
+            monState.shouldSkipTurn = (value % 2) == 1;
+        }
     }
 
     /**
@@ -488,14 +525,14 @@ contract Engine is IEngine {
         RevealedMove storage move = battleStates[battleKey].moveHistory[playerIndex][turnId];
 
         {
-            // Handle shouldSkipTurn flag first and toggle it off
+            // Handle shouldSkipTurn flag first and toggle it off if set
             MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
             if (currentMonState.shouldSkipTurn) {
                 currentMonState.shouldSkipTurn = false;
                 return;
             }
         }
-        
+
         // Handle a switch or a no-op
         // otherwise, execute the moveset
         if (move.moveIndex == SWITCH_MOVE_INDEX) {
@@ -505,16 +542,14 @@ contract Engine is IEngine {
         }
         // Execute the move and then set updated state, active mons, and effects/data
         else {
-            IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex];
-            (
-                MonState[][] memory monStates,
-                uint256[] memory activeMons,
-                IEffect[][] memory newEffects,
-                bytes[][] memory extraDataForEffects,
-                bytes32 globalK,
-                bytes32 globalV
-            ) = moveSet.move(battleKey, playerIndex, move.extraData, rng);
+            // Set the battleKey to allow for writes
+            battleKeyForWrite = battleKey;
 
+            // Run the move and allow for writes
+            IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex];
+            moveSet.move(battleKey, playerIndex, move.extraData, rng);
+
+            /*
             // Assign the new mon states to storage
             state.monStates = monStates;
 
@@ -553,6 +588,10 @@ contract Engine is IEngine {
             if (globalK != "") {
                 globalKV[battleKey][globalK] = globalV;
             }
+            */
+
+            // Set the battleKey back to 0 to prevent writes
+            battleKeyForWrite = bytes32(0);
         }
     }
 

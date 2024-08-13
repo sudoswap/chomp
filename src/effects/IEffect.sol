@@ -24,5 +24,5 @@ interface IEffect {
         uint256 rng,
         bytes memory extraData,
         uint256 targetIndex // 0 for p0, and 1 for p1, and 2 for global effect (different from playerSwitchForTurnFlag, sorry!)
-    ) external view returns (MonState[][] memory monStates, bytes memory updatedExtraData, bool removeAfterHandle);
+    ) external returns (bytes memory updatedExtraData, bool removeAfterHandle);
 }

@@ -86,7 +86,7 @@ contract Engine is IEngine {
      */
 
     // Set mon state for a specific player for a specific variable in mon state for a specific mon
-    function setMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int256 value)
+    function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int256 valueToAdd)
         external
     {
         bytes32 battleKey = battleKeyForWrite;
@@ -96,23 +96,23 @@ contract Engine is IEngine {
         BattleState storage state = battleStates[battleKey];
         MonState storage monState = state.monStates[playerIndex][monIndex];
         if (stateVarIndex == MonStateIndexName.HP) {
-            monState.hpDelta += value;
+            monState.hpDelta += valueToAdd;
         } else if (stateVarIndex == MonStateIndexName.Stamina) {
-            monState.staminaDelta += value;
+            monState.staminaDelta += valueToAdd;
         } else if (stateVarIndex == MonStateIndexName.Speed) {
-            monState.speedDelta += value;
+            monState.speedDelta += valueToAdd;
         } else if (stateVarIndex == MonStateIndexName.Attack) {
-            monState.attackDelta += value;
+            monState.attackDelta += valueToAdd;
         } else if (stateVarIndex == MonStateIndexName.Defence) {
-            monState.defenceDelta += value;
+            monState.defenceDelta += valueToAdd;
         } else if (stateVarIndex == MonStateIndexName.SpecialAttack) {
-            monState.specialAttackDelta += value;
+            monState.specialAttackDelta += valueToAdd;
         } else if (stateVarIndex == MonStateIndexName.SpecialDefence) {
-            monState.specialDefenceDelta += value;
+            monState.specialDefenceDelta += valueToAdd;
         } else if (stateVarIndex == MonStateIndexName.IsKnockedOut) {
-            monState.isKnockedOut = (value % 2) == 1;
+            monState.isKnockedOut = (valueToAdd % 2) == 1;
         } else if (stateVarIndex == MonStateIndexName.ShouldSkipTurn) {
-            monState.shouldSkipTurn = (value % 2) == 1;
+            monState.shouldSkipTurn = (valueToAdd % 2) == 1;
         }
     }
 
@@ -549,47 +549,6 @@ contract Engine is IEngine {
             IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex];
             moveSet.move(battleKey, playerIndex, move.extraData, rng);
 
-            /*
-            // Assign the new mon states to storage
-            state.monStates = monStates;
-
-            // Assign the new active mon IDs to storage
-            state.activeMonIndex = activeMons;
-
-            // Assign new effects (if any)
-            if (newEffects.length > 0) {
-                for (uint256 targetIndex; targetIndex < 3; ++targetIndex) {
-                    IEffect[] storage effects;
-                    bytes[] storage extraData;
-
-                    // Grab storage reference to the correct effects/extra data array
-                    if (targetIndex == 2) {
-                        effects = state.globalEffects;
-                        extraData = state.extraDataForGlobalEffects;
-                    } else {
-                        effects = state.monStates[targetIndex][state.activeMonIndex[targetIndex]].targetedEffects;
-                        extraData =
-                            state.monStates[targetIndex][state.activeMonIndex[targetIndex]].extraDataForTargetedEffects;
-                    }
-
-                    // Attach each new effect if it is valid to register
-                    if (newEffects[targetIndex].length > 0) {
-                        for (uint256 j; j < newEffects[targetIndex].length; ++j) {
-                            if (newEffects[targetIndex][j].isValidToRegister(battleKey, targetIndex)) {
-                                effects.push(newEffects[targetIndex][j]);
-                                extraData.push(extraDataForEffects[targetIndex][j]);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Assign the global key value (if any)
-            if (globalK != "") {
-                globalKV[battleKey][globalK] = globalV;
-            }
-            */
-
             // Set the battleKey back to 0 to prevent writes
             battleKeyForWrite = bytes32(0);
         }
@@ -613,8 +572,12 @@ contract Engine is IEngine {
         uint256 i;
         while (i < effects.length) {
             if (effects[i].shouldRunAtRound(round)) {
-                // We run the effect
-                (MonState[][] memory updatedMonStates, bytes memory updatedExtraData, bool removeAfterHandle) =
+
+                // Set the battleKey to allow for writes
+                battleKeyForWrite = battleKey;
+
+                // Run the effects
+                (bytes memory updatedExtraData, bool removeAfterHandle) =
                     effects[i].runEffect(battleKey, rng, extraData[i], 0);
 
                 // If we remove the effect after doing it, then we clear and update the array/extra data
@@ -625,14 +588,15 @@ contract Engine is IEngine {
                     extraData[i] = extraData[effects.length - 1];
                     extraData.pop();
                 }
-                // Otherwise, we update the extra data if e.g. the effect needs to modify state
+                // Otherwise, we update the extra data if e.g. the effect needs to modify its own storage
                 else {
                     extraData[i] = updatedExtraData;
                     ++i;
                 }
 
-                // Either way, in both cases, we then update the mon states
-                state.monStates = updatedMonStates;
+                // Unset the battleKey to lock writes
+                battleKeyForWrite = bytes32(0);
+
             } else {
                 ++i;
             }

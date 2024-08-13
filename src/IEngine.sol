@@ -19,6 +19,6 @@ interface IEngine {
     function getGlobalKV(bytes32 battleKey, bytes32 key) external view returns (bytes32);
     function getCommitment(bytes32 battleKey, address player) external view returns (Commitment memory);
 
-    function setMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int256 value)
+    function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int256 valueToAdd)
         external;
 }

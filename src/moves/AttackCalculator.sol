@@ -76,7 +76,7 @@ abstract contract AttackCalculator {
         }
 
         // Update stamina delta for the attacker mon
-        ENGINE.setMonState(
+        ENGINE.updateMonState(
             attackerPlayerIndex,
             state.activeMonIndex[attackerPlayerIndex],
             MonStateIndexName.Stamina,
@@ -84,7 +84,7 @@ abstract contract AttackCalculator {
         );
 
         // Do damage calc and check for KO on defending mon
-        ENGINE.setMonState(
+        ENGINE.updateMonState(
             defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], MonStateIndexName.HP, -1 * int256(damage)
         );
 
@@ -92,7 +92,7 @@ abstract contract AttackCalculator {
         int256 newTotalHealth = int256(defenderMon.hp)
             + state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta - int256(damage);
         if (newTotalHealth <= 0) {
-            ENGINE.setMonState(
+            ENGINE.updateMonState(
                 defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], MonStateIndexName.IsKnockedOut, 1
             );
         }

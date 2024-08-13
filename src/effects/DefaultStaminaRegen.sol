@@ -38,8 +38,7 @@ contract DefaultStaminaRegen is IEffect {
 
     function runEffect(bytes32 battleKey, uint256, bytes memory, uint256)
         external
-        view
-        returns (MonState[][] memory, bytes memory, bool)
+        returns (bytes memory, bool)
     {
         uint256 playerSwitchForTurnFlag = ENGINE.getPlayerSwitchForTurnFlagForBattleState(battleKey);
         MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
@@ -48,17 +47,17 @@ contract DefaultStaminaRegen is IEffect {
         // Update stamina for both active mons only if it's a 2 player turn
         if (playerSwitchForTurnFlag == 2) {
             for (uint256 playerIndex; playerIndex < 2; ++playerIndex) {
+
                 int256 currentActiveMonStaminaDelta = monStates[playerIndex][activeMonIndex[playerIndex]].staminaDelta;
-                int256 updatedActiveMonStaminaDelta = currentActiveMonStaminaDelta;
-                // Cannot go past max stamina
+
+                // Cannot go past max stamina, so we only add 1 stamina if the current delta is negative
                 if (currentActiveMonStaminaDelta < 0) {
-                    updatedActiveMonStaminaDelta = currentActiveMonStaminaDelta + 1;
+                    ENGINE.updateMonState(playerIndex, activeMonIndex[playerIndex], MonStateIndexName.Stamina, 1);
                 }
-                monStates[playerIndex][activeMonIndex[playerIndex]].staminaDelta = updatedActiveMonStaminaDelta;
             }
         }
 
         // We don't need to store data
-        return (monStates, "", false);
+        return ( "", false);
     }
 }

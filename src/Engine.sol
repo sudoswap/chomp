@@ -12,7 +12,7 @@ import {IEngine} from "./IEngine.sol";
 contract Engine is IEngine {
     uint256 constant SWITCH_PRIORITY = 6;
 
-    bytes32 battleKeyForWrite;
+    bytes32 public battleKeyForWrite;
     mapping(bytes32 => uint256) public pairHashNonces;
     mapping(bytes32 battleKey => Battle) public battles;
     mapping(bytes32 battleKey => BattleState) public battleStates;

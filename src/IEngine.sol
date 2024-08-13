@@ -5,6 +5,9 @@ import "./Enums.sol";
 import "./Structs.sol";
 
 interface IEngine {
+
+    function battleKeyForWrite() external view returns (bytes32);
+
     function getBattle(bytes32 battleKey) external view returns (Battle memory);
     function getTeamsForBattle(bytes32 battleKey) external view returns (Mon[][] memory);
     function getPlayersForBattle(bytes32 battleKey) external view returns (address[] memory);

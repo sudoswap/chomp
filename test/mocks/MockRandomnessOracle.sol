@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import {IRandomnessOracle} from "./IRandomnessOracle.sol";
+import {IRandomnessOracle} from "../../src/rng/IRandomnessOracle.sol";
 
 contract MockRandomnessOracle is IRandomnessOracle {
     uint256 rng;

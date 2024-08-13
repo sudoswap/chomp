@@ -13,7 +13,7 @@ import {IValidator} from "../src/IValidator.sol";
 
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
-import {MockRandomnessOracle} from "../src/rng/MockRandomnessOracle.sol";
+import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
 
 import {TypeCalculator} from "../src/types/TypeCalculator.sol";
 
@@ -1017,5 +1017,15 @@ contract GameTest is Test {
         vm.startPrank(BOB);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", BOB));
         engine.revealMove(battleKey, moveIndex, bytes32(""), "");
+    }
+
+    // Ensure that we cannot write to mon state when there is no active execute() call in the call stack
+    function test_ensureWritingToStateFailsWhenNotInCallStack() public {
+        _startDummyBattle();
+
+        // Calling the update function directly should revert
+        vm.startPrank(ALICE);
+        vm.expectRevert(Engine.NoWriteAllowed.selector);
+        engine.updateMonState(0, 0, MonStateIndexName.Hp, 0);
     }
 }

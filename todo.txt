@@ -6,13 +6,8 @@ dev TODO:
     - compared to returning the entire state
 
 Changes needed:
-- set permissions on engine
-- set write functions on engine for mon state
-- moves will only return whether or not to handle a switch
-    - accordingly, updating effects / mon state will be handled through asking the engine directly
-    - may need to also let the engine update moves, but this can technically be handled by removing / inserting a new instance
-
-DONE: finished making moves writable
+- set permissions on engine [x]
+- set write functions on engine for mon state [x]
 
 TODO:
 - add test to ensure that unauthorized writes do not succeed
@@ -20,6 +15,7 @@ TODO:
 - add ability to add effects and remove effects
 - add ability to write to global kv
 - add return values to moves so they can initiate a switch if needed
+    - need to specify which mon index to switch to, and whether or not there is a switch
 - add on-switch as trigger for effects, dovetail into abilities
 
 

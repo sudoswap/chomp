@@ -85,7 +85,7 @@ abstract contract AttackCalculator {
 
         // Do damage calc and check for KO on defending mon
         ENGINE.updateMonState(
-            defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], MonStateIndexName.HP, -1 * int256(damage)
+            defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], MonStateIndexName.Hp, -1 * int256(damage)
         );
 
         // Check for KO and set if so on defending mon

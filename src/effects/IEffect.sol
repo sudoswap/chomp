@@ -6,7 +6,7 @@ import "../Structs.sol";
 
 interface IEffect {
     // Identifier (32 ASCII words)
-    function name() external returns (bytes32);
+    function name() external returns (string memory);
 
     // Whether or not an effect can be registered
     function isValidToRegister(bytes32 battleKey, uint256 targetIndex) external returns (bool);

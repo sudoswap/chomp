@@ -21,4 +21,5 @@ interface IEngine {
 
     function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int256 valueToAdd)
         external;
+    function addEffect(uint256 targetIndex, IEffect effect, bytes calldata extraData) external;
 }

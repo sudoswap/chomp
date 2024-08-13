@@ -14,8 +14,8 @@ contract DefaultStaminaRegen is IEffect {
         ENGINE = _ENGINE;
     }
 
-    function name() external pure returns (bytes32) {
-        return "DefaultStaminaRegen";
+    function name() external pure returns (string memory) {
+        return "Default Stamina Regen";
     }
 
     // Irrelevant, as it will be registered at the beginning of the battle
@@ -36,10 +36,7 @@ contract DefaultStaminaRegen is IEffect {
         return false;
     }
 
-    function runEffect(bytes32 battleKey, uint256, bytes memory, uint256)
-        external
-        returns (bytes memory, bool)
-    {
+    function runEffect(bytes32 battleKey, uint256, bytes memory, uint256) external returns (bytes memory, bool) {
         uint256 playerSwitchForTurnFlag = ENGINE.getPlayerSwitchForTurnFlagForBattleState(battleKey);
         MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
@@ -47,7 +44,6 @@ contract DefaultStaminaRegen is IEffect {
         // Update stamina for both active mons only if it's a 2 player turn
         if (playerSwitchForTurnFlag == 2) {
             for (uint256 playerIndex; playerIndex < 2; ++playerIndex) {
-
                 int256 currentActiveMonStaminaDelta = monStates[playerIndex][activeMonIndex[playerIndex]].staminaDelta;
 
                 // Cannot go past max stamina, so we only add 1 stamina if the current delta is negative
@@ -58,6 +54,6 @@ contract DefaultStaminaRegen is IEffect {
         }
 
         // We don't need to store data
-        return ( "", false);
+        return ("", false);
     }
 }

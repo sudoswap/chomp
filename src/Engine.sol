@@ -95,7 +95,7 @@ contract Engine is IEngine {
         }
         BattleState storage state = battleStates[battleKey];
         MonState storage monState = state.monStates[playerIndex][monIndex];
-        if (stateVarIndex == MonStateIndexName.HP) {
+        if (stateVarIndex == MonStateIndexName.Hp) {
             monState.hpDelta += valueToAdd;
         } else if (stateVarIndex == MonStateIndexName.Stamina) {
             monState.staminaDelta += valueToAdd;
@@ -113,6 +113,39 @@ contract Engine is IEngine {
             monState.isKnockedOut = (valueToAdd % 2) == 1;
         } else if (stateVarIndex == MonStateIndexName.ShouldSkipTurn) {
             monState.shouldSkipTurn = (valueToAdd % 2) == 1;
+        }
+    }
+
+    function addEffect(uint256 targetIndex, IEffect effect, bytes calldata extraData) external {
+        bytes32 battleKey = battleKeyForWrite;
+        if (battleKey == bytes32(0)) {
+            revert NoWriteAllowed();
+        }
+        BattleState storage state = battleStates[battleKey];
+        if (targetIndex == 2) {
+            state.globalEffects.push(effect);
+            state.extraDataForGlobalEffects.push(extraData);
+        } else {
+            state.monStates[targetIndex][state.activeMonIndex[targetIndex]].targetedEffects.push(effect);
+            state.monStates[targetIndex][state.activeMonIndex[targetIndex]].extraDataForTargetedEffects.push(extraData);
+        }
+    }
+
+    function removeEffect(uint256 targetIndex, uint256 effectIndex) external {
+        bytes32 battleKey = battleKeyForWrite;
+        if (battleKey == bytes32(0)) {
+            revert NoWriteAllowed();
+        }
+        BattleState storage state = battleStates[battleKey];
+        if (targetIndex == 2) {
+            state.globalEffects[effectIndex] = state.globalEffects[state.globalEffects.length - 1];
+            state.globalEffects.pop();
+        } else {
+            uint256 activeMonIndex = state.activeMonIndex[targetIndex];
+            uint256 totalNumEffects = state.monStates[targetIndex][activeMonIndex].targetedEffects.length;
+            state.monStates[targetIndex][activeMonIndex].targetedEffects[effectIndex] =
+                state.monStates[targetIndex][activeMonIndex].targetedEffects[totalNumEffects - 1];
+            state.monStates[targetIndex][activeMonIndex].targetedEffects.pop();
         }
     }
 
@@ -572,7 +605,6 @@ contract Engine is IEngine {
         uint256 i;
         while (i < effects.length) {
             if (effects[i].shouldRunAtRound(round)) {
-
                 // Set the battleKey to allow for writes
                 battleKeyForWrite = battleKey;
 
@@ -596,7 +628,6 @@ contract Engine is IEngine {
 
                 // Unset the battleKey to lock writes
                 battleKeyForWrite = bytes32(0);
-
             } else {
                 ++i;
             }

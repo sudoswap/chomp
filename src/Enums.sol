@@ -31,7 +31,7 @@ enum AttackSupertype {
 }
 
 enum MonStateIndexName {
-    HP,
+    Hp,
     Stamina,
     Speed,
     Attack,

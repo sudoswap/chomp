@@ -5,7 +5,6 @@ import "./Enums.sol";
 import "./Structs.sol";
 
 interface IEngine {
-
     function battleKeyForWrite() external view returns (bytes32);
 
     function getBattle(bytes32 battleKey) external view returns (Battle memory);
@@ -24,5 +23,6 @@ interface IEngine {
 
     function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int256 valueToAdd)
         external;
-    function addEffect(uint256 targetIndex, IEffect effect, bytes calldata extraData) external;
+    function addEffect(uint256 targetIndex, uint256 monIndex, IEffect effect, bytes calldata extraData) external;
+    function removeEffect(uint256 targetIndex, uint256 monIndex, uint256 effectIndex) external;
 }

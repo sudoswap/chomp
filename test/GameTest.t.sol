@@ -10,9 +10,13 @@ import "../src/Structs.sol";
 import {DefaultValidator} from "../src/DefaultValidator.sol";
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
+import {IEffect} from "../src/effects/IEffect.sol";
 
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
+
+import {EffectAttack} from "./mocks/EffectAttack.sol";
+import {InstantDeathEffect} from "./mocks/InstantDeathEffect.sol";
 import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
 
 import {TypeCalculator} from "../src/types/TypeCalculator.sol";
@@ -78,7 +82,7 @@ contract GameTest is Test {
      * Switching executes at correct priority [x]
      * Global Stamina Recovery effect works as expected [x]
      * Accuracy works as expected (i.e. controls damage or no damage, modify oracle) [x]
-     * Stamina works as expected (i.e. controls whether or not a move can be used, deltas are updated) [ ]
+     * Stamina works as expected (i.e. controls whether or not a move can be used, deltas are updated) [x]
      * Effects work as expected (create a damage over time effect, check that Effect can KO) [ ]
      * shouldSkipTurn flag works as expected (create an effect that skips move, and a move that skips move) [ ]
      */
@@ -250,7 +254,7 @@ contract GameTest is Test {
         assertEq(state.turnId, 2);
     }
 
-    function test_FasterSpeedKOsGameOver() public {
+    function test_fasterSpeedKOsGameOver() public {
         // Initialize mons
         IMoveSet normalAttack = new CustomAttack(
             engine,
@@ -474,7 +478,7 @@ contract GameTest is Test {
         return battleKey;
     }
 
-    function test_FasterPriorityKOsForcesSwitch() public {
+    function test_fasterPriorityKOsForcesSwitch() public {
         bytes32 battleKey = _setup2v2FasterPriorityBattleAndForceSwitch();
 
         // Check that Alice (p0) now has the playerSwitch flag set
@@ -509,7 +513,7 @@ contract GameTest is Test {
         assertEq(state.monStates[1][0].staminaDelta, -2);
     }
 
-    function test_FasterPriorityKOsForcesSwitchCorrectlyFailsOnInvalidSwitchReveal() public {
+    function test_fasterPriorityKOsForcesSwitchCorrectlyFailsOnInvalidSwitchReveal() public {
         bytes32 battleKey = _setup2v2FasterPriorityBattleAndForceSwitch();
 
         // Check that Alice (p0) now has the playerSwitch flag set
@@ -539,7 +543,7 @@ contract GameTest is Test {
         assertEq(state.winner, BOB);
     }
 
-    function test_FasterPriorityKOsForcesSwitchCorrectlyFailsOnInvalidSwitchNoCommit() public {
+    function test_fasterPriorityKOsForcesSwitchCorrectlyFailsOnInvalidSwitchNoCommit() public {
         bytes32 battleKey = _setup2v2FasterPriorityBattleAndForceSwitch();
 
         // Check that Alice (p0) now has the playerSwitch flag set
@@ -561,7 +565,7 @@ contract GameTest is Test {
         assertEq(state.winner, BOB);
     }
 
-    function test_NonKOSubsequentMoves() public {
+    function test_nonKOSubsequentMoves() public {
         // Initialize fast and slow mons
         IMoveSet normalAttack = new CustomAttack(
             engine,
@@ -1023,9 +1027,93 @@ contract GameTest is Test {
     function test_ensureWritingToStateFailsWhenNotInCallStack() public {
         _startDummyBattle();
 
-        // Calling the update function directly should revert
+        // Updating mon state directly should revert
         vm.startPrank(ALICE);
         vm.expectRevert(Engine.NoWriteAllowed.selector);
         engine.updateMonState(0, 0, MonStateIndexName.Hp, 0);
+
+        // Adding effect directly should revert
+        vm.startPrank(ALICE);
+        vm.expectRevert(Engine.NoWriteAllowed.selector);
+        engine.addEffect(0, 0, IEffect(address(0)), "");
+
+        // Deleting effect directly should revert
+        vm.startPrank(ALICE);
+        vm.expectRevert(Engine.NoWriteAllowed.selector);
+        engine.removeEffect(0, 0, 0);
+    }
+
+    function test_effectAppliedByAttackCanKO() public {
+        // Initialize mons and moves
+        IMoveSet normalStaminaAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 7})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = normalStaminaAttack;
+        Mon memory normalMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+        // Instant death attack
+        IEffect instantDeath = new InstantDeathEffect(engine);
+        IMoveSet instantDeathAttack =
+            new EffectAttack(engine, instantDeath, EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1}));
+        IMoveSet[] memory deathMoves = new IMoveSet[](1);
+        deathMoves[0] = instantDeathAttack;
+        Mon memory instantDeathMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: deathMoves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory team = new Mon[](1);
+        team[0] = normalMon;
+        Mon[] memory deathTeam = new Mon[](1);
+        deathTeam[0] = instantDeathMon;
+        teams[0] = team;
+        teams[1] = deathTeam;
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Both player pick move index 0, which for Bob afflicts the instant death condition on the
+        // opposing mon (Alice's) and knocks it out
+        uint256 moveIndex = 0;
+        bytes memory extraData = "";
+        _commitRevealExecuteForAliceAndBob(battleKey, moveIndex, moveIndex, extraData, extraData);
+
+        // Assert Bob wins
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, BOB);
     }
 }

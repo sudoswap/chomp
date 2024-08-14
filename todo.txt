@@ -1,23 +1,66 @@
 dev TODO:
-- change up move interface to not return modified state
-    - instead, use permissioned system to let the engine give external callers an ability to modify state during the callstack
-    - moves instead only return whether or not to force a switch, and then are expected to call the engine to mutate state
-    - saves on gas, and should make it clearer when state mutations happen, and which ones they are (more surgical)
-    - compared to returning the entire state
-
-Changes needed:
-- set permissions on engine [x]
-- set write functions on engine for mon state [x]
 
 TODO:
-- add test to ensure that unauthorized writes do not succeed
+
+HANDLE CASE WHERE BOTH PLAYERS NEED TO MAKE A VALID SWITCH (e.g. poison kills A, and then move kills B)
+
+flow:
+
+- run move0
+- check for KO
+- if so:
+    - run end of round effects for other player
+    - check for new KO for other mon
+    - if so:
+        - set dual flag, return
+    - otherwise:
+        - set single flag, return
+
+- otherwise:
+
+- run move1
+- check for KO
+- if so:
+    - run end of round effects for other player
+    - check for KO for other mon
+    - if so:
+        - set dual flag, return
+    - otherwise:
+        - set single flag, return
+
+- otherwise
+
+- both moves did not lead to KO
+- run effects for priority player
+    - check for KO
+    - if so:
+        - set flag
+        - run effects for non priority player
+        - check for KO
+            - if so:
+                - set dual flag
+
+
+- add test to ensure that unauthorized writes do not succeed [x]
     - think a little bit more about the security aspects
-- add ability to add effects and remove effects
+- add ability to add effects and remove effects [x]
 - add ability to write to global kv
 - add return values to moves so they can initiate a switch if needed
     - need to specify which mon index to switch to, and whether or not there is a switch
 - add on-switch as trigger for effects, dovetail into abilities
 
+Negative Status Effects:
+
+(Auto cure)
+- Sleep, cannot take action, 50% chance of cure every turn, max 3 turns
+- Fright, takes 1 stamina damage every turn, 50% chance of cure every turn, max 3 turns
+- Disabled, cannot switch out, 50% chance of cure every turn, max 3 turns
+
+(No cure)
+- Frostbite, takes 1/16 damage every turn, reduces special attack by 50%
+- Burn, takes 1/16 damage every turn, reduces attack by 50%
+- Poison, takes 1/8 damage every turn
+- Shock, reduces speed by 50%, 25% chance cannot move
 
 ---------------------------------------------------------------------------------------------
 - the switch return (each move can at most switch one mon, either the opponent's mon, or the user's mon) will be handled by the engine

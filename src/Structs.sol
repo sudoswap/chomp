@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import {Type} from "./Enums.sol";
-
 import {IRuleset} from "./IRuleset.sol";
 import {IValidator} from "./IValidator.sol";
 import {IEffect} from "./effects/IEffect.sol";
@@ -20,7 +19,7 @@ struct Battle {
 
 struct BattleState {
     uint256 turnId;
-    uint256 playerSwitchForTurnFlag;
+    uint256 playerSwitchForTurnFlag; // 0 for p0 only move, 1 for p1 only move, 2 for both players
     MonState[][] monStates;
     uint256[] activeMonIndex;
     RevealedMove[][] moveHistory;

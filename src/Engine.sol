@@ -116,7 +116,7 @@ contract Engine is IEngine {
         }
     }
 
-    function addEffect(uint256 targetIndex, IEffect effect, bytes calldata extraData) external {
+    function addEffect(uint256 targetIndex, uint256 monIndex, IEffect effect, bytes calldata extraData) external {
         bytes32 battleKey = battleKeyForWrite;
         if (battleKey == bytes32(0)) {
             revert NoWriteAllowed();
@@ -126,12 +126,12 @@ contract Engine is IEngine {
             state.globalEffects.push(effect);
             state.extraDataForGlobalEffects.push(extraData);
         } else {
-            state.monStates[targetIndex][state.activeMonIndex[targetIndex]].targetedEffects.push(effect);
-            state.monStates[targetIndex][state.activeMonIndex[targetIndex]].extraDataForTargetedEffects.push(extraData);
+            state.monStates[targetIndex][monIndex].targetedEffects.push(effect);
+            state.monStates[targetIndex][monIndex].extraDataForTargetedEffects.push(extraData);
         }
     }
 
-    function removeEffect(uint256 targetIndex, uint256 effectIndex) external {
+    function removeEffect(uint256 targetIndex, uint256 monIndex, uint256 effectIndex) external {
         bytes32 battleKey = battleKeyForWrite;
         if (battleKey == bytes32(0)) {
             revert NoWriteAllowed();
@@ -141,11 +141,10 @@ contract Engine is IEngine {
             state.globalEffects[effectIndex] = state.globalEffects[state.globalEffects.length - 1];
             state.globalEffects.pop();
         } else {
-            uint256 activeMonIndex = state.activeMonIndex[targetIndex];
-            uint256 totalNumEffects = state.monStates[targetIndex][activeMonIndex].targetedEffects.length;
-            state.monStates[targetIndex][activeMonIndex].targetedEffects[effectIndex] =
-                state.monStates[targetIndex][activeMonIndex].targetedEffects[totalNumEffects - 1];
-            state.monStates[targetIndex][activeMonIndex].targetedEffects.pop();
+            uint256 totalNumEffects = state.monStates[targetIndex][monIndex].targetedEffects.length;
+            state.monStates[targetIndex][monIndex].targetedEffects[effectIndex] =
+                state.monStates[targetIndex][monIndex].targetedEffects[totalNumEffects - 1];
+            state.monStates[targetIndex][monIndex].targetedEffects.pop();
         }
     }
 
@@ -340,19 +339,23 @@ contract Engine is IEngine {
             - Run round start global effects
             - Run round start targeted effects for p0 and p1
             - Execute priority player's move
-            - Check for game over 
-            - Check for KO, if so:
-                - Run end of turn effects
-                - Check for game over
-                - Return correct player switch flag
+            - Check for game over/KO (for switch flag)
+                - If game over, just return
+            - If KO, skip non priority player's move
             - Execute non priority player's move
-            - Check for game over
-            - Check for KO, if so:
-                - Run end of turn effects
-                - Check for game over
-                - Return correct player switch flag
-            - Run end of turn effects
-            - Check for game over
+            - Check for game over/KO (for switch flag)
+                - If game over, just return
+            - Run global end of turn effects
+            - Check for game over/KO (for switch flag)
+                - If game over, just return
+            - If not KOed, run the priority player's targeted effects
+            - Check for game over/KO (for switch flag)
+                - If game over, just return
+            - If not KOed, run the non priority player's targeted effects
+            - Check for game over/KO (for switch flag)
+                - If game over, just return
+            - Progress turn index
+            - Set player switch for turn flag
         */
         else {
             // Validate both moves have been revealed for the current turn
@@ -371,7 +374,8 @@ contract Engine is IEngine {
                 otherPlayerIndex = 1;
             }
 
-            // Run beginning of round effects
+            // Run beginning of round effects all at once to start
+            // NOTE: We assume these cannot KO
             _runEffects(battleKey, rng, 2, Round.Start);
             _runEffects(battleKey, rng, priorityPlayerIndex, Round.Start);
             _runEffects(battleKey, rng, otherPlayerIndex, Round.Start);
@@ -379,70 +383,58 @@ contract Engine is IEngine {
             // Execute priority player's move
             _handlePlayerMove(battleKey, rng, priorityPlayerIndex);
 
-            // Check for game over
-            address gameResult = battle.validator.validateGameOver(battleKey, priorityPlayerIndex);
-            if (gameResult != address(0)) {
-                state.winner = gameResult;
-                return;
-            }
-
-            // Check for knockout or subsequent game over for either player after handling move (conditional on a KO)
+            // Initialize variables for checking game state
             uint256 playerSwitchForTurnFlag;
-            bool executedEndOfRoundEffects;
-            (playerSwitchForTurnFlag, gameResult, executedEndOfRoundEffects) =
-                _checkForKnockoutAndAdvanceIfNeeded(battleKey, priorityPlayerIndex, rng);
-            if (gameResult != address(0)) {
-                state.winner = gameResult;
-                return;
-            } else if (executedEndOfRoundEffects) {
-                state.playerSwitchForTurnFlag = playerSwitchForTurnFlag;
-                state.turnId += 1;
-                return;
+            bool isPriorityPlayerMonKOed;
+            bool isNonPriorityPlayerMonKOed;
+            bool isGameOver;
+
+            // Check if either player's mon has been KO'ed, and if we need to force a switch for next turn
+            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
+                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
+            if (isGameOver) return;
+
+            // If both mons are not KO'ed, then run the non priority player's move
+            if (!isNonPriorityPlayerMonKOed && !isPriorityPlayerMonKOed) {
+                _handlePlayerMove(battleKey, rng, otherPlayerIndex);
             }
 
-            // Execute non-priority player's move
-            _handlePlayerMove(battleKey, rng, otherPlayerIndex);
+            // Check for game over and/or KOs
+            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
+                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
+            if (isGameOver) return;
 
-            // Check for game over
-            gameResult = battle.validator.validateGameOver(battleKey, priorityPlayerIndex);
-            if (gameResult != address(0)) {
-                state.winner = gameResult;
-                return;
-            }
-
-            // Afterwards, check again for knockout or subsequent game over for either player after handling move
-            (playerSwitchForTurnFlag, gameResult, executedEndOfRoundEffects) =
-                _checkForKnockoutAndAdvanceIfNeeded(battleKey, priorityPlayerIndex, rng);
-            if (gameResult != address(0)) {
-                state.winner = gameResult;
-                return;
-            } else if (executedEndOfRoundEffects) {
-                state.playerSwitchForTurnFlag = playerSwitchForTurnFlag;
-                state.turnId += 1;
-                return;
-            }
-
-            // If we don't need to force a switch, and it's not game over:
-            // Run effects for global, p0 active mon, and p1 active mon
-            // Then check for game over / knockout again
-            _runEffects(battleKey, rng, 0, Round.End);
-            _runEffects(battleKey, rng, 1, Round.End);
+            // Always run global effects at the end of the round
             _runEffects(battleKey, rng, 2, Round.End);
 
-            // One last time, check again for knockout or subsequent game over for either player after handling effects
-            (playerSwitchForTurnFlag, gameResult, executedEndOfRoundEffects) =
-                _checkForKnockoutAndAdvanceIfNeeded(battleKey, priorityPlayerIndex, rng);
-            if (gameResult != address(0)) {
-                state.winner = gameResult;
-                return;
-            } else if (executedEndOfRoundEffects) {
-                state.playerSwitchForTurnFlag = playerSwitchForTurnFlag;
-                state.turnId += 1;
-                return;
+            // Check for game over and/or KOs
+            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
+                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
+            if (isGameOver) return;
+
+            // If priority mon is not KOed, run effects for the priority mon
+            if (!isPriorityPlayerMonKOed) {
+                _runEffects(battleKey, rng, priorityPlayerIndex, Round.End);
             }
 
-            // Progress turn index
+            // Check for game over and/or KOs
+            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
+                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
+            if (isGameOver) return;
+
+            // If non priority mon is not KOed, run effects for the non priority mon
+            if (!isNonPriorityPlayerMonKOed) {
+                _runEffects(battleKey, rng, otherPlayerIndex, Round.End);
+            }
+
+            // Check for game over and/or KOs
+            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
+                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
+            if (isGameOver) return;
+
+            // Progress turn index and finally set the player switch for turn flag
             state.turnId += 1;
+            state.playerSwitchForTurnFlag = playerSwitchForTurnFlag;
         }
     }
 
@@ -464,49 +456,42 @@ contract Engine is IEngine {
     /**
      * - Internal helper functions for execute()
      */
-    function _checkForKnockoutAndAdvanceIfNeeded(bytes32 battleKey, uint256 priorityPlayerIndex, uint256 rng)
+
+    // Chec
+    function _checkForGameOverOrKO(bytes32 battleKey, uint256 priorityPlayerIndex)
         internal
-        returns (uint256 playerSwitchForTurnFlag, address gameResult, bool executedRoundEndEffects)
+        returns (
+            uint256 playerSwitchForTurnFlag,
+            bool isPriorityPlayerActiveMonKnockedOut,
+            bool isNonPriorityPlayerActiveMonKnockedOut,
+            bool isGameOver
+        )
     {
         Battle storage battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
         uint256 otherPlayerIndex = (priorityPlayerIndex + 1) % 2;
+        address gameResult = battle.validator.validateGameOver(battleKey, priorityPlayerIndex);
+        if (gameResult != address(0)) {
+            state.winner = gameResult;
+            isGameOver = true;
+        } else {
+            
+            // Always set default switch to be 2 (allow both players to make a move)
+            playerSwitchForTurnFlag = 2;
 
-        bool isPriorityPlayerActiveMonKnockedOut =
-            state.monStates[priorityPlayerIndex][state.activeMonIndex[priorityPlayerIndex]].isKnockedOut;
-        bool isNonPriorityPlayerActiveMonKnockedOut =
-            state.monStates[otherPlayerIndex][state.activeMonIndex[otherPlayerIndex]].isKnockedOut;
-
-        // IF there is a knockout, then continue to run end of round effects and then recheck knockout flags
-        if (isPriorityPlayerActiveMonKnockedOut || isNonPriorityPlayerActiveMonKnockedOut) {
-            if (isPriorityPlayerActiveMonKnockedOut && !isNonPriorityPlayerActiveMonKnockedOut) {
-                // Run end of round effects for non priority active mon
-                _runEffects(battleKey, rng, 2, Round.End);
-                _runEffects(battleKey, rng, otherPlayerIndex, Round.End);
-                executedRoundEndEffects = true;
-            } else if (!isPriorityPlayerActiveMonKnockedOut && isNonPriorityPlayerActiveMonKnockedOut) {
-                // Run end of round effects for non priority active mon
-                _runEffects(battleKey, rng, 2, Round.End);
-                _runEffects(battleKey, rng, priorityPlayerIndex, Round.End);
-                executedRoundEndEffects = true;
-            }
-
-            // In both cases, we now recheck the knockout flags after updating end of round effects
             isPriorityPlayerActiveMonKnockedOut =
                 state.monStates[priorityPlayerIndex][state.activeMonIndex[priorityPlayerIndex]].isKnockedOut;
+
             isNonPriorityPlayerActiveMonKnockedOut =
                 state.monStates[otherPlayerIndex][state.activeMonIndex[otherPlayerIndex]].isKnockedOut;
 
-            // If a both mons are KO'ed, we have to first check for game over
-            // Either way, if both mons are KO'ed, we don't set priorityPlayerIndex and instead rely on validateMove for the next round
-            // Otherwise, it's still the case that only one of the active mons is KO'ed, so we set priorityPlayerIndex
-            if (isPriorityPlayerActiveMonKnockedOut && isNonPriorityPlayerActiveMonKnockedOut) {
-                gameResult = battle.validator.validateGameOver(battleKey, priorityPlayerIndex);
-            }
-            // If there was still just one knockout, we set the correct playerSwitchForTurnFlag value (shift player index up by 1)
-            if (isPriorityPlayerActiveMonKnockedOut) {
+            // If the priority player mon is KO'ed, then next turn we tenatively set it to be just the other player
+            if (isPriorityPlayerActiveMonKnockedOut && !isNonPriorityPlayerActiveMonKnockedOut) {
                 playerSwitchForTurnFlag = priorityPlayerIndex;
-            } else if (isNonPriorityPlayerActiveMonKnockedOut) {
+            }
+
+            // If the non priority player mon is KO'ed, then next turn we tenatively set it to be just the priority player
+            if (!isPriorityPlayerActiveMonKnockedOut && isNonPriorityPlayerActiveMonKnockedOut) {
                 playerSwitchForTurnFlag = otherPlayerIndex;
             }
         }
@@ -617,7 +602,7 @@ contract Engine is IEngine {
                     effects[i] = effects[effects.length - 1];
                     effects.pop();
 
-                    extraData[i] = extraData[effects.length - 1];
+                    extraData[i] = extraData[extraData.length - 1];
                     extraData.pop();
                 }
                 // Otherwise, we update the extra data if e.g. the effect needs to modify its own storage

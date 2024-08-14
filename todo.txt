@@ -52,9 +52,9 @@ flow:
 Negative Status Effects:
 
 (Auto cure)
-- Sleep, cannot take action, 50% chance of cure every turn, max 3 turns
-- Fright, takes 1 stamina damage every turn, 50% chance of cure every turn, max 3 turns
-- Disabled, cannot switch out, 50% chance of cure every turn, max 3 turns
+- Sleep, cannot take action, 33% chance of cure every turn, max 3 turns
+- Fright, takes 1 stamina damage every turn, 33% chance of cure every turn, max 3 turns
+- Disabled, cannot switch out, 33% chance of cure every turn, max 3 turns
 
 (No cure)
 - Frostbite, takes 1/16 damage every turn, reduces special attack by 50%

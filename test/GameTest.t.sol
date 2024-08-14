@@ -17,7 +17,9 @@ import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
 
 import {EffectAttack} from "./mocks/EffectAttack.sol";
 import {InstantDeathEffect} from "./mocks/InstantDeathEffect.sol";
+
 import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
+import {SkipTurnMove} from "./mocks/SkipTurnMove.sol";
 
 import {TypeCalculator} from "../src/types/TypeCalculator.sol";
 
@@ -27,24 +29,23 @@ import {IMoveSet} from "../src/moves/IMoveSet.sol";
 import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
 
 /**
-     * Tests:
-     * Battle initiated, stored to state [x]
-     * Battle initiated, MUST select swap [x]
-     * Faster Speed Wins KO, leads to game over if team size = 1 [x]
-     * Faster Priority Wins KO, leads to game over if team size = 1 [x]
-     * Faster Priority Wins KO, leads to forced switch if team size is >= 2 [x]
-     * Execute reverts if game is already over [x]
-     * Switches are forced correctly on KO [x]
-     * Faster Speed Wins KO, leads to forced switch if team size is >= 2 [ ]
-     * Non-KO moves lead to subsequent move for both players [x]
-     * Switching executes at correct priority [x]
-     * Global Stamina Recovery effect works as expected [x]
-     * Accuracy works as expected (i.e. controls damage or no damage, modify oracle) [x]
-     * Stamina works as expected (i.e. controls whether or not a move can be used, deltas are updated) [x]
-     * Effects work as expected (create a damage over time effect, check that Effect can KO) [x]
-     * shouldSkipTurn flag works as expected (create an effect that skips move, and a move that skips move) [ ]
-*/
-
+ * Tests:
+ * Battle initiated, stored to state [x]
+ * Battle initiated, MUST select swap [x]
+ * Faster Speed Wins KO, leads to game over if team size = 1 [x]
+ * Faster Priority Wins KO, leads to game over if team size = 1 [x]
+ * Faster Priority Wins KO, leads to forced switch if team size is >= 2 [x]
+ * Execute reverts if game is already over [x]
+ * Switches are forced correctly on KO [x]
+ * Faster Speed Wins KO, leads to forced switch if team size is >= 2 [ ]
+ * Non-KO moves lead to subsequent move for both players [x]
+ * Switching executes at correct priority [x]
+ * Global Stamina Recovery effect works as expected [x]
+ * Accuracy works as expected (i.e. controls damage or no damage, modify oracle) [x]
+ * Stamina works as expected (i.e. controls whether or not a move can be used, deltas are updated) [x]
+ * Effects work as expected (create a damage over time effect, check that Effect can KO) [x]
+ * shouldSkipTurn flag works as expected (create an effect that skips move, and a move that skips move) [ ]
+ */
 contract GameTest is Test {
     Engine engine;
     DefaultValidator validator;
@@ -323,7 +324,7 @@ contract GameTest is Test {
         assertEq(state.monStates[0][0].staminaDelta, -1);
     }
 
-    function test_FasterPriorityKOsGameOver() public {
+    function test_fasterPriorityKOsGameOver() public {
         // Initialize fast and slow mons
         IMoveSet slowAttack = new CustomAttack(
             engine,
@@ -1117,18 +1118,426 @@ contract GameTest is Test {
         assertEq(state.winner, BOB);
     }
 
-    // TODO: implement these 
-    
     function test_effectAppliedByAttackCanKOAndForceSwitch() public {
+        // Initialize mons and moves
+        IMoveSet normalStaminaAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 7})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = normalStaminaAttack;
+        Mon memory normalMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+        // Instant death attack
+        IEffect instantDeath = new InstantDeathEffect(engine);
+        IMoveSet instantDeathAttack =
+            new EffectAttack(engine, instantDeath, EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1}));
+        IMoveSet[] memory deathMoves = new IMoveSet[](1);
+        deathMoves[0] = instantDeathAttack;
+        Mon memory instantDeathMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: deathMoves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory team = new Mon[](2);
+        team[0] = normalMon;
+        team[1] = normalMon;
+        Mon[] memory deathTeam = new Mon[](2);
+        deathTeam[0] = instantDeathMon;
+        deathTeam[1] = instantDeathMon;
+        teams[0] = team;
+        teams[1] = deathTeam;
+
+        DefaultValidator twoMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Both player pick move index 0, which for Bob afflicts the instant death condition on the
+        // opposing mon (Alice's) and knocks it out
+        uint256 moveIndex = 0;
+        bytes memory extraData = "";
+        _commitRevealExecuteForAliceAndBob(battleKey, moveIndex, moveIndex, extraData, extraData);
+
+        // Now only Alice should be able to switch
+        vm.startPrank(ALICE);
+        bytes32 salt = "";
+        bytes32 moveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, abi.encode(1)));
+        engine.commitMove(battleKey, moveHash);
+
+        // Alice should be able to reveal because she is the only player (player flag should be set)
+        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
+
+        // Execute the switch
+        engine.execute(battleKey);
     }
 
     function test_moveKOSupersedesRoundEndEffectKOForGameEnd() public {
+        // Initialize mons and moves
+        IMoveSet lethalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 7})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = lethalAttack;
+        Mon memory normalMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+        // Instant death attack
+        IEffect instantDeath = new InstantDeathEffect(engine);
+        IMoveSet instantDeathAttack =
+            new EffectAttack(engine, instantDeath, EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1}));
+        IMoveSet[] memory deathMoves = new IMoveSet[](1);
+        deathMoves[0] = instantDeathAttack;
+        Mon memory instantDeathMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: deathMoves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory team = new Mon[](1);
+        team[0] = normalMon;
+        Mon[] memory deathTeam = new Mon[](1);
+        deathTeam[0] = instantDeathMon;
+        teams[0] = team;
+        teams[1] = deathTeam;
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Both player pick move index 0, which for Bob afflicts the instant death condition on the
+        // opposing mon (Alice's)
+        // But Alice's mon should KO Bob's before the end of round takes place
+        uint256 moveIndex = 0;
+        bytes memory extraData = "";
+        _commitRevealExecuteForAliceAndBob(battleKey, moveIndex, moveIndex, extraData, extraData);
+
+        // Assert Alice wins
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, ALICE);
     }
 
-    function test_moveKOAndEffectKOLeadToDualSwap() public {
+    function test_moveKOAndEffectKOLeadToDualSwapOtherMoveRevertsForAlice() public {
+        // Initialize mons and moves
+        IMoveSet lethalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 0})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = lethalAttack;
+        Mon memory normalMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+        // Instant death attack
+        IEffect instantDeath = new InstantDeathEffect(engine);
+        IMoveSet instantDeathAttack =
+            new EffectAttack(engine, instantDeath, EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1}));
+        IMoveSet[] memory deathMoves = new IMoveSet[](1);
+        deathMoves[0] = instantDeathAttack;
+        Mon memory instantDeathMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: deathMoves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory team = new Mon[](2);
+        team[0] = normalMon;
+        team[1] = normalMon;
+        Mon[] memory deathTeam = new Mon[](2);
+        deathTeam[0] = instantDeathMon;
+        deathTeam[1] = instantDeathMon;
+        teams[0] = team;
+        teams[1] = deathTeam;
+
+        DefaultValidator twoMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Both player pick move index 0, which for Bob afflicts the instant death condition on the
+        // opposing mon (Alice's) and knocks it out
+        // But Bob moves first (higher priority), so he gets the instant death affliction
+        uint256 moveIndex = 0;
+        bytes memory extraData = "";
+        _commitRevealExecuteForAliceAndBob(battleKey, moveIndex, moveIndex, extraData, extraData);
+
+        // Now if Alice tries to pick a non-switch move, the engine should revert
+        vm.startPrank(ALICE);
+        bytes32 salt = "";
+        uint256 aliceMoveIndex = 0;
+        bytes32 aliceMoveHash = keccak256(abi.encodePacked(aliceMoveIndex, salt, extraData));
+        engine.commitMove(battleKey, aliceMoveHash);
+
+        // (Assume Bob correctly commits to swapping his mon)
+        vm.startPrank(BOB);
+        salt = "";
+        bytes32 bobMoveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, abi.encode(1)));
+        engine.commitMove(battleKey, bobMoveHash);
+
+        // Bob's reveal should succeed
+        vm.startPrank(BOB);
+        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
+
+        // Alice's reveal will revert (must choose switch)
+        vm.startPrank(ALICE);
+        vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
+        engine.revealMove(battleKey, aliceMoveIndex, salt, extraData);
+    }
+
+    function test_moveKOAndEffectKOLeadToDualSwapAndSwapSucceeds() public {
+        // Initialize mons and moves
+        IMoveSet lethalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 0})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = lethalAttack;
+        Mon memory normalMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+        // Instant death attack
+        IEffect instantDeath = new InstantDeathEffect(engine);
+        IMoveSet instantDeathAttack =
+            new EffectAttack(engine, instantDeath, EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1}));
+        IMoveSet[] memory deathMoves = new IMoveSet[](1);
+        deathMoves[0] = instantDeathAttack;
+        Mon memory instantDeathMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: deathMoves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory team = new Mon[](2);
+        team[0] = normalMon;
+        team[1] = normalMon;
+        Mon[] memory deathTeam = new Mon[](2);
+        deathTeam[0] = instantDeathMon;
+        deathTeam[1] = instantDeathMon;
+        teams[0] = team;
+        teams[1] = deathTeam;
+
+        DefaultValidator twoMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Both player pick move index 0, which for Bob afflicts the instant death condition on the
+        // opposing mon (Alice's) and knocks it out
+        // But Bob moves first (higher priority), so he gets the instant death affliction
+        uint256 moveIndex = 0;
+        bytes memory extraData = "";
+        _commitRevealExecuteForAliceAndBob(battleKey, moveIndex, moveIndex, extraData, extraData);
+
+        // Now both moves have to swap to index 1 for their mons
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(1), abi.encode(1)
+        );
     }
 
     function test_shouldSkipTurnFlagWorks() public {
-    }
+        // Initialize mons and moves
+        IMoveSet lethalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 6})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = lethalAttack;
+        Mon memory normalMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+        // Skip Turn attack to skip move
+        IMoveSet skipAttack =
+            new SkipTurnMove(engine, SkipTurnMove.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 7}));
+        IMoveSet[] memory skipMoves = new IMoveSet[](1);
+        skipMoves[0] = skipAttack;
+        Mon memory skipMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: skipMoves
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory team = new Mon[](1);
+        team[0] = normalMon;
+        Mon[] memory skipTeam = new Mon[](1);
+        skipTeam[0] = skipMon;
+        teams[0] = team;
+        teams[1] = skipTeam;
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
 
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Both player pick move index 0
+        // Bob goes for a fast skip turn effect
+        // Alice tries to go fast for a lethal effect
+        // Bob should win priority and inflict skip turn effect
+        uint256 moveIndex = 0;
+        bytes memory extraData = "";
+        _commitRevealExecuteForAliceAndBob(battleKey, moveIndex, moveIndex, extraData, extraData);
+
+        // Assert no winner, and no damage dealt
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, address(0));
+        assertEq(state.monStates[1][0].hpDelta, 0);
+    }
 }

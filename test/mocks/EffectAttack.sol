@@ -10,7 +10,6 @@ import {IEffect} from "../../src/effects/IEffect.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 
 contract EffectAttack is IMoveSet {
-
     struct Args {
         Type TYPE;
         uint256 STAMINA_COST;
@@ -35,10 +34,10 @@ contract EffectAttack is IMoveSet {
         return "Effect Attack";
     }
 
-    function move(bytes32, uint256 attackerPlayerIndex, bytes memory extraData, uint256) external
-    {   
+    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes memory extraData, uint256) external {
         uint256 targetIndex = (attackerPlayerIndex + 1) % 2;
-        ENGINE.addEffect(targetIndex, EFFECT, extraData);
+        uint256 activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey)[targetIndex];
+        ENGINE.addEffect(targetIndex, activeMonIndex, EFFECT, extraData);
     }
 
     function priority(bytes32) external view returns (uint256) {
@@ -52,7 +51,7 @@ contract EffectAttack is IMoveSet {
     function moveType(bytes32) external view returns (Type) {
         return TYPE;
     }
-    
+
     function isValidTarget(bytes32) external pure returns (bool) {
         return true;
     }

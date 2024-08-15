@@ -44,7 +44,8 @@ import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
  * Accuracy works as expected (i.e. controls damage or no damage, modify oracle) [x]
  * Stamina works as expected (i.e. controls whether or not a move can be used, deltas are updated) [x]
  * Effects work as expected (create a damage over time effect, check that Effect can KO) [x]
- * shouldSkipTurn flag works as expected (create an effect that skips move, and a move that skips move) [ ]
+ * shouldSkipTurn flag works as expected (create an effect that skips move, and a move that skips move) [x]
+ * Moves that force switch work and revert when expected (e.g. invalid switch) [ ]
  */
 contract GameTest is Test {
     Engine engine;
@@ -1540,4 +1541,24 @@ contract GameTest is Test {
         assertEq(state.winner, address(0));
         assertEq(state.monStates[1][0].hpDelta, 0);
     }
+
+    // TODO:
+
+    /*
+    function test_forceSwitchMoveCorrectlySwitchesPriorityPlayer() public {
+
+    }
+
+    function test_forceSwitchMoveCorrectlySwitchesNonPriorityPlayer() public {
+        
+    }
+
+    function test_forceSwitchMoveRevertsWhenInvalidSwitchTargetPriorityPlayer() public {
+        
+    }
+
+    function test_forceSwitchMoveRevertsWhenInvalidSwitchTargetNonPriorityPlayer() public {
+        
+    }
+    */
 }

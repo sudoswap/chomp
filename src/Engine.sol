@@ -475,7 +475,6 @@ contract Engine is IEngine {
             state.winner = gameResult;
             isGameOver = true;
         } else {
-            
             // Always set default switch to be 2 (allow both players to make a move)
             playerSwitchForTurnFlag = 2;
 
@@ -565,7 +564,28 @@ contract Engine is IEngine {
 
             // Run the move and allow for writes
             IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex];
-            moveSet.move(battleKey, playerIndex, move.extraData, rng);
+            (uint256 switchFlag, uint256 monToSwitchIndex) = moveSet.move(battleKey, playerIndex, move.extraData, rng);
+
+            // Handle the special case where the move tells us to handle a switch
+            if (switchFlag != NO_SWITCH_FLAG) {
+                // Need to run the validator here because if it is the result of a move, then we did NOT run validateSwitch earlier
+                // If it's invalid, we revert
+                if (!battle.validator.validateSwitch(battleKey, playerIndex, monToSwitchIndex)) {
+                    // Get the player address
+                    address player;
+                    if (playerIndex == 0) {
+                        player = battle.p0;
+                    }
+                    else {
+                        player = battle.p1;
+                    }
+                    revert InvalidMove(player);
+                }
+                // Otherwise, we handle the switch normally
+                else {
+                    _handleSwitch(battleKey, playerIndex);
+                }
+            }
 
             // Set the battleKey back to 0 to prevent writes
             battleKeyForWrite = bytes32(0);

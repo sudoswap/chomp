@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
+import "../Constants.sol";
 import "../Enums.sol";
 import "../Structs.sol";
 
@@ -35,10 +36,14 @@ contract CustomAttack is AttackCalculator, IMoveSet {
         PRIORITY = args.PRIORITY;
     }
 
-    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng) external {
-        return calculateDamage(
+    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng)
+        external
+        returns (uint256, uint256)
+    {
+        calculateDamage(
             battleKey, attackerPlayerIndex, BASE_POWER, ACCURACY, STAMINA_COST, TYPE, AttackSupertype.Physical, rng
         );
+        return (NO_SWITCH_FLAG, 0);
     }
 
     function priority(bytes32) external view returns (uint256) {

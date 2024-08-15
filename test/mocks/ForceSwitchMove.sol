@@ -9,7 +9,8 @@ import "../../src/Structs.sol";
 import {IEngine} from "../../src/IEngine.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 
-contract SkipTurnMove is IMoveSet {
+contract ForceSwitchMove is IMoveSet {
+
     struct Args {
         Type TYPE;
         uint256 STAMINA_COST;
@@ -29,17 +30,16 @@ contract SkipTurnMove is IMoveSet {
     }
 
     function name() external pure returns (string memory) {
-        return "Skip Turn";
+        return "Force Switch";
     }
 
-    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes memory, uint256)
+    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes memory data, uint256)
         external
         returns (uint256, uint256)
     {
-        uint256 targetIndex = (attackerPlayerIndex + 1) % 2;
-        uint256 activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey)[targetIndex];
-        ENGINE.updateMonState(targetIndex, activeMonIndex, MonStateIndexName.ShouldSkipTurn, 1);
-        return (NO_SWITCH_FLAG, 0);
+        // Decode data as (uint256 playerIndex, uint256 monToSwitchIndex)
+        (uint256 playerIndex, uint256 monToSwitchIndex) = abi.decode(data, (uint256, uint256));
+        return (playerIndex, monToSwitchIndex);
     }
 
     function priority(bytes32) external view returns (uint256) {

@@ -13,6 +13,9 @@ interface IValidator {
         view
         returns (bool);
 
+    // Validates that a switch is valid
+    function validateSwitch(bytes32 battleKey, uint256 playerIndex, uint256 monToSwitchIndex) external returns (bool);
+
     // Validates that the game is over, returns address(0) if no winner, otherwise returns the winner
     function validateGameOver(bytes32 battleKey, uint256 priorityPlayerIndex) external view returns (address);
 

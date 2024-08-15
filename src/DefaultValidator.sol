@@ -51,6 +51,31 @@ contract DefaultValidator is IValidator {
         return true;
     }
 
+    function validateSwitch(bytes32 battleKey, uint256 playerIndex, uint256 monToSwitchIndex)
+        public
+        view
+        returns (bool)
+    {
+        MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
+        uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
+
+        if (monToSwitchIndex >= MONS_PER_TEAM) {
+            return false;
+        }
+        bool isNewMonKnockedOut = monStates[playerIndex][monToSwitchIndex].isKnockedOut;
+        if (isNewMonKnockedOut) {
+            return false;
+        }
+        // If it's not the zeroth turn, we cannot switch to the same mon
+        // (exception for zeroth turn because we have not initiated a swap yet, so index 0 is fine)
+        if (ENGINE.getTurnIdForBattleState(battleKey) != 0) {
+            if (monToSwitchIndex == activeMonIndex[playerIndex]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // Validates that you can't switch to the same mon, you have enough stamina, the move isn't disabled, etc.
     function validateMove(bytes32 battleKey, uint256 moveIndex, address player, bytes calldata extraData)
         external
@@ -94,21 +119,11 @@ contract DefaultValidator is IValidator {
         // AND if the new mon isn't the same index as the existing mon
         else if (moveIndex == SWITCH_MOVE_INDEX) {
             uint256 monToSwitchIndex = abi.decode(extraData, (uint256));
-            if (monToSwitchIndex >= MONS_PER_TEAM) {
-                return false;
-            }
-            bool isNewMonKnockedOut = monStates[playerIndex][monToSwitchIndex].isKnockedOut;
-            if (isNewMonKnockedOut) {
-                return false;
-            }
-            // If it's not the zeroth turn, we cannot switch to the same mon
-            // (exception for zeroth turn because we have not initiated a swap yet, so index 0 is fine)
-            if (ENGINE.getTurnIdForBattleState(battleKey) != 0) {
-                if (monToSwitchIndex == activeMonIndex[playerIndex]) {
-                    return false;
-                }
-            }
-            return true;
+            return validateSwitch(
+                battleKey,
+                playerIndex,
+                monToSwitchIndex
+            );
         }
 
         // Otherwise, a move cannot be selected if its stamina costs more than the mon's current stamina

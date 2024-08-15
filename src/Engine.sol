@@ -322,7 +322,7 @@ contract Engine is IEngine {
 
             // Handle switching as a privileged move
             if (move.moveIndex == SWITCH_MOVE_INDEX) {
-                _handleSwitch(battleKey, playerIndex);
+                _handleSwitch(battleKey, playerIndex, abi.decode(move.extraData, (uint256)));
             }
 
             // Progress turn index
@@ -496,11 +496,8 @@ contract Engine is IEngine {
         }
     }
 
-    function _handleSwitch(bytes32 battleKey, uint256 playerIndex) internal {
+    function _handleSwitch(bytes32 battleKey, uint256 playerIndex, uint256 monToSwitchIndex) internal {
         BattleState storage state = battleStates[battleKey];
-        uint256 turnId = state.turnId;
-        RevealedMove storage move = state.moveHistory[playerIndex][turnId];
-        uint256 monToSwitchIndex = abi.decode(move.extraData, (uint256));
         MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
         IEffect[] storage effects = currentMonState.targetedEffects;
         bytes[] storage extraData = currentMonState.extraDataForTargetedEffects;
@@ -540,20 +537,18 @@ contract Engine is IEngine {
         BattleState storage state = battleStates[battleKey];
         uint256 turnId = state.turnId;
         RevealedMove storage move = battleStates[battleKey].moveHistory[playerIndex][turnId];
-
-        {
-            // Handle shouldSkipTurn flag first and toggle it off if set
-            MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
-            if (currentMonState.shouldSkipTurn) {
-                currentMonState.shouldSkipTurn = false;
-                return;
-            }
+        
+        // Handle shouldSkipTurn flag first and toggle it off if set
+        MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
+        if (currentMonState.shouldSkipTurn) {
+            currentMonState.shouldSkipTurn = false;
+            return;
         }
 
         // Handle a switch or a no-op
         // otherwise, execute the moveset
         if (move.moveIndex == SWITCH_MOVE_INDEX) {
-            _handleSwitch(battleKey, playerIndex);
+            _handleSwitch(battleKey, playerIndex, abi.decode(move.extraData, (uint256)));
         } else if (move.moveIndex == NO_OP_MOVE_INDEX) {
             // do nothing (e.g. just recover stamina)
         }
@@ -568,23 +563,7 @@ contract Engine is IEngine {
 
             // Handle the special case where the move tells us to handle a switch
             if (switchFlag != NO_SWITCH_FLAG) {
-                // Need to run the validator here because if it is the result of a move, then we did NOT run validateSwitch earlier
-                // If it's invalid, we revert
-                if (!battle.validator.validateSwitch(battleKey, playerIndex, monToSwitchIndex)) {
-                    // Get the player address
-                    address player;
-                    if (playerIndex == 0) {
-                        player = battle.p0;
-                    }
-                    else {
-                        player = battle.p1;
-                    }
-                    revert InvalidMove(player);
-                }
-                // Otherwise, we handle the switch normally
-                else {
-                    _handleSwitch(battleKey, playerIndex);
-                }
+                _handleSwitch(battleKey, playerIndex, monToSwitchIndex);
             }
 
             // Set the battleKey back to 0 to prevent writes

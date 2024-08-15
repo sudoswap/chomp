@@ -302,7 +302,7 @@ contract Engine is IEngine {
 
         // validate that the commited moves are legal
         // (e.g. there is enough stamina, move is not disabled, etc.)
-        if (!battle.validator.validateMove(battleKey, moveIndex, msg.sender, extraData)) {
+        if (!battle.validator.validatePlayerMove(battleKey, moveIndex, msg.sender, extraData)) {
             revert InvalidMove(msg.sender);
         }
 
@@ -569,19 +569,32 @@ contract Engine is IEngine {
             _handleSwitch(battleKey, playerIndex, abi.decode(move.extraData, (uint256)));
         } else if (move.moveIndex == NO_OP_MOVE_INDEX) {
             // do nothing (e.g. just recover stamina)
+            return;
         }
         // Execute the move and then set updated state, active mons, and effects/data
         else {
-            // Set the battleKey to allow for writes
+
+            // Call validateSpecificMoveSelection again from the validator to ensure that it is still valid to execute
+            // If not, then we just return early
+            // Handles cases where e.g. some condition outside of the player's control leads to an invalid move
+            if (!battle.validator.validateSpecificMoveSelection(battleKey, move.moveIndex, playerIndex, move.extraData)) {
+                return;
+            }
+            
+            IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex];
+            
+            // Update the mon state directly to account for the stamina cost of the move
+            state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta -= int256(moveSet.stamina(battleKey));
+
+            // Set the key to allow for writes
             battleKeyForWrite = battleKey;
 
-            // Run the move and allow for writes
-            IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex];
+            // Run the move and see if we need to handle a switch
             (uint256 switchFlag, uint256 monToSwitchIndex) = moveSet.move(battleKey, playerIndex, move.extraData, rng);
 
             // Handle the special case where the move tells us to handle a switch
             if (switchFlag != NO_SWITCH_FLAG) {
-                _handleSwitch(battleKey, playerIndex, monToSwitchIndex);
+                _handleSwitch(battleKey, switchFlag, monToSwitchIndex);
             }
 
             // Set the battleKey back to 0 to prevent writes

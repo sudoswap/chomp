@@ -1,13 +1,6 @@
 dev TODO:
 
-IMoveSet changes:
-- use priority() in Engine.sol to deduct, don't rely on moves to deduct stamina for you
-    - similarly, if the priority isn't met, just skip the turn (allows for cases where e.g. stamina is deduced by the opposing move)
-- return whether or not to trigger a switch (and use it in the engine to decide!), again instead of relying on the moves to do it
-
 - add ability to write to global kv []
-- add return values to moves so they can initiate a switch if needed
-    - need to specify which mon index to switch to, and whether or not there is a switch
 - add on-switch as trigger for effects, dovetail into abilities
 
 Negative Status Effects:

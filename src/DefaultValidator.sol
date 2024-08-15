@@ -76,8 +76,33 @@ contract DefaultValidator is IValidator {
         return true;
     }
 
+    function validateSpecificMoveSelection(bytes32 battleKey, uint256 moveIndex, uint256 playerIndex, bytes calldata extraData)
+        public
+        view
+        returns (bool) {
+        Mon[][] memory teams = ENGINE.getTeamsForBattle(battleKey);
+        MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
+        uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
+
+        // Otherwise, a move cannot be selected if its stamina costs more than the mon's current stamina
+        IMoveSet moveSet = teams[playerIndex][activeMonIndex[playerIndex]].moves[moveIndex];
+        int256 monStaminaDelta = monStates[playerIndex][activeMonIndex[playerIndex]].staminaDelta;
+        uint256 monBaseStamina = teams[playerIndex][activeMonIndex[playerIndex]].stamina;
+        uint256 monCurrentStamina = uint256(int256(monBaseStamina) + monStaminaDelta);
+        if (moveSet.stamina(battleKey) > monCurrentStamina) {
+            return false;
+        }
+        else {
+            // Then, we check the move itself to see if it enforces any other specific conditions
+            if (!moveSet.isValidTarget(battleKey)) {
+                return false;
+            }
+            return true;
+        }
+    }
+
     // Validates that you can't switch to the same mon, you have enough stamina, the move isn't disabled, etc.
-    function validateMove(bytes32 battleKey, uint256 moveIndex, address player, bytes calldata extraData)
+    function validatePlayerMove(bytes32 battleKey, uint256 moveIndex, address player, bytes calldata extraData)
         external
         view
         returns (bool)
@@ -122,17 +147,8 @@ contract DefaultValidator is IValidator {
             return validateSwitch(battleKey, playerIndex, monToSwitchIndex);
         }
 
-        // Otherwise, a move cannot be selected if its stamina costs more than the mon's current stamina
-        IMoveSet moveSet = teams[playerIndex][activeMonIndex[playerIndex]].moves[moveIndex];
-        int256 monStaminaDelta = monStates[playerIndex][activeMonIndex[playerIndex]].staminaDelta;
-        uint256 monBaseStamina = teams[playerIndex][activeMonIndex[playerIndex]].stamina;
-        uint256 monCurrentStamina = uint256(int256(monBaseStamina) + monStaminaDelta);
-        if (moveSet.stamina(battleKey) > monCurrentStamina) {
-            return false;
-        }
-
-        // Lastly, we check the move itself to see if it enforces any other specific conditions
-        if (!moveSet.isValidTarget(battleKey)) {
+        // Otherwise, it's not a switch or a no-op, so it's a normal move
+        if (! validateSpecificMoveSelection(battleKey, moveIndex, playerIndex, extraData)) {
             return false;
         }
 

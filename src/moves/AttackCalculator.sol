@@ -75,14 +75,6 @@ abstract contract AttackCalculator {
             damage = (basePower * attackStat * (100 - rngScaling) * typeMultiplier) / (defenceStat * 100);
         }
 
-        // Update stamina delta for the attacker mon
-        ENGINE.updateMonState(
-            attackerPlayerIndex,
-            state.activeMonIndex[attackerPlayerIndex],
-            MonStateIndexName.Stamina,
-            -1 * int256(staminaCost)
-        );
-
         // Do damage calc and check for KO on defending mon
         ENGINE.updateMonState(
             defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], MonStateIndexName.Hp, -1 * int256(damage)

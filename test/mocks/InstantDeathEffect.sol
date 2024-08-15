@@ -19,14 +19,9 @@ contract InstantDeathEffect is IEffect {
         return "Instant Death";
     }
 
-    // Irrelevant, as it will be registered at the beginning of the battle
-    function isValidToRegister(bytes32, uint256) external pure returns (bool) {
-        return true;
-    }
-
     // Should run at end of round
-    function shouldRunAtRound(Round r) external pure returns (bool) {
-        if (r == Round.End) {
+    function shouldRunAtStep(EffectStep r) external pure returns (bool) {
+        if (r == EffectStep.RoundEnd) {
             return true;
         } else {
             return false;
@@ -37,12 +32,22 @@ contract InstantDeathEffect is IEffect {
         return false;
     }
 
-    function runEffect(bytes32 battleKey, uint256, bytes memory, uint256 targetIndex)
+    function onRoundEnd(bytes32 battleKey, uint256, bytes memory, uint256 targetIndex)
         external
-        returns (bytes memory updatedExtraData, bool removeAfterHandle)
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         uint256 activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey)[targetIndex];
         ENGINE.updateMonState(targetIndex, activeMonIndex, MonStateIndexName.IsKnockedOut, 1);
         return ("", true);
+    }
+
+    // Everything below is an NoOp
+    function onApply(bytes memory extraData) external returns (bytes memory updatedExtraData) {}
+    function onRemove(bytes memory extraData) external {}
+    function onRoundStart(bytes32 battleKey, uint256, bytes memory, uint256 targetIndex)
+        external
+        pure
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {
     }
 }

@@ -119,11 +119,7 @@ contract DefaultValidator is IValidator {
         // AND if the new mon isn't the same index as the existing mon
         else if (moveIndex == SWITCH_MOVE_INDEX) {
             uint256 monToSwitchIndex = abi.decode(extraData, (uint256));
-            return validateSwitch(
-                battleKey,
-                playerIndex,
-                monToSwitchIndex
-            );
+            return validateSwitch(battleKey, playerIndex, monToSwitchIndex);
         }
 
         // Otherwise, a move cannot be selected if its stamina costs more than the mon's current stamina

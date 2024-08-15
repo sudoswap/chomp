@@ -10,7 +10,6 @@ import {IEngine} from "../../src/IEngine.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 
 contract ForceSwitchMove is IMoveSet {
-
     struct Args {
         Type TYPE;
         uint256 STAMINA_COST;

@@ -1,50 +1,11 @@
 dev TODO:
 
-TODO:
+IMoveSet changes:
+- use priority() in Engine.sol to deduct, don't rely on moves to deduct stamina for you
+    - similarly, if the priority isn't met, just skip the turn (allows for cases where e.g. stamina is deduced by the opposing move)
+- return whether or not to trigger a switch (and use it in the engine to decide!), again instead of relying on the moves to do it
 
-HANDLE CASE WHERE BOTH PLAYERS NEED TO MAKE A VALID SWITCH (e.g. poison kills A, and then move kills B)
-
-flow:
-
-- run move0
-- check for KO
-- if so:
-    - run end of round effects for other player
-    - check for new KO for other mon
-    - if so:
-        - set dual flag, return
-    - otherwise:
-        - set single flag, return
-
-- otherwise:
-
-- run move1
-- check for KO
-- if so:
-    - run end of round effects for other player
-    - check for KO for other mon
-    - if so:
-        - set dual flag, return
-    - otherwise:
-        - set single flag, return
-
-- otherwise
-
-- both moves did not lead to KO
-- run effects for priority player
-    - check for KO
-    - if so:
-        - set flag
-        - run effects for non priority player
-        - check for KO
-            - if so:
-                - set dual flag
-
-
-- add test to ensure that unauthorized writes do not succeed [x]
-    - think a little bit more about the security aspects
-- add ability to add effects and remove effects [x]
-- add ability to write to global kv
+- add ability to write to global kv []
 - add return values to moves so they can initiate a switch if needed
     - need to specify which mon index to switch to, and whether or not there is a switch
 - add on-switch as trigger for effects, dovetail into abilities

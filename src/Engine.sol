@@ -85,7 +85,6 @@ contract Engine is IEngine {
      * - Write functions for MonState, Effects, and GlobalKV
      */
 
-    // Set mon state for a specific player for a specific variable in mon state for a specific mon
     function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int256 valueToAdd)
         external
     {
@@ -116,12 +115,17 @@ contract Engine is IEngine {
         }
     }
 
-    function addEffect(uint256 targetIndex, uint256 monIndex, IEffect effect, bytes calldata extraData) external {
+    function addEffect(uint256 targetIndex, uint256 monIndex, IEffect effect, bytes memory extraData) external {
         bytes32 battleKey = battleKeyForWrite;
         if (battleKey == bytes32(0)) {
             revert NoWriteAllowed();
         }
         BattleState storage state = battleStates[battleKey];
+        // Check if we have to run an onApply state update
+        if (effect.shouldRunAtStep(EffectStep.OnApply)) {
+            // If so, we run the effect first, and get updated extraData if necessary
+            extraData = effect.onApply(extraData);
+        }
         if (targetIndex == 2) {
             state.globalEffects.push(effect);
             state.extraDataForGlobalEffects.push(extraData);
@@ -131,21 +135,36 @@ contract Engine is IEngine {
         }
     }
 
-    function removeEffect(uint256 targetIndex, uint256 monIndex, uint256 effectIndex) external {
+    function removeEffect(uint256 targetIndex, uint256 monIndex, uint256 indexToRemove) public {
         bytes32 battleKey = battleKeyForWrite;
         if (battleKey == bytes32(0)) {
             revert NoWriteAllowed();
         }
         BattleState storage state = battleStates[battleKey];
+
+        // Set the appropriate effects/extra data array from storage
+        IEffect[] storage effects;
+        bytes[] storage extraData;
         if (targetIndex == 2) {
-            state.globalEffects[effectIndex] = state.globalEffects[state.globalEffects.length - 1];
-            state.globalEffects.pop();
+            effects = state.globalEffects;
+            extraData = state.extraDataForGlobalEffects;
         } else {
-            uint256 totalNumEffects = state.monStates[targetIndex][monIndex].targetedEffects.length;
-            state.monStates[targetIndex][monIndex].targetedEffects[effectIndex] =
-                state.monStates[targetIndex][monIndex].targetedEffects[totalNumEffects - 1];
-            state.monStates[targetIndex][monIndex].targetedEffects.pop();
+            effects = state.monStates[targetIndex][monIndex].targetedEffects;
+            extraData = state.monStates[targetIndex][monIndex].extraDataForTargetedEffects;
         }
+
+        // One last check to see if we should run the final lifecycle hook
+        IEffect effect = effects[indexToRemove];
+        if (effect.shouldRunAtStep(EffectStep.OnRemove)) {
+            effect.onRemove(extraData[indexToRemove]);
+        }
+        
+        // Remove effects and extra data
+        uint256 numEffects = effects.length;
+        effects[indexToRemove] = effects[numEffects - 1];
+        effects.pop();
+        extraData[indexToRemove] = extraData[numEffects - 1];
+        extraData.pop();
     }
 
     /**
@@ -376,9 +395,9 @@ contract Engine is IEngine {
 
             // Run beginning of round effects all at once to start
             // NOTE: We assume these cannot KO
-            _runEffects(battleKey, rng, 2, Round.Start);
-            _runEffects(battleKey, rng, priorityPlayerIndex, Round.Start);
-            _runEffects(battleKey, rng, otherPlayerIndex, Round.Start);
+            _runEffects(battleKey, rng, 2, EffectStep.RoundStart);
+            _runEffects(battleKey, rng, priorityPlayerIndex, EffectStep.RoundStart);
+            _runEffects(battleKey, rng, otherPlayerIndex, EffectStep.RoundStart);
 
             // Execute priority player's move
             _handlePlayerMove(battleKey, rng, priorityPlayerIndex);
@@ -405,7 +424,7 @@ contract Engine is IEngine {
             if (isGameOver) return;
 
             // Always run global effects at the end of the round
-            _runEffects(battleKey, rng, 2, Round.End);
+            _runEffects(battleKey, rng, 2, EffectStep.RoundEnd);
 
             // Check for game over and/or KOs
             (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
@@ -414,7 +433,7 @@ contract Engine is IEngine {
 
             // If priority mon is not KOed, run effects for the priority mon
             if (!isPriorityPlayerMonKOed) {
-                _runEffects(battleKey, rng, priorityPlayerIndex, Round.End);
+                _runEffects(battleKey, rng, priorityPlayerIndex, EffectStep.RoundEnd);
             }
 
             // Check for game over and/or KOs
@@ -424,7 +443,7 @@ contract Engine is IEngine {
 
             // If non priority mon is not KOed, run effects for the non priority mon
             if (!isNonPriorityPlayerMonKOed) {
-                _runEffects(battleKey, rng, otherPlayerIndex, Round.End);
+                _runEffects(battleKey, rng, otherPlayerIndex, EffectStep.RoundEnd);
             }
 
             // Check for game over and/or KOs
@@ -457,7 +476,6 @@ contract Engine is IEngine {
      * - Internal helper functions for execute()
      */
 
-    // Chec
     function _checkForGameOverOrKO(bytes32 battleKey, uint256 priorityPlayerIndex)
         internal
         returns (
@@ -537,7 +555,7 @@ contract Engine is IEngine {
         BattleState storage state = battleStates[battleKey];
         uint256 turnId = state.turnId;
         RevealedMove storage move = battleStates[battleKey].moveHistory[playerIndex][turnId];
-        
+
         // Handle shouldSkipTurn flag first and toggle it off if set
         MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
         if (currentMonState.shouldSkipTurn) {
@@ -571,9 +589,7 @@ contract Engine is IEngine {
         }
     }
 
-    // Iterates through all effects and handles them
-    // Removes them if necessary, and also updates extra data if needed
-    function _runEffects(bytes32 battleKey, uint256 rng, uint256 targetIndex, Round round) internal {
+    function _runEffects(bytes32 battleKey, uint256 rng, uint256 targetIndex, EffectStep round) internal {
         BattleState storage state = battleStates[battleKey];
         IEffect[] storage effects;
         bytes[] storage extraData;
@@ -588,21 +604,24 @@ contract Engine is IEngine {
 
         uint256 i;
         while (i < effects.length) {
-            if (effects[i].shouldRunAtRound(round)) {
+            if (effects[i].shouldRunAtStep(round)) {
                 // Set the battleKey to allow for writes
                 battleKeyForWrite = battleKey;
 
-                // Run the effects
-                (bytes memory updatedExtraData, bool removeAfterHandle) =
-                    effects[i].runEffect(battleKey, rng, extraData[i], 0);
+                // Run the effects (depending on which round stage we are on)
+                bytes memory updatedExtraData;
+                bool removeAfterRun;
+                if (round == EffectStep.RoundStart) {
+                    (updatedExtraData, removeAfterRun) =
+                        effects[i].onRoundStart(battleKey, rng, extraData[i], targetIndex);
+                } else if (round == EffectStep.RoundEnd) {
+                    (updatedExtraData, removeAfterRun) =
+                        effects[i].onRoundEnd(battleKey, rng, extraData[i], targetIndex);
+                }
 
                 // If we remove the effect after doing it, then we clear and update the array/extra data
-                if (removeAfterHandle) {
-                    effects[i] = effects[effects.length - 1];
-                    effects.pop();
-
-                    extraData[i] = extraData[extraData.length - 1];
-                    extraData.pop();
+                if (removeAfterRun) {
+                    removeEffect(targetIndex, state.activeMonIndex[targetIndex], i);
                 }
                 // Otherwise, we update the extra data if e.g. the effect needs to modify its own storage
                 else {

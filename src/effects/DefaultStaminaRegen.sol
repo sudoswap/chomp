@@ -18,14 +18,9 @@ contract DefaultStaminaRegen is IEffect {
         return "Default Stamina Regen";
     }
 
-    // Irrelevant, as it will be registered at the beginning of the battle
-    function isValidToRegister(bytes32, uint256) external pure returns (bool) {
-        return true;
-    }
-
     // Should run at end of round
-    function shouldRunAtRound(Round r) external pure returns (bool) {
-        if (r == Round.End) {
+    function shouldRunAtStep(EffectStep r) external pure returns (bool) {
+        if (r == EffectStep.RoundEnd) {
             return true;
         } else {
             return false;
@@ -36,7 +31,7 @@ contract DefaultStaminaRegen is IEffect {
         return false;
     }
 
-    function runEffect(bytes32 battleKey, uint256, bytes memory, uint256) external returns (bytes memory, bool) {
+    function onRoundEnd(bytes32 battleKey, uint256, bytes memory, uint256) external returns (bytes memory, bool) {
         uint256 playerSwitchForTurnFlag = ENGINE.getPlayerSwitchForTurnFlagForBattleState(battleKey);
         MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
@@ -55,5 +50,15 @@ contract DefaultStaminaRegen is IEffect {
 
         // We don't need to store data
         return ("", false);
+    }
+
+    // Everything below is an NoOp
+    function onApply(bytes memory extraData) external returns (bytes memory updatedExtraData) {}
+    function onRemove(bytes memory extraData) external {}
+    function onRoundStart(bytes32 battleKey, uint256, bytes memory, uint256 targetIndex)
+        external
+        pure
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {
     }
 }

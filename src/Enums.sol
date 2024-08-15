@@ -20,9 +20,11 @@ enum Type {
     None
 }
 
-enum Round {
-    Start,
-    End
+enum EffectStep {
+    OnApply,
+    RoundStart,
+    RoundEnd,
+    OnRemove
 }
 
 enum AttackSupertype {

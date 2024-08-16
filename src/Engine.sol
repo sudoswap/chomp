@@ -301,7 +301,7 @@ contract Engine is IEngine {
 
         // validate that the commited moves are legal
         // (e.g. there is enough stamina, move is not disabled, etc.)
-        if (!battle.validator.validatePlayerMove(battleKey, moveIndex, msg.sender, extraData)) {
+        if (!battle.validator.validatePlayerMove(battleKey, moveIndex, currentPlayerIndex, extraData)) {
             revert InvalidMove(msg.sender);
         }
 

@@ -8,9 +8,8 @@ interface IValidator {
     function validateGameStart(Battle calldata b, address gameStartCaller) external returns (bool);
 
     // Validates that you can't switch to the same mon, you have enough stamina, the move isn't disabled, etc.
-    function validatePlayerMove(bytes32 battleKey, uint256 moveIndex, address player, bytes calldata extraData)
+    function validatePlayerMove(bytes32 battleKey, uint256 moveIndex, uint256 playerIndex, bytes calldata extraData)
         external
-        view
         returns (bool);
 
     // Validates that a move selection is valid (specifically wrt stamina)
@@ -19,7 +18,7 @@ interface IValidator {
         uint256 moveIndex,
         uint256 playerIndex,
         bytes calldata extraData
-    ) external view returns (bool);
+    ) external returns (bool);
 
     // Validates that a switch is valid
     function validateSwitch(bytes32 battleKey, uint256 playerIndex, uint256 monToSwitchIndex) external returns (bool);

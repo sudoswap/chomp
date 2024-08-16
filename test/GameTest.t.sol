@@ -402,9 +402,6 @@ contract GameTest is Test {
         assertEq(state.monStates[1][0].staminaDelta, -1);
     }
 
-    // Helper function used to check that we correctly force a switch in priority matchups
-    // if we knock out a mon (with higher priority), and there are mons remaining
-    // End result is it Bob in the lead with 2 mons vs 1 mon for Alice
     function _setup2v2FasterPriorityBattleAndForceSwitch() internal returns (bytes32) {
         // Initialize fast and slow mons
         IMoveSet slowAttack = new CustomAttack(
@@ -998,16 +995,13 @@ contract GameTest is Test {
         });
 
         vm.startPrank(ALICE);
-
         bytes32 battleKey = engine.start(battle);
-
         _commitRevealExecuteForAliceAndBob(
             battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
         );
 
         // Commit move index 0 for Alice
         uint256 moveIndex = 0;
-
         vm.startPrank(ALICE);
         bytes32 aliceMoveHash = keccak256(abi.encodePacked(moveIndex, bytes32(""), ""));
         engine.commitMove(battleKey, aliceMoveHash);
@@ -1017,13 +1011,13 @@ contract GameTest is Test {
         bytes32 bobMoveHash = keccak256(abi.encodePacked(moveIndex, bytes32(""), ""));
         engine.commitMove(battleKey, bobMoveHash);
 
-        // Reveal Alice's move (valid)
-        vm.startPrank(ALICE);
+        // Reveal Bob's move (valid)
+        vm.startPrank(BOB);
         engine.revealMove(battleKey, moveIndex, bytes32(""), "");
 
-        // Assert that Bob cannot reveal anything because of the stamina cost
-        vm.startPrank(BOB);
-        vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", BOB));
+        // Assert that Alice cannot reveal anything because of the stamina cost (she has the high stamina cost mon)
+        vm.startPrank(ALICE);
+        vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
         engine.revealMove(battleKey, moveIndex, bytes32(""), "");
     }
 
@@ -1797,9 +1791,93 @@ contract GameTest is Test {
         engine.revealMove(battleKey, moveIndex, salt, abi.encode(0, 0));
     }
 
-    /*
-    function test_forceSwitchMoveRevertsWhenInvalidSwitchTargetNonPriorityPlayer() public {
-        
+    function test_forceSwitchMoveRevertsWhenInvalidSwitchTargetNonPriorityPlayerAfterAttacking() public {
+    // Initialize mons and moves
+        // Attack to force a switch for user (should be higher priority than the other move)
+        IMoveSet switchAttack =
+            new ForceSwitchMove(engine, ForceSwitchMove.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 2}));
+        IMoveSet[] memory switchMoves = new IMoveSet[](1);
+        switchMoves[0] = switchAttack;
+        Mon memory switchMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: switchMoves
+        });
+        IMoveSet normalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = normalAttack;
+        Mon memory normalMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+
+        Mon[] memory team = new Mon[](2);
+        team[0] = switchMon;
+        team[1] = switchMon;
+        Mon[] memory otherTeam = new Mon[](2);
+        otherTeam[0] = normalMon;
+        otherTeam[1] = normalMon;
+
+        Mon[][] memory teams = new Mon[][](2);
+        teams[0] = team;
+        teams[1] = otherTeam;
+
+        DefaultValidator twoMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Let Alice commit to switching to mon index 1 (invalid target) with player index 0 (same mon)
+        bytes32 salt = "";
+        uint256 moveIndex = 0;
+        vm.startPrank(ALICE);
+        engine.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, abi.encode(1, 0))));
+
+        // Let Bob commit and reveal to attack (move index 0)
+        bytes memory extraData = "";
+        vm.startPrank(BOB);
+        engine.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, extraData)));
+
+        // Ensure Bob can reveal
+        engine.revealMove(battleKey, moveIndex, salt, extraData);
+
+        // Expect revert if Alice tries to reveal (should be marked as invalid switch)
+        vm.startPrank(ALICE);
+        vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
+        engine.revealMove(battleKey, moveIndex, salt, abi.encode(1, 0));    
     }
-    */
 }

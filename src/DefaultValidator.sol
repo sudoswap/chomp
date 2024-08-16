@@ -101,36 +101,29 @@ contract DefaultValidator is IValidator {
         }
 
         // If the move triggers a swap, we need to check to see if it's a valid swap
-        // (uint256 forceSwitchPlayerIndex, uint256 monIndexToSwitchTo) = moveSet.postMoveSwitch(battleKey, playerIndex, extraData);
-        // if (forceSwitchPlayerIndex != NO_SWITCH_FLAG) {
-        //     bool isValidSwitch = validateSwitch(battleKey, forceSwitchPlayerIndex, monIndexToSwitchTo);
-        //     if (!isValidSwitch) {
-        //         return false;
-        //     }
-        // }
+        (uint256 forceSwitchPlayerIndex, uint256 monIndexToSwitchTo) = moveSet.postMoveSwitch(battleKey, playerIndex, extraData);
+        if (forceSwitchPlayerIndex != NO_SWITCH_FLAG) {
+            bool isValidSwitch = validateSwitch(battleKey, forceSwitchPlayerIndex, monIndexToSwitchTo);
+            if (!isValidSwitch) {
+                return false;
+            }
+        }
 
         return true;
     }
 
     // Validates that you can't switch to the same mon, you have enough stamina, the move isn't disabled, etc.
-    function validatePlayerMove(bytes32 battleKey, uint256 moveIndex, address player, bytes calldata extraData)
+    function validatePlayerMove(bytes32 battleKey, uint256 moveIndex, uint256 playerIndex, bytes calldata extraData)
         external
         view
         returns (bool)
     {
-        Mon[][] memory teams = ENGINE.getTeamsForBattle(battleKey);
         MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
 
         // Enforce a switch IF:
         // - if it is the zeroth turn
         // - if the active mon is knocked out
-        uint256 playerIndex;
-        if (player == ENGINE.getPlayersForBattle(battleKey)[1]) {
-            playerIndex = 0;
-        } else {
-            playerIndex = 1;
-        }
         {
             bool isTurnZero = ENGINE.getTurnIdForBattleState(battleKey) == 0;
             bool isActiveMonKnockedOut = monStates[playerIndex][activeMonIndex[playerIndex]].isKnockedOut;

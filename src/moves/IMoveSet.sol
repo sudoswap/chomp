@@ -13,8 +13,9 @@ interface IMoveSet {
         returns (bool hasPostMoveSwitch);
 
     // A move can force up to one switch after its normal move execution has ended
-    function postMoveSwitch(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData, uint256 rng)
+    function postMoveSwitch(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData)
         external
+        pure
         returns (uint256 forceSwitchPlayerIndex, uint256 monIndexToSwitchTo);
 
     function priority(bytes32 battleKey) external view returns (uint256);

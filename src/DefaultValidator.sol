@@ -98,8 +98,18 @@ contract DefaultValidator is IValidator {
             if (!moveSet.isValidTarget(battleKey)) {
                 return false;
             }
-            return true;
         }
+
+        // If the move triggers a swap, we need to check to see if it's a valid swap
+        // (uint256 forceSwitchPlayerIndex, uint256 monIndexToSwitchTo) = moveSet.postMoveSwitch(battleKey, playerIndex, extraData);
+        // if (forceSwitchPlayerIndex != NO_SWITCH_FLAG) {
+        //     bool isValidSwitch = validateSwitch(battleKey, forceSwitchPlayerIndex, monIndexToSwitchTo);
+        //     if (!isValidSwitch) {
+        //         return false;
+        //     }
+        // }
+
+        return true;
     }
 
     // Validates that you can't switch to the same mon, you have enough stamina, the move isn't disabled, etc.
@@ -148,7 +158,7 @@ contract DefaultValidator is IValidator {
             return validateSwitch(battleKey, playerIndex, monToSwitchIndex);
         }
 
-        // Otherwise, it's not a switch or a no-op, so it's a normal move
+        // Otherwise, it's not a switch or a no-op, so it's a move
         if (!validateSpecificMoveSelection(battleKey, moveIndex, playerIndex, extraData)) {
             return false;
         }

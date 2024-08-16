@@ -594,7 +594,7 @@ contract Engine is IEngine {
             // If we need to a switch, check to see what we switch
             if (doSwitch) {
                 (uint256 switchFlag, uint256 monToSwitchIndex) =
-                    moveSet.postMoveSwitch(battleKey, playerIndex, move.extraData, rng);
+                    moveSet.postMoveSwitch(battleKey, playerIndex, move.extraData);
                 _handleSwitch(battleKey, switchFlag, monToSwitchIndex);
             }
 

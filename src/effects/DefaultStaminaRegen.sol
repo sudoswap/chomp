@@ -59,6 +59,5 @@ contract DefaultStaminaRegen is IEffect {
         external
         pure
         returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {
-    }
+    {}
 }

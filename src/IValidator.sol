@@ -14,10 +14,12 @@ interface IValidator {
         returns (bool);
 
     // Validates that a move selection is valid (specifically wrt stamina)
-    function validateSpecificMoveSelection(bytes32 battleKey, uint256 moveIndex, uint256 playerIndex, bytes calldata extraData)
-        external
-        view
-        returns (bool);
+    function validateSpecificMoveSelection(
+        bytes32 battleKey,
+        uint256 moveIndex,
+        uint256 playerIndex,
+        bytes calldata extraData
+    ) external view returns (bool);
 
     // Validates that a switch is valid
     function validateSwitch(bytes32 battleKey, uint256 playerIndex, uint256 monToSwitchIndex) external returns (bool);

@@ -1,5 +1,35 @@
 dev TODO:
 
+NOTE: KNOWN BUGGY INTERACTION
+- If a move forces a switch and triggers before the other player can make its move, it might be an invalid move
+- The Engine handles the case where the stamina is insufficient (it just skips the move)
+- But other weird cases might happen!
+
+
+
+
+
+
+
+DO THIS NEXT:
+****************************
+Handle checking the post move switch in the 
+validateMove() call to ensure at commit time there are no invalid switches
+****************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 - add ability to write to global kv []
 - add on-switch as trigger for effects, dovetail into abilities
 

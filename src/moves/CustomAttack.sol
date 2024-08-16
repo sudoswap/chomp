@@ -38,12 +38,12 @@ contract CustomAttack is AttackCalculator, IMoveSet {
 
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng)
         external
-        returns (uint256, uint256)
+        returns (bool)
     {
         calculateDamage(
             battleKey, attackerPlayerIndex, BASE_POWER, ACCURACY, STAMINA_COST, TYPE, AttackSupertype.Physical, rng
         );
-        return (NO_SWITCH_FLAG, 0);
+        return false;
     }
 
     function priority(bytes32) external view returns (uint256) {
@@ -60,5 +60,13 @@ contract CustomAttack is AttackCalculator, IMoveSet {
 
     function isValidTarget(bytes32) external pure returns (bool) {
         return true;
+    }
+
+    function postMoveSwitch(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData, uint256 rng)
+        external
+        returns (uint256, uint256)
+    {
+        // No-op
+        return (NO_SWITCH_FLAG, NO_SWITCH_FLAG);
     }
 }

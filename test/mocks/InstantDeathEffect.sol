@@ -48,6 +48,5 @@ contract InstantDeathEffect is IEffect {
         external
         pure
         returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {
-    }
+    {}
 }

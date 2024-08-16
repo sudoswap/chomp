@@ -37,12 +37,12 @@ contract EffectAttack is IMoveSet {
 
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes memory extraData, uint256)
         external
-        returns (uint256, uint256)
+        returns (bool)
     {
         uint256 targetIndex = (attackerPlayerIndex + 1) % 2;
         uint256 activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey)[targetIndex];
         ENGINE.addEffect(targetIndex, activeMonIndex, EFFECT, extraData);
-        return (NO_SWITCH_FLAG, 0);
+        return false;
     }
 
     function priority(bytes32) external view returns (uint256) {
@@ -59,5 +59,13 @@ contract EffectAttack is IMoveSet {
 
     function isValidTarget(bytes32) external pure returns (bool) {
         return true;
+    }
+
+    function postMoveSwitch(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData, uint256 rng)
+        external
+        returns (uint256, uint256)
+    {
+        // No-op
+        return (NO_SWITCH_FLAG, NO_SWITCH_FLAG);
     }
 }

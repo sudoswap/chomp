@@ -76,10 +76,12 @@ contract DefaultValidator is IValidator {
         return true;
     }
 
-    function validateSpecificMoveSelection(bytes32 battleKey, uint256 moveIndex, uint256 playerIndex, bytes calldata extraData)
-        public
-        view
-        returns (bool) {
+    function validateSpecificMoveSelection(
+        bytes32 battleKey,
+        uint256 moveIndex,
+        uint256 playerIndex,
+        bytes calldata extraData
+    ) public view returns (bool) {
         Mon[][] memory teams = ENGINE.getTeamsForBattle(battleKey);
         MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
@@ -91,8 +93,7 @@ contract DefaultValidator is IValidator {
         uint256 monCurrentStamina = uint256(int256(monBaseStamina) + monStaminaDelta);
         if (moveSet.stamina(battleKey) > monCurrentStamina) {
             return false;
-        }
-        else {
+        } else {
             // Then, we check the move itself to see if it enforces any other specific conditions
             if (!moveSet.isValidTarget(battleKey)) {
                 return false;
@@ -148,7 +149,7 @@ contract DefaultValidator is IValidator {
         }
 
         // Otherwise, it's not a switch or a no-op, so it's a normal move
-        if (! validateSpecificMoveSelection(battleKey, moveIndex, playerIndex, extraData)) {
+        if (!validateSpecificMoveSelection(battleKey, moveIndex, playerIndex, extraData)) {
             return false;
         }
 

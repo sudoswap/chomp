@@ -34,10 +34,18 @@ contract ForceSwitchMove is IMoveSet {
 
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes memory data, uint256)
         external
+        pure
+        returns (bool)
+    {
+        return true;
+    }
+
+    function postMoveSwitch(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData, uint256 rng)
+        external
         returns (uint256, uint256)
     {
         // Decode data as (uint256 playerIndex, uint256 monToSwitchIndex)
-        (uint256 playerIndex, uint256 monToSwitchIndex) = abi.decode(data, (uint256, uint256));
+        (uint256 playerIndex, uint256 monToSwitchIndex) = abi.decode(extraData, (uint256, uint256));
         return (playerIndex, monToSwitchIndex);
     }
 

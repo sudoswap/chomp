@@ -84,7 +84,6 @@ contract Engine is IEngine {
     /**
      * - Write functions for MonState, Effects, and GlobalKV
      */
-
     function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int256 valueToAdd)
         external
     {
@@ -158,7 +157,7 @@ contract Engine is IEngine {
         if (effect.shouldRunAtStep(EffectStep.OnRemove)) {
             effect.onRemove(extraData[indexToRemove]);
         }
-        
+
         // Remove effects and extra data
         uint256 numEffects = effects.length;
         effects[indexToRemove] = effects[numEffects - 1];
@@ -475,7 +474,6 @@ contract Engine is IEngine {
     /**
      * - Internal helper functions for execute()
      */
-
     function _checkForGameOverOrKO(bytes32 battleKey, uint256 priorityPlayerIndex)
         internal
         returns (
@@ -573,27 +571,30 @@ contract Engine is IEngine {
         }
         // Execute the move and then set updated state, active mons, and effects/data
         else {
-
             // Call validateSpecificMoveSelection again from the validator to ensure that it is still valid to execute
             // If not, then we just return early
             // Handles cases where e.g. some condition outside of the player's control leads to an invalid move
-            if (!battle.validator.validateSpecificMoveSelection(battleKey, move.moveIndex, playerIndex, move.extraData)) {
+            if (!battle.validator.validateSpecificMoveSelection(battleKey, move.moveIndex, playerIndex, move.extraData))
+            {
                 return;
             }
-            
+
             IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex];
-            
+
             // Update the mon state directly to account for the stamina cost of the move
-            state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta -= int256(moveSet.stamina(battleKey));
+            state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta -=
+                int256(moveSet.stamina(battleKey));
 
             // Set the key to allow for writes
             battleKeyForWrite = battleKey;
 
             // Run the move and see if we need to handle a switch
-            (uint256 switchFlag, uint256 monToSwitchIndex) = moveSet.move(battleKey, playerIndex, move.extraData, rng);
+            (bool doSwitch) = moveSet.move(battleKey, playerIndex, move.extraData, rng);
 
-            // Handle the special case where the move tells us to handle a switch
-            if (switchFlag != NO_SWITCH_FLAG) {
+            // If we need to a switch, check to see what we switch
+            if (doSwitch) {
+                (uint256 switchFlag, uint256 monToSwitchIndex) =
+                    moveSet.postMoveSwitch(battleKey, playerIndex, move.extraData, rng);
                 _handleSwitch(battleKey, switchFlag, monToSwitchIndex);
             }
 

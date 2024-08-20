@@ -400,9 +400,9 @@ contract Engine is IEngine {
 
             // Run beginning of round effects all at once to start
             // NOTE: We assume these cannot KO
-            _runEffects(battleKey, rng, 2, EffectStep.RoundStart);
-            _runEffects(battleKey, rng, priorityPlayerIndex, EffectStep.RoundStart);
-            _runEffects(battleKey, rng, otherPlayerIndex, EffectStep.RoundStart);
+            _runEffects(battleKey, rng, 2, 2, EffectStep.RoundStart);
+            _runEffects(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.RoundStart);
+            _runEffects(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.RoundStart);
 
             // Execute priority player's move
             _handlePlayerMove(battleKey, rng, priorityPlayerIndex);
@@ -429,7 +429,7 @@ contract Engine is IEngine {
             if (isGameOver) return;
 
             // Always run global effects at the end of the round
-            _runEffects(battleKey, rng, 2, EffectStep.RoundEnd);
+            _runEffects(battleKey, rng, 2, 2, EffectStep.RoundEnd);
 
             // Check for game over and/or KOs
             (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
@@ -438,7 +438,7 @@ contract Engine is IEngine {
 
             // If priority mon is not KOed, run effects for the priority mon
             if (!isPriorityPlayerMonKOed) {
-                _runEffects(battleKey, rng, priorityPlayerIndex, EffectStep.RoundEnd);
+                _runEffects(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.RoundEnd);
             }
 
             // Check for game over and/or KOs
@@ -448,7 +448,7 @@ contract Engine is IEngine {
 
             // If non priority mon is not KOed, run effects for the non priority mon
             if (!isNonPriorityPlayerMonKOed) {
-                _runEffects(battleKey, rng, otherPlayerIndex, EffectStep.RoundEnd);
+                _runEffects(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.RoundEnd);
             }
 
             // Check for game over and/or KOs
@@ -554,9 +554,9 @@ contract Engine is IEngine {
         state.activeMonIndex[playerIndex] = monToSwitchIndex;
 
         // Run onMonSwitchIn hook for global effects
-        _runEffects(battleKey, state.pRNGStream[state.pRNGStream.length - 1], 2, EffectStep.OnMonSwitchIn);
+        _runEffects(battleKey, state.pRNGStream[state.pRNGStream.length - 1], 2, playerIndex, EffectStep.OnMonSwitchIn);
 
-        // We will check for game over after the switch in the engine for two player turns, so we don't do it here
+        // NOTE: We will check for game over after the switch in the engine for two player turns, so we don't do it here
     }
 
     function _handlePlayerMove(bytes32 battleKey, uint256 rng, uint256 playerIndex) internal {
@@ -614,17 +614,17 @@ contract Engine is IEngine {
         }
     }
 
-    function _runEffects(bytes32 battleKey, uint256 rng, uint256 targetIndex, EffectStep round) internal {
+    function _runEffects(bytes32 battleKey, uint256 rng, uint256 effectIndex, uint256 playerIndex, EffectStep round) internal {
         BattleState storage state = battleStates[battleKey];
         IEffect[] storage effects;
         bytes[] storage extraData;
         // Switch between global or targeted effects array
-        if (targetIndex == 2) {
+        if (effectIndex == 2) {
             effects = state.globalEffects;
             extraData = state.extraDataForGlobalEffects;
         } else {
-            effects = state.monStates[targetIndex][state.activeMonIndex[targetIndex]].targetedEffects;
-            extraData = state.monStates[targetIndex][state.activeMonIndex[targetIndex]].extraDataForTargetedEffects;
+            effects = state.monStates[effectIndex][state.activeMonIndex[effectIndex]].targetedEffects;
+            extraData = state.monStates[effectIndex][state.activeMonIndex[effectIndex]].extraDataForTargetedEffects;
         }
 
         uint256 i;
@@ -638,18 +638,19 @@ contract Engine is IEngine {
                 bool removeAfterRun;
                 if (round == EffectStep.RoundStart) {
                     (updatedExtraData, removeAfterRun) =
-                        effects[i].onRoundStart(battleKey, rng, extraData[i], targetIndex);
+                        effects[i].onRoundStart(battleKey, rng, extraData[i], effectIndex);
                 } else if (round == EffectStep.RoundEnd) {
                     (updatedExtraData, removeAfterRun) =
-                        effects[i].onRoundEnd(battleKey, rng, extraData[i], targetIndex);
+                        effects[i].onRoundEnd(battleKey, rng, extraData[i], effectIndex);
                 } else if (round == EffectStep.OnMonSwitchIn) {
+                    // NOTE: We pass in the playerIndex here, not the effectIndex so that we know which active mon to apply effects to
                     (updatedExtraData, removeAfterRun) =
-                        effects[i].onMonSwitchIn(battleKey, rng, extraData[i], targetIndex);
+                        effects[i].onMonSwitchIn(battleKey, rng, extraData[i], playerIndex);
                 }
 
                 // If we remove the effect after doing it, then we clear and update the array/extra data
                 if (removeAfterRun) {
-                    removeEffect(targetIndex, state.activeMonIndex[targetIndex], i);
+                    removeEffect(effectIndex, state.activeMonIndex[effectIndex], i);
                 }
                 // Otherwise, we update the extra data if e.g. the effect needs to modify its own storage
                 else {

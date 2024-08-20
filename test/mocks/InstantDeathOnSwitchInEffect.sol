@@ -8,7 +8,7 @@ import "../../src/Structs.sol";
 import {IEngine} from "../../src/IEngine.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
 
-contract InstantDeathEffect is IEffect {
+contract InstantDeathOnSwitchInEffect is IEffect {
     IEngine immutable ENGINE;
 
     constructor(IEngine _ENGINE) {

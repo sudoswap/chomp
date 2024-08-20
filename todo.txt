@@ -5,29 +5,15 @@ NOTE: KNOWN BUGGY INTERACTION
 - The Engine handles the case where the stamina is insufficient (it just skips the move)
 - But other weird cases might happen!
 
-
-
-
-
-
-
 DO THIS NEXT:
 ****************************
 - add onSwitchIn hook (only for global effects)
+
+NEED to let the hook know which player swapped in (which is separate from the index of the effects array)
+
+
 - add onSwitchIn for Abilities (new interface) for mons
 ****************************
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 - add ability to write to global kv []

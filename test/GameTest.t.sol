@@ -16,9 +16,11 @@ import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
 
 import {EffectAttack} from "./mocks/EffectAttack.sol";
+import {GlobalEffectAttack} from "./mocks/GlobalEffectAttack.sol";
 
 import {ForceSwitchMove} from "./mocks/ForceSwitchMove.sol";
 import {InstantDeathEffect} from "./mocks/InstantDeathEffect.sol";
+import {InstantDeathOnSwitchInEffect} from "./mocks/InstantDeathOnSwitchInEffect.sol";
 
 import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
 import {SkipTurnMove} from "./mocks/SkipTurnMove.sol";
@@ -1777,7 +1779,6 @@ contract GameTest is Test {
         engine.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, abi.encode(0, 0))));
 
         // Let Bob commit and reveal to attack (move index 0)
-        
         bytes memory extraData = "";
         vm.startPrank(BOB);
         engine.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, extraData)));
@@ -1882,6 +1883,92 @@ contract GameTest is Test {
     }
 
     // environmental effect kills mon after switch in from player move and forces switch
+    function test_effectOnSwitchInFromSwitchMoveKOsAndForcesSwitch() public {
+
+        // Initialize mons and moves
+        // Attack to force a switch for user (should be higher priority than the other move)
+        IMoveSet switchAttack =
+            new ForceSwitchMove(engine, ForceSwitchMove.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1}));
+        IMoveSet[] memory switchMoves = new IMoveSet[](1);
+        switchMoves[0] = switchAttack;
+        Mon memory switchMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: switchMoves
+        });
+
+        // Create a new GlobalEffectAttack that applies InstantDeathOnSwitchIn
+        IEffect instantDeathOnSwitchIn = new InstantDeathOnSwitchInEffect(engine);
+
+        // Move should be higher priority than the switch attack
+        IMoveSet instantDeathOnSwitchInAttack =
+            new GlobalEffectAttack(engine, instantDeathOnSwitchIn, GlobalEffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 2}));
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = instantDeathOnSwitchInAttack;
+        Mon memory stageHazardMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+
+        Mon[] memory team = new Mon[](2);
+        team[0] = switchMon;
+        team[1] = switchMon;
+        Mon[] memory otherTeam = new Mon[](2);
+        otherTeam[0] = stageHazardMon;
+        otherTeam[1] = stageHazardMon;
+
+        Mon[][] memory teams = new Mon[][](2);
+        teams[0] = team;
+        teams[1] = otherTeam;
+
+        DefaultValidator twoMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Let both players select move index 0
+        // (Have Alice force themselves to switch to mon index 1)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, abi.encode(0, 1), "");
+
+        // Assert that the player switch for turn flag is now 0, indicating Alice has to switch
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.playerSwitchForTurnFlag, 0);
+
+        // Assert that Alice's mon is now KOed
+        assertEq(state.monStates[0][0].isKnockedOut, true);
+    }
+
 
     // environmental effect kills mon after switch in from other player move and forces switch
 

@@ -1959,18 +1959,159 @@ contract GameTest is Test {
 
         // Let both players select move index 0
         // (Have Alice force themselves to switch to mon index 1)
+        // (But swapping to mon index 1 will trigger on switch in and kill the mon)
         _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, abi.encode(0, 1), "");
 
         // Assert that the player switch for turn flag is now 0, indicating Alice has to switch
         BattleState memory state = engine.getBattleState(battleKey);
         assertEq(state.playerSwitchForTurnFlag, 0);
 
-        // Assert that Alice's mon is now KOed
-        assertEq(state.monStates[0][0].isKnockedOut, true);
+        // Assert that Alice's new mon is now KOed
+        assertEq(state.monStates[0][1].isKnockedOut, true);
     }
 
 
     // environmental effect kills mon after switch in from other player move and forces switch
+    function test_effectOnSwitchInFromSwitchMoveForOtherPlayerKOsAndForcesSwitch() public {
+
+        // Initialize mons and moves
+        IMoveSet switchAttack =
+            new ForceSwitchMove(engine, ForceSwitchMove.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1}));
+        IEffect instantDeathOnSwitchIn = new InstantDeathOnSwitchInEffect(engine);
+        IMoveSet instantDeathOnSwitchInAttack =
+            new GlobalEffectAttack(engine, instantDeathOnSwitchIn, GlobalEffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 2}));
+        
+        IMoveSet[] memory moves = new IMoveSet[](2);
+        moves[0] = switchAttack;
+        moves[1] = instantDeathOnSwitchInAttack;
+
+        Mon memory mon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+
+        Mon[] memory team = new Mon[](2);
+        team[0] = mon;
+        team[1] = mon;
+
+        Mon[] memory otherTeam = new Mon[](2);
+        otherTeam[0] = mon;
+        otherTeam[1] = mon;
+
+        Mon[][] memory teams = new Mon[][](2);
+        teams[0] = team;
+        teams[1] = otherTeam;
+
+        DefaultValidator twoMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 2, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // (Have Alice force Bob to switch to mon index 1, have Bob select the instant death switch in effect
+        // (But swapping to mon index 1 will trigger on switch in and kill the mon)
+        // Instant death on switch in (by Bob's mon) will trigger and kill his own mon
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 1, abi.encode(1, 1), "");
+
+        // Assert that the player switch for turn flag is now 0, indicating Bob has to switch
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.playerSwitchForTurnFlag, 1);
+
+        // Assert that Bob's new mon is now KOed
+        assertEq(state.monStates[1][1].isKnockedOut, true);
+    }
 
     // environmental effect kills mon after switch in move (not as a side effect from move)
+    function test_effectOnSwitchInFromDirectSwitchMoveKOsAndForcesSwitch() public {
+
+        // Initialize mons and moves
+        IEffect instantDeathOnSwitchIn = new InstantDeathOnSwitchInEffect(engine);
+
+        // Set priority to be higher than switch
+        IMoveSet instantDeathOnSwitchInAttack =
+            new GlobalEffectAttack(engine, instantDeathOnSwitchIn, GlobalEffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 10}));
+        
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = instantDeathOnSwitchInAttack;
+
+        Mon memory mon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves
+        });
+
+        Mon[] memory team = new Mon[](2);
+        team[0] = mon;
+        team[1] = mon;
+
+        Mon[] memory otherTeam = new Mon[](2);
+        otherTeam[0] = mon;
+        otherTeam[1] = mon;
+
+        Mon[][] memory teams = new Mon[][](2);
+        teams[0] = team;
+        teams[1] = otherTeam;
+
+        DefaultValidator twoMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Have Alice switch to their second mon, have Bob select the instant death switch in effect
+        // (But swapping to mon index 1 for Alice will trigger on switch in and kill the mon)
+        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, 0, abi.encode(1), "");
+
+        // Assert that the player switch for turn flag is now 0, indicating Alice has to switch
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.playerSwitchForTurnFlag, 0);
+
+        // Assert that Alice's new mon is now KOed
+        assertEq(state.monStates[0][1].isKnockedOut, true);
+    }
 }

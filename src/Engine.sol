@@ -650,7 +650,11 @@ contract Engine is IEngine {
 
                 // If we remove the effect after doing it, then we clear and update the array/extra data
                 if (removeAfterRun) {
-                    removeEffect(effectIndex, state.activeMonIndex[effectIndex], i);
+                    uint256 monIndex = 0;
+                    if (effectIndex != 2) {
+                        monIndex = state.activeMonIndex[effectIndex];
+                    }
+                    removeEffect(effectIndex, monIndex, i);
                 }
                 // Otherwise, we update the extra data if e.g. the effect needs to modify its own storage
                 else {

@@ -32,7 +32,7 @@ contract ForceSwitchMove is IMoveSet {
         return "Force Switch";
     }
 
-    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes memory data, uint256)
+    function move(bytes32, uint256, bytes memory, uint256)
         external
         pure
         returns (bool)
@@ -40,7 +40,7 @@ contract ForceSwitchMove is IMoveSet {
         return true;
     }
 
-    function postMoveSwitch(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData)
+    function postMoveSwitch(bytes32, uint256, bytes calldata extraData)
         external
         pure
         returns (uint256, uint256)

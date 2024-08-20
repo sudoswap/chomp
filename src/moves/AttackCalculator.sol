@@ -23,7 +23,7 @@ abstract contract AttackCalculator {
         uint256 attackerPlayerIndex,
         uint256 basePower,
         uint256 accuracy, // out of 100
-        uint256 staminaCost,
+        uint256,
         Type attackType,
         AttackSupertype attackSupertype,
         uint256 rng

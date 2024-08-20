@@ -101,7 +101,8 @@ contract DefaultValidator is IValidator {
         }
 
         // If the move triggers a swap, we need to check to see if it's a valid swap
-        (uint256 forceSwitchPlayerIndex, uint256 monIndexToSwitchTo) = moveSet.postMoveSwitch(battleKey, playerIndex, extraData);
+        (uint256 forceSwitchPlayerIndex, uint256 monIndexToSwitchTo) =
+            moveSet.postMoveSwitch(battleKey, playerIndex, extraData);
         if (forceSwitchPlayerIndex != NO_SWITCH_FLAG) {
             bool isValidSwitch = validateSwitch(battleKey, forceSwitchPlayerIndex, monIndexToSwitchTo);
             if (!isValidSwitch) {

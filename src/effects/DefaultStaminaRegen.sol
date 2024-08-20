@@ -60,4 +60,8 @@ contract DefaultStaminaRegen is IEffect {
         pure
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {}
+    function onMonSwitchIn(bytes32 battleKey, uint256, bytes memory, uint256 targetIndex)
+        external
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {}
 }

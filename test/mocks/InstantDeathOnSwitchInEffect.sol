@@ -16,12 +16,12 @@ contract InstantDeathEffect is IEffect {
     }
 
     function name() external pure returns (string memory) {
-        return "Instant Death";
+        return "Instant Death On Switch";
     }
 
     // Should run at end of round
     function shouldRunAtStep(EffectStep r) external pure returns (bool) {
-        if (r == EffectStep.RoundEnd) {
+        if (r == EffectStep.OnMonSwitchIn) {
             return true;
         } else {
             return false;
@@ -32,13 +32,13 @@ contract InstantDeathEffect is IEffect {
         return false;
     }
 
-    function onRoundEnd(bytes32 battleKey, uint256, bytes memory, uint256 targetIndex)
+    // On mon switch in
+    function onMonSwitchIn(bytes32 battleKey, uint256, bytes memory, uint256 targetIndex)
         external
-        returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {
-        uint256 activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey)[targetIndex];
-        ENGINE.updateMonState(targetIndex, activeMonIndex, MonStateIndexName.IsKnockedOut, 1);
-        return ("", true);
+        returns (bytes memory updatedExtraData, bool removeAfterRun) {
+            uint256 activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey)[targetIndex];
+            ENGINE.updateMonState(targetIndex, activeMonIndex, MonStateIndexName.IsKnockedOut, 1);
+            return ("", true);
     }
 
     // Everything below is an NoOp
@@ -49,7 +49,8 @@ contract InstantDeathEffect is IEffect {
         pure
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {}
-    function onMonSwitchIn(bytes32, uint256, bytes memory, uint256)
+    function onRoundEnd(bytes32, uint256, bytes memory, uint256)
         external
-        returns (bytes memory updatedExtraData, bool removeAfterRun) {}
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {}
 }

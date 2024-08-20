@@ -61,7 +61,7 @@ contract EffectAttack is IMoveSet {
         return true;
     }
 
-    function postMoveSwitch(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData)
+    function postMoveSwitch(bytes32, uint256, bytes calldata)
         external
         pure
         returns (uint256, uint256)

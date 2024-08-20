@@ -331,23 +331,29 @@ contract Engine is IEngine {
         // If only a single player has a move to submit, then we don't trigger any effects
         // (Basically this only handles switching mons for now)
         if (state.playerSwitchForTurnFlag == 0 || state.playerSwitchForTurnFlag == 1) {
+            uint256 rngForSoloTurn = 0;
+
             // Push 0 to rng stream as only single player is switching, to keep in line with turnId
-            state.pRNGStream.push(0);
+            state.pRNGStream.push(rngForSoloTurn);
 
             // Get the player index that needs to switch for this turn
             uint256 playerIndex = state.playerSwitchForTurnFlag;
-            RevealedMove memory move = battleStates[battleKey].moveHistory[playerIndex][turnId];
 
-            // Handle switching as a privileged move
-            if (move.moveIndex == SWITCH_MOVE_INDEX) {
-                _handleSwitch(battleKey, playerIndex, abi.decode(move.extraData, (uint256)));
-            }
+            // Run the move (trust that the validator only lets valid single player moves happen as a switch action)
+            _handlePlayerMove(battleKey, rngForSoloTurn, playerIndex);
+
+            uint256 playerSwitchForTurnFlag = 2;
+            bool isGameOver;
+
+            // Check if either player's mon has been KO'ed, and if we need to force a switch for next turn
+            (playerSwitchForTurnFlag,,, isGameOver) = _checkForGameOverOrKO(battleKey, playerIndex);
+            if (isGameOver) return;
 
             // Progress turn index
             state.turnId += 1;
 
             // Return control flow to both players
-            state.playerSwitchForTurnFlag = 2;
+            state.playerSwitchForTurnFlag = playerSwitchForTurnFlag;
         }
         // Otherwise, we need to run priority calculations and update the game state for both players
         /*
@@ -546,6 +552,11 @@ contract Engine is IEngine {
 
         // Update to new active mon (we assume validate already resolved and gives us a valid target)
         state.activeMonIndex[playerIndex] = monToSwitchIndex;
+
+        // Run onMonSwitchIn hook for global effects
+        _runEffects(battleKey, state.pRNGStream[state.pRNGStream.length - 1], 2, EffectStep.OnMonSwitchIn);
+
+        // We will check for game over after the switch in the engine for two player turns, so we don't do it here
     }
 
     function _handlePlayerMove(bytes32 battleKey, uint256 rng, uint256 playerIndex) internal {
@@ -631,6 +642,9 @@ contract Engine is IEngine {
                 } else if (round == EffectStep.RoundEnd) {
                     (updatedExtraData, removeAfterRun) =
                         effects[i].onRoundEnd(battleKey, rng, extraData[i], targetIndex);
+                } else if (round == EffectStep.OnMonSwitchIn) {
+                    (updatedExtraData, removeAfterRun) =
+                        effects[i].onMonSwitchIn(battleKey, rng, extraData[i], targetIndex);
                 }
 
                 // If we remove the effect after doing it, then we clear and update the array/extra data

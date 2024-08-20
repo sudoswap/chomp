@@ -21,6 +21,9 @@ interface IEffect {
     function onRoundEnd(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);
+    function onMonSwitchIn(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
+        external
+        returns (bytes memory updatedExtraData, bool removeAfterRun);
 
     // Lifecycle hooks when being applied or removed
     function onApply(bytes memory extraData) external returns (bytes memory updatedExtraData);

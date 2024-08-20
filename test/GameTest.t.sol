@@ -1880,4 +1880,10 @@ contract GameTest is Test {
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
         engine.revealMove(battleKey, moveIndex, salt, abi.encode(1, 0));    
     }
+
+    // environmental effect kills mon after switch in from player move and forces switch
+
+    // environmental effect kills mon after switch in from other player move and forces switch
+
+    // environmental effect kills mon after switch in move (not as a side effect from move)
 }

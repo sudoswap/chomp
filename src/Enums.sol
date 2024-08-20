@@ -24,7 +24,8 @@ enum EffectStep {
     OnApply,
     RoundStart,
     RoundEnd,
-    OnRemove
+    OnRemove,
+    OnMonSwitchIn
 }
 
 enum AttackSupertype {

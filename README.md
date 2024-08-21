@@ -4,6 +4,18 @@ on-chain turn-based pvp battling game, inspired by pokemon showdown x mugen
 
 designed to be highly extensible
 
+general flow of the game is: 
+- each turn, players simultaneously choose a move on their active mon.
+- moves can alter stats, do damage, or generally mutate game state in some way.
+- this continues until one player has all their mons knocked out.
+
+(think normal pokemon style)
+
+mechanical differences are:
+- extensible engine, write your own Mons or Moves
+- far greater support for state-based moves / mechanics
+- stamina-based resource system instead of PP for balancing moves
+
 ### Engine.sol
 Main entry point for handling Battles.
 Handles committing, revealing, and executing moves to advance battle state.
@@ -21,7 +33,7 @@ General flow:
 Validators do auxiliary verification outside of the game engine. They handle additional game ending conditions like timeouts and hook into the Battle's lifecycle, e.g. Battle start and Battle end.
 
 ### Mons
-Mons are the player's game pieces. They can each hold a number of Moves and have their own stats. They are intended to be used to validate the end result of a Battle. 
+Mons are the player's game pieces. They can each hold a number of Moves and have their own stats as well as a unique Ability.
 
 ### Moves
 A Move takes in game state and returns any updates. It also has limited ability to write to a global key-value table. 

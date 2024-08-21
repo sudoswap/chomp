@@ -21,8 +21,8 @@ abstract contract AttackCalculator {
     function calculateDamage(
         bytes32 battleKey,
         uint256 attackerPlayerIndex,
-        uint256 basePower,
-        uint256 accuracy, // out of 100
+        uint32 basePower,
+        uint32 accuracy, // out of 100
         uint256,
         Type attackType,
         AttackSupertype attackSupertype,
@@ -35,13 +35,13 @@ abstract contract AttackCalculator {
             return;
         }
 
-        uint256 damage;
+        uint32 damage;
         Mon memory defenderMon;
         uint256 defenderPlayerIndex = (attackerPlayerIndex + 1) % 2;
 
         {
-            uint256 attackStat;
-            uint256 defenceStat;
+            uint32 attackStat;
+            uint32 defenceStat;
 
             Mon memory attackerMon =
                 (ENGINE.getBattle(battleKey)).teams[attackerPlayerIndex][state.activeMonIndex[attackerPlayerIndex]];
@@ -54,22 +54,22 @@ abstract contract AttackCalculator {
 
             // Grab the right atk/defense stats, and apply the delta if needed
             if (attackSupertype == AttackSupertype.Physical) {
-                attackStat = uint256(int256(attackerMon.attack) + attackerMonState.attackDelta);
-                defenceStat = uint256(int256(defenderMon.defence) + defenderMonState.defenceDelta);
+                attackStat = uint32(int32(attackerMon.attack) + attackerMonState.attackDelta);
+                defenceStat = uint32(int32(defenderMon.defence) + defenderMonState.defenceDelta);
             } else {
-                attackStat = uint256(int256(attackerMon.specialAttack) + attackerMonState.specialAttackDelta);
-                defenceStat = uint256(int256(defenderMon.specialDefence) + defenderMonState.specialDefenceDelta);
+                attackStat = uint32(int32(attackerMon.specialAttack) + attackerMonState.specialAttackDelta);
+                defenceStat = uint32(int32(defenderMon.specialDefence) + defenderMonState.specialDefenceDelta);
             }
 
-            uint256 typeMultiplier = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.type1);
+            uint32 typeMultiplier = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.type1);
             if (defenderMon.type2 != Type.None) {
-                uint256 secondaryTypeMultiplier = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.type2);
+                uint32 secondaryTypeMultiplier = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.type2);
                 typeMultiplier = typeMultiplier * secondaryTypeMultiplier;
             }
 
-            uint256 rngScaling = 0;
+            uint32 rngScaling = 0;
             if (MOVE_VARIANCE > 0) {
-                rngScaling = rng % (MOVE_VARIANCE + 1);
+                rngScaling = uint32(rng % (MOVE_VARIANCE + 1));
             }
 
             damage = (basePower * attackStat * (100 - rngScaling) * typeMultiplier) / (defenceStat * 100);
@@ -77,12 +77,12 @@ abstract contract AttackCalculator {
 
         // Do damage calc and check for KO on defending mon
         ENGINE.updateMonState(
-            defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], MonStateIndexName.Hp, -1 * int256(damage)
+            defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], MonStateIndexName.Hp, -1 * int32(damage)
         );
 
         // Check for KO and set if so on defending mon
-        int256 newTotalHealth = int256(defenderMon.hp)
-            + state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta - int256(damage);
+        int32 newTotalHealth = int32(defenderMon.hp)
+            + state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta - int32(damage);
         if (newTotalHealth <= 0) {
             ENGINE.updateMonState(
                 defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], MonStateIndexName.IsKnockedOut, 1

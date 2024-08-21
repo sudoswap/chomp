@@ -11,6 +11,7 @@ import {DefaultValidator} from "../src/DefaultValidator.sol";
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
 import {IEffect} from "../src/effects/IEffect.sol";
+import {IAbility} from "../src/abilities/IAbility.sol";
 
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
@@ -89,7 +90,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
     }
 
@@ -279,7 +281,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         Mon memory slowMon = Mon({
             hp: 10,
@@ -291,7 +294,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory fastTeam = new Mon[](1);
@@ -355,7 +359,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: slowMoves
+            moves: slowMoves,
+            ability: IAbility(address(0))
         });
         Mon memory slowMon = Mon({
             hp: 10,
@@ -367,7 +372,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: fastMoves
+            moves: fastMoves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory fastTeam = new Mon[](1);
@@ -430,7 +436,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: slowMoves
+            moves: slowMoves,
+            ability: IAbility(address(0))
         });
         Mon memory slowMon = Mon({
             hp: 10,
@@ -442,7 +449,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: fastMoves
+            moves: fastMoves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory fastTeam = new Mon[](2);
@@ -587,7 +595,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory team = new Mon[](1);
@@ -646,7 +655,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory team = new Mon[](2);
@@ -704,7 +714,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory team = new Mon[](2);
@@ -762,7 +773,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory team = new Mon[](2);
@@ -819,7 +831,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory team = new Mon[](2);
@@ -889,7 +902,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: normalMoves
+            moves: normalMoves,
+            ability: IAbility(address(0))
         });
         Mon memory inaccurateMon = Mon({
             hp: 10,
@@ -901,7 +915,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: inaccurateMoves
+            moves: inaccurateMoves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory normalTeam = new Mon[](1);
@@ -966,7 +981,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: highStaminaMoves
+            moves: highStaminaMoves,
+            ability: IAbility(address(0))
         });
         Mon memory normalStaminaMon = Mon({
             hp: 10,
@@ -978,7 +994,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: normalStaminaMoves
+            moves: normalStaminaMoves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory highStaminaTeam = new Mon[](1);
@@ -1062,7 +1079,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         // Instant death attack
         IEffect instantDeath = new InstantDeathEffect(engine);
@@ -1080,7 +1098,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: deathMoves
+            moves: deathMoves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory team = new Mon[](1);
@@ -1136,7 +1155,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         // Instant death attack
         IEffect instantDeath = new InstantDeathEffect(engine);
@@ -1154,7 +1174,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: deathMoves
+            moves: deathMoves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory team = new Mon[](2);
@@ -1225,7 +1246,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         // Instant death attack
         IEffect instantDeath = new InstantDeathEffect(engine);
@@ -1243,7 +1265,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: deathMoves
+            moves: deathMoves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory team = new Mon[](1);
@@ -1300,7 +1323,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         // Instant death attack
         IEffect instantDeath = new InstantDeathEffect(engine);
@@ -1318,7 +1342,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: deathMoves
+            moves: deathMoves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory team = new Mon[](2);
@@ -1400,7 +1425,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         // Instant death attack
         IEffect instantDeath = new InstantDeathEffect(engine);
@@ -1418,7 +1444,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: deathMoves
+            moves: deathMoves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory team = new Mon[](2);
@@ -1483,7 +1510,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         // Skip Turn attack to skip move
         IMoveSet skipAttack =
@@ -1500,7 +1528,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: skipMoves
+            moves: skipMoves,
+            ability: IAbility(address(0))
         });
         Mon[][] memory teams = new Mon[][](2);
         Mon[] memory team = new Mon[](1);
@@ -1557,7 +1586,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: switchMoves
+            moves: switchMoves,
+            ability: IAbility(address(0))
         });
         Mon[] memory team = new Mon[](2);
         team[0] = switchMon;
@@ -1581,7 +1611,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
         otherTeam[0] = normalMon;
         otherTeam[1] = normalMon;
@@ -1638,7 +1669,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: switchMoves
+            moves: switchMoves,
+            ability: IAbility(address(0))
         });
         IMoveSet normalAttack = new CustomAttack(
             engine,
@@ -1657,7 +1689,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
 
         Mon[] memory team = new Mon[](2);
@@ -1719,7 +1752,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: switchMoves
+            moves: switchMoves,
+            ability: IAbility(address(0))
         });
         IMoveSet normalAttack = new CustomAttack(
             engine,
@@ -1738,7 +1772,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
 
         Mon[] memory team = new Mon[](2);
@@ -1809,7 +1844,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: switchMoves
+            moves: switchMoves,
+            ability: IAbility(address(0))
         });
         IMoveSet normalAttack = new CustomAttack(
             engine,
@@ -1828,7 +1864,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
 
         Mon[] memory team = new Mon[](2);
@@ -1901,7 +1938,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: switchMoves
+            moves: switchMoves,
+            ability: IAbility(address(0))
         });
 
         // Create a new GlobalEffectAttack that applies InstantDeathOnSwitchIn
@@ -1922,7 +1960,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
 
         Mon[] memory team = new Mon[](2);
@@ -1995,7 +2034,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
 
         Mon[] memory team = new Mon[](2);
@@ -2067,7 +2107,8 @@ contract GameTest is Test {
             specialDefence: 1,
             type1: Type.Fire,
             type2: Type.None,
-            moves: moves
+            moves: moves,
+            ability: IAbility(address(0))
         });
 
         Mon[] memory team = new Mon[](2);

@@ -12,14 +12,14 @@ import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 contract ForceSwitchMove is IMoveSet {
     struct Args {
         Type TYPE;
-        uint256 STAMINA_COST;
-        uint256 PRIORITY;
+        uint32 STAMINA_COST;
+        uint32 PRIORITY;
     }
 
     IEngine immutable ENGINE;
     Type immutable TYPE;
-    uint256 immutable STAMINA_COST;
-    uint256 immutable PRIORITY;
+    uint32 immutable STAMINA_COST;
+    uint32 immutable PRIORITY;
 
     constructor(IEngine _ENGINE, Args memory args) {
         ENGINE = _ENGINE;
@@ -50,11 +50,11 @@ contract ForceSwitchMove is IMoveSet {
         return (playerIndex, monToSwitchIndex);
     }
 
-    function priority(bytes32) external view returns (uint256) {
+    function priority(bytes32) external view returns (uint32) {
         return PRIORITY;
     }
 
-    function stamina(bytes32) external view returns (uint256) {
+    function stamina(bytes32) external view returns (uint32) {
         return STAMINA_COST;
     }
 

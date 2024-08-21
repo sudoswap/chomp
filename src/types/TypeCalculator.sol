@@ -252,7 +252,7 @@ contract TypeCalculator is ITypeCalculator {
         typeChart[uint256(Type.Cosmic)][uint256(Type.Cosmic)] = 1;
     }
 
-    function getTypeEffectiveness(Type attackerType, Type defenderType) public view returns (uint256) {
-        return typeChart[uint256(attackerType)][uint256(defenderType)];
+    function getTypeEffectiveness(Type attackerType, Type defenderType) public view returns (uint32) {
+        return uint32(typeChart[uint256(attackerType)][uint256(defenderType)]);
     }
 }

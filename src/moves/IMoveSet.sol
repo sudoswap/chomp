@@ -18,8 +18,8 @@ interface IMoveSet {
         pure
         returns (uint256 forceSwitchPlayerIndex, uint256 monIndexToSwitchTo);
 
-    function priority(bytes32 battleKey) external view returns (uint256);
-    function stamina(bytes32 battleKey) external view returns (uint256);
+    function priority(bytes32 battleKey) external view returns (uint32);
+    function stamina(bytes32 battleKey) external view returns (uint32);
     function moveType(bytes32 battleKey) external view returns (Type);
     function isValidTarget(bytes32 battleKey) external view returns (bool);
 }

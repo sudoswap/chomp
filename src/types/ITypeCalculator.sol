@@ -4,5 +4,5 @@ pragma solidity ^0.8.0;
 import "../Enums.sol";
 
 interface ITypeCalculator {
-    function getTypeEffectiveness(Type attackerType, Type defenderType) external view returns (uint256);
+    function getTypeEffectiveness(Type attackerType, Type defenderType) external view returns (uint32);
 }

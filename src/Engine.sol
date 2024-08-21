@@ -84,7 +84,7 @@ contract Engine is IEngine {
     /**
      * - Write functions for MonState, Effects, and GlobalKV
      */
-    function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int256 valueToAdd)
+    function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int32 valueToAdd)
         external
     {
         bytes32 battleKey = battleKeyForWrite;
@@ -594,7 +594,7 @@ contract Engine is IEngine {
 
             // Update the mon state directly to account for the stamina cost of the move
             state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta -=
-                int256(moveSet.stamina(battleKey));
+                int32(moveSet.stamina(battleKey));
 
             // Set the key to allow for writes
             battleKeyForWrite = battleKey;
@@ -706,12 +706,12 @@ contract Engine is IEngine {
         } else if (p0Priority < p1Priority) {
             return 1;
         } else {
-            uint256 p0MonSpeed = uint256(
-                int256(battle.teams[0][state.activeMonIndex[0]].speed)
+            uint32 p0MonSpeed = uint32(
+                int32(battle.teams[0][state.activeMonIndex[0]].speed)
                     + state.monStates[0][state.activeMonIndex[0]].speedDelta
             );
-            uint256 p1MonSpeed = uint256(
-                int256(battle.teams[1][state.activeMonIndex[1]].speed)
+            uint32 p1MonSpeed = uint32(
+                int32(battle.teams[1][state.activeMonIndex[1]].speed)
                     + state.monStates[1][state.activeMonIndex[1]].speedDelta
             );
             if (p0MonSpeed > p1MonSpeed) {

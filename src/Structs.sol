@@ -5,6 +5,7 @@ import {Type} from "./Enums.sol";
 import {IRuleset} from "./IRuleset.sol";
 import {IValidator} from "./IValidator.sol";
 import {IEffect} from "./effects/IEffect.sol";
+import {IAbility} from "./abilities/IAbility.sol";
 import {IMoveSet} from "./moves/IMoveSet.sol";
 import {IRandomnessOracle} from "./rng/IRandomnessOracle.sol";
 
@@ -30,26 +31,27 @@ struct BattleState {
 }
 
 struct Mon {
-    uint256 hp;
-    uint256 stamina;
-    uint256 speed;
-    uint256 attack;
-    uint256 defence;
-    uint256 specialAttack;
-    uint256 specialDefence;
+    uint32 hp;
+    uint32 stamina;
+    uint32 speed;
+    uint32 attack;
+    uint32 defence;
+    uint32 specialAttack;
+    uint32 specialDefence;
     Type type1;
     Type type2;
     IMoveSet[] moves;
+    IAbility ability;
 }
 
 struct MonState {
-    int256 hpDelta;
-    int256 staminaDelta;
-    int256 speedDelta;
-    int256 attackDelta;
-    int256 defenceDelta;
-    int256 specialAttackDelta;
-    int256 specialDefenceDelta;
+    int32 hpDelta;
+    int32 staminaDelta;
+    int32 speedDelta;
+    int32 attackDelta;
+    int32 defenceDelta;
+    int32 specialAttackDelta;
+    int32 specialDefenceDelta;
     bool isKnockedOut; // Is either 0 or 1
     bool shouldSkipTurn; // Used for effects to skip turn, or when moves become invalid (outside of user control)
     IEffect[] targetedEffects;

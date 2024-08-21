@@ -7,17 +7,10 @@ NOTE: KNOWN BUGGY INTERACTION
 
 DO THIS NEXT:
 ****************************
-- add onSwitchIn hook (only for global effects)
-
-NEED to let the hook know which player swapped in (which is separate from the index of the effects array)
-
-
 - add onSwitchIn for Abilities (new interface) for mons
-****************************
-
-
 - add ability to write to global kv []
 - add on-switch as trigger for effects, dovetail into abilities
+****************************
 
 Negative Status Effects:
 
@@ -33,10 +26,6 @@ Negative Status Effects:
 - Shock, reduces speed by 50%, 25% chance cannot move
 
 ---------------------------------------------------------------------------------------------
-- the switch return (each move can at most switch one mon, either the opponent's mon, or the user's mon) will be handled by the engine
-- add a new on-switch-in hook to handle both the ability, as well as global effects which run on switch in (specific mon effects can or cannot run on switch in? i guess can have both, no real difference)
-
-- add ability interface (adds on switch in handler--should this just be the case for all events?)]
 
 Feature thinking:
 

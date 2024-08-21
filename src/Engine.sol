@@ -556,6 +556,12 @@ contract Engine is IEngine {
         // Run onMonSwitchIn hook for global effects
         _runEffects(battleKey, state.pRNGStream[state.pRNGStream.length - 1], 2, playerIndex, EffectStep.OnMonSwitchIn);
 
+        // Run ability for the newly switched in mon
+        Mon memory mon = battles[battleKey].teams[playerIndex][monToSwitchIndex];
+        if (address(mon.ability) != address(0)) {
+            mon.ability.activateOnSwitch(battleKey, playerIndex, monToSwitchIndex);
+        }
+
         // NOTE: We will check for game over after the switch in the engine for two player turns, so we don't do it here
     }
 
@@ -575,7 +581,16 @@ contract Engine is IEngine {
         // Handle a switch or a no-op
         // otherwise, execute the moveset
         if (move.moveIndex == SWITCH_MOVE_INDEX) {
+
+            // Set the key to allow for writes
+            battleKeyForWrite = battleKey;
+
+            // Handle the switch
             _handleSwitch(battleKey, playerIndex, abi.decode(move.extraData, (uint256)));
+
+            // Set the battleKey back to 0 to prevent writes
+            battleKeyForWrite = bytes32(0);
+            
         } else if (move.moveIndex == NO_OP_MOVE_INDEX) {
             // do nothing (e.g. just recover stamina)
             return;

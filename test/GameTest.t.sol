@@ -17,6 +17,7 @@ import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
 
 import {EffectAttack} from "./mocks/EffectAttack.sol";
+import {EffectAbility} from "./mocks/EffectAbility.sol";
 import {GlobalEffectAttack} from "./mocks/GlobalEffectAttack.sol";
 
 import {ForceSwitchMove} from "./mocks/ForceSwitchMove.sol";
@@ -1828,7 +1829,7 @@ contract GameTest is Test {
     }
 
     function test_forceSwitchMoveRevertsWhenInvalidSwitchTargetNonPriorityPlayerAfterAttacking() public {
-    // Initialize mons and moves
+        // Initialize mons and moves
         // Attack to force a switch for user (should be higher priority than the other move)
         IMoveSet switchAttack =
             new ForceSwitchMove(engine, ForceSwitchMove.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 2}));
@@ -2154,5 +2155,277 @@ contract GameTest is Test {
 
         // Assert that Alice's new mon is now KOed
         assertEq(state.monStates[0][1].isKnockedOut, true);
+    }
+
+    // ability triggers effect leading to death on self after switch-in (lol)
+    function test_abilityOnSwitchInKOsAndLeadsToGameOver() public {
+
+        // Initialize mons and moves
+        IMoveSet[] memory moves = new IMoveSet[](0);
+        IEffect instantDeathAtEndOfTurn = new InstantDeathEffect(engine);
+        IAbility suicideAbility = new EffectAbility(engine, instantDeathAtEndOfTurn);
+        Mon memory suicideMon = Mon({
+            hp: 1,
+            stamina: 1,
+            speed: 1,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves,
+            ability: suicideAbility
+        });
+        Mon memory normalMon = Mon({
+            hp: 1,
+            stamina: 1,
+            speed: 1,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon[] memory suicideTeam = new Mon[](1);
+        suicideTeam[0] = suicideMon;
+        Mon[] memory normalTeam = new Mon[](1);
+        normalTeam[0] = normalMon;
+
+        Mon[][] memory teams = new Mon[][](2);
+        teams[0] = suicideTeam;
+        teams[1] = normalTeam;
+
+        DefaultValidator oneMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 0, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: oneMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // After this, Alice's mon should be dead and Bob should be the winner
+        // Verify Bob is the winner
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, BOB);
+    }
+    
+    // ability triggers effect leading to death on self after being switched in from self move
+    function test_abilityOnSwitchInFromSwitchInMoveKOsAndLeadsToGameOver() public {
+
+        IMoveSet switchAttack =
+            new ForceSwitchMove(engine, ForceSwitchMove.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 2}));
+        IMoveSet[] memory switchMoves = new IMoveSet[](1);
+        switchMoves[0] = switchAttack;
+        Mon memory switchMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: switchMoves,
+            ability: IAbility(address(0))
+        });
+        IEffect instantDeathAtEndOfTurn = new InstantDeathEffect(engine);
+        IAbility suicideAbility = new EffectAbility(engine, instantDeathAtEndOfTurn);
+        Mon memory suicideMon = Mon({
+            hp: 1,
+            stamina: 1,
+            speed: 1,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: switchMoves,
+            ability: suicideAbility
+        });
+
+        // A normal mon with a damaging move
+        IMoveSet normalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = normalAttack;
+        Mon memory normalMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        
+        Mon[] memory suicideTeam = new Mon[](2);
+        suicideTeam[0] = switchMon;
+        suicideTeam[1] = suicideMon;
+
+        Mon[] memory normalTeam = new Mon[](2);
+        normalTeam[0] = normalMon;
+        normalTeam[1] = normalMon;
+
+        Mon[][] memory teams = new Mon[][](2);
+        teams[0] = suicideTeam;
+        teams[1] = normalTeam;
+
+        DefaultValidator twoMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice switches themselves to mon index 1, while Bob chooses move index 0
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, abi.encode(0, 1), "");
+
+        // Assert that Alice's new mon is now KOed
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][1].isKnockedOut, true);
+
+        // Assert that player switch flag for turn is now 0, indicating Alice has to switch
+        assertEq(state.playerSwitchForTurnFlag, 0);
+    }
+
+    // ability triggers effect from a manual switch
+    function test_abilityOnSwitchInFromManualSwitchKOsAndLeadsToGameOver() public {
+        IMoveSet switchAttack =
+            new ForceSwitchMove(engine, ForceSwitchMove.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 2}));
+        IMoveSet[] memory switchMoves = new IMoveSet[](1);
+        switchMoves[0] = switchAttack;
+        Mon memory switchMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: switchMoves,
+            ability: IAbility(address(0))
+        });
+        IEffect instantDeathAtEndOfTurn = new InstantDeathEffect(engine);
+        IAbility suicideAbility = new EffectAbility(engine, instantDeathAtEndOfTurn);
+        Mon memory suicideMon = Mon({
+            hp: 1,
+            stamina: 1,
+            speed: 1,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: switchMoves,
+            ability: suicideAbility
+        });
+
+        // A normal mon with a damaging move
+        IMoveSet normalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = normalAttack;
+        Mon memory normalMon = Mon({
+            hp: 10,
+            stamina: 1,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        
+        Mon[] memory suicideTeam = new Mon[](2);
+        suicideTeam[0] = switchMon;
+        suicideTeam[1] = suicideMon;
+
+        Mon[] memory normalTeam = new Mon[](2);
+        normalTeam[0] = normalMon;
+        normalTeam[1] = normalMon;
+
+        Mon[][] memory teams = new Mon[][](2);
+        teams[0] = suicideTeam;
+        teams[1] = normalTeam;
+
+        DefaultValidator twoMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice switches themselves to mon index 1, while Bob chooses move index 0
+        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, 0, abi.encode(1), "");
+
+        // Assert that Alice's new mon is now KOed
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][1].isKnockedOut, true);
+
+        // Assert that player switch flag for turn is now 0, indicating Alice has to switch
+        assertEq(state.playerSwitchForTurnFlag, 0);
     }
 }

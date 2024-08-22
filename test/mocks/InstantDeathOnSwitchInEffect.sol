@@ -41,8 +41,12 @@ contract InstantDeathOnSwitchInEffect is IEffect {
             return ("", true);
     }
 
+    function shouldApply(uint256, uint256, bytes memory) external pure returns (bool) {
+        return true;
+    }
+
     // Everything below is an NoOp
-    function onApply(bytes memory) external returns (bytes memory updatedExtraData) {}
+    function onApply(uint256 targetIndex, uint256 monIndex, bytes memory) external returns (bytes memory updatedExtraData) {}
     function onRemove(bytes memory) external {}
     function onRoundStart(bytes32, uint256, bytes memory, uint256)
         external

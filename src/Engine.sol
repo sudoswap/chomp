@@ -119,18 +119,20 @@ contract Engine is IEngine {
         if (battleKey == bytes32(0)) {
             revert NoWriteAllowed();
         }
-        BattleState storage state = battleStates[battleKey];
-        // Check if we have to run an onApply state update
-        if (effect.shouldRunAtStep(EffectStep.OnApply)) {
-            // If so, we run the effect first, and get updated extraData if necessary
-            extraData = effect.onApply(extraData);
-        }
-        if (targetIndex == 2) {
-            state.globalEffects.push(effect);
-            state.extraDataForGlobalEffects.push(extraData);
-        } else {
-            state.monStates[targetIndex][monIndex].targetedEffects.push(effect);
-            state.monStates[targetIndex][monIndex].extraDataForTargetedEffects.push(extraData);
+        if (effect.shouldApply(targetIndex, monIndex, extraData)) {
+            BattleState storage state = battleStates[battleKey];
+            if (targetIndex == 2) {
+                state.globalEffects.push(effect);
+                state.extraDataForGlobalEffects.push(extraData);
+            } else {
+                state.monStates[targetIndex][monIndex].targetedEffects.push(effect);
+                state.monStates[targetIndex][monIndex].extraDataForTargetedEffects.push(extraData);
+            }
+            // Check if we have to run an onApply state update
+            if (effect.shouldRunAtStep(EffectStep.OnApply)) {
+                // If so, we run the effect first, and get updated extraData if necessary
+                extraData = effect.onApply(targetIndex, monIndex, extraData);
+            }
         }
     }
 
@@ -164,6 +166,14 @@ contract Engine is IEngine {
         effects.pop();
         extraData[indexToRemove] = extraData[numEffects - 1];
         extraData.pop();
+    }
+
+    function setGlobalKV(bytes32 key, bytes32 value) external {
+        bytes32 battleKey = battleKeyForWrite;
+        if (battleKey == bytes32(0)) {
+            revert NoWriteAllowed();
+        }
+        globalKV[battleKey][key] = value;
     }
 
     /**

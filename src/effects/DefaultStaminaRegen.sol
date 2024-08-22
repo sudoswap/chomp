@@ -52,8 +52,12 @@ contract DefaultStaminaRegen is IEffect {
         return ("", false);
     }
 
+    function shouldApply(uint256, uint256, bytes memory) external pure returns (bool) {
+        return true;
+    }
+
     // Everything below is an NoOp
-    function onApply(bytes memory extraData) external returns (bytes memory updatedExtraData) {}
+    function onApply(uint256 targetIndex, uint256 monIndex, bytes memory extraData) external returns (bytes memory updatedExtraData) {}
     function onRemove(bytes memory extraData) external {}
     function onRoundStart(bytes32 battleKey, uint256, bytes memory, uint256 targetIndex)
         external

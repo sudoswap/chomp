@@ -7,6 +7,9 @@ import "../Structs.sol";
 interface IEffect {
     function name() external returns (string memory);
 
+    // Whether or not to add the effect
+    function shouldApply(uint256 targetIndex, uint256 monIndex, bytes memory extraData) external returns (bool);
+
     // Whether to run the effect at the start of the round
     function shouldRunAtStep(EffectStep r) external returns (bool);
 
@@ -26,6 +29,6 @@ interface IEffect {
         returns (bytes memory updatedExtraData, bool removeAfterRun);
 
     // Lifecycle hooks when being applied or removed
-    function onApply(bytes memory extraData) external returns (bytes memory updatedExtraData);
+    function onApply(uint256 targetIndex, uint256 monIndex, bytes memory extraData) external returns (bytes memory updatedExtraData);
     function onRemove(bytes memory extraData) external;
 }

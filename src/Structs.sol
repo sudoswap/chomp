@@ -4,8 +4,9 @@ pragma solidity ^0.8.0;
 import {Type} from "./Enums.sol";
 import {IRuleset} from "./IRuleset.sol";
 import {IValidator} from "./IValidator.sol";
-import {IEffect} from "./effects/IEffect.sol";
+
 import {IAbility} from "./abilities/IAbility.sol";
+import {IEffect} from "./effects/IEffect.sol";
 import {IMoveSet} from "./moves/IMoveSet.sol";
 import {IRandomnessOracle} from "./rng/IRandomnessOracle.sol";
 

@@ -35,10 +35,11 @@ contract InstantDeathOnSwitchInEffect is IEffect {
     // On mon switch in
     function onMonSwitchIn(bytes32 battleKey, uint256, bytes memory, uint256 targetIndex)
         external
-        returns (bytes memory updatedExtraData, bool removeAfterRun) {
-            uint256 activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey)[targetIndex];
-            ENGINE.updateMonState(targetIndex, activeMonIndex, MonStateIndexName.IsKnockedOut, 1);
-            return ("", true);
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {
+        uint256 activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey)[targetIndex];
+        ENGINE.updateMonState(targetIndex, activeMonIndex, MonStateIndexName.IsKnockedOut, 1);
+        return ("", true);
     }
 
     function shouldApply(uint256, uint256, bytes memory) external pure returns (bool) {
@@ -46,7 +47,10 @@ contract InstantDeathOnSwitchInEffect is IEffect {
     }
 
     // Everything below is an NoOp
-    function onApply(uint256 targetIndex, uint256 monIndex, bytes memory) external returns (bytes memory updatedExtraData) {}
+    function onApply(uint256 targetIndex, uint256 monIndex, bytes memory)
+        external
+        returns (bytes memory updatedExtraData)
+    {}
     function onRemove(bytes memory) external {}
     function onRoundStart(bytes32, uint256, bytes memory, uint256)
         external

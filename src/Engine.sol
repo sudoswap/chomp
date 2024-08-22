@@ -591,7 +591,6 @@ contract Engine is IEngine {
         // Handle a switch or a no-op
         // otherwise, execute the moveset
         if (move.moveIndex == SWITCH_MOVE_INDEX) {
-
             // Set the key to allow for writes
             battleKeyForWrite = battleKey;
 
@@ -600,7 +599,6 @@ contract Engine is IEngine {
 
             // Set the battleKey back to 0 to prevent writes
             battleKeyForWrite = bytes32(0);
-            
         } else if (move.moveIndex == NO_OP_MOVE_INDEX) {
             // do nothing (e.g. just recover stamina)
             return;
@@ -639,7 +637,9 @@ contract Engine is IEngine {
         }
     }
 
-    function _runEffects(bytes32 battleKey, uint256 rng, uint256 effectIndex, uint256 playerIndex, EffectStep round) internal {
+    function _runEffects(bytes32 battleKey, uint256 rng, uint256 effectIndex, uint256 playerIndex, EffectStep round)
+        internal
+    {
         BattleState storage state = battleStates[battleKey];
         IEffect[] storage effects;
         bytes[] storage extraData;

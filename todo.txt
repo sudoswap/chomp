@@ -7,10 +7,7 @@ NOTE: KNOWN BUGGY INTERACTION
 
 DO THIS NEXT:
 ****************************
-- add ability to write to global kv []
-    - test that e.g. effects do not double stack if they read the same global state
 - add canonical mon registry to prefill mon struct / moves / abilities
-- add OnMonKO to mon effects steps []
 ****************************
 
 Negative Status Effects:

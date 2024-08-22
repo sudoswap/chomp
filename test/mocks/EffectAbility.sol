@@ -7,7 +7,6 @@ import {IAbility} from "../../src/abilities/IAbility.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
 
 contract EffectAbility is IAbility {
-
     IEngine immutable ENGINE;
     IEffect immutable EFFECT;
 

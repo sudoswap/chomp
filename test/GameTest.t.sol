@@ -10,15 +10,17 @@ import "../src/Structs.sol";
 import {DefaultValidator} from "../src/DefaultValidator.sol";
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
-import {IEffect} from "../src/effects/IEffect.sol";
+
 import {IAbility} from "../src/abilities/IAbility.sol";
+import {IEffect} from "../src/effects/IEffect.sol";
 
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
 
-import {EffectAttack} from "./mocks/EffectAttack.sol";
 import {EffectAbility} from "./mocks/EffectAbility.sol";
+import {EffectAttack} from "./mocks/EffectAttack.sol";
 import {GlobalEffectAttack} from "./mocks/GlobalEffectAttack.sol";
+import {SingleInstanceEffect} from "./mocks/SingleInstanceEffect.sol";
 
 import {ForceSwitchMove} from "./mocks/ForceSwitchMove.sol";
 import {InstantDeathEffect} from "./mocks/InstantDeathEffect.sol";
@@ -1917,12 +1919,11 @@ contract GameTest is Test {
         // Expect revert if Alice tries to reveal (should be marked as invalid switch)
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
-        engine.revealMove(battleKey, moveIndex, salt, abi.encode(1, 0));    
+        engine.revealMove(battleKey, moveIndex, salt, abi.encode(1, 0));
     }
 
     // environmental effect kills mon after switch in from player move and forces switch
     function test_effectOnSwitchInFromSwitchMoveKOsAndForcesSwitch() public {
-
         // Initialize mons and moves
         // Attack to force a switch for user (should be higher priority than the other move)
         IMoveSet switchAttack =
@@ -1947,8 +1948,9 @@ contract GameTest is Test {
         IEffect instantDeathOnSwitchIn = new InstantDeathOnSwitchInEffect(engine);
 
         // Move should be higher priority than the switch attack
-        IMoveSet instantDeathOnSwitchInAttack =
-            new GlobalEffectAttack(engine, instantDeathOnSwitchIn, GlobalEffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 2}));
+        IMoveSet instantDeathOnSwitchInAttack = new GlobalEffectAttack(
+            engine, instantDeathOnSwitchIn, GlobalEffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 2})
+        );
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = instantDeathOnSwitchInAttack;
         Mon memory stageHazardMon = Mon({
@@ -2010,17 +2012,16 @@ contract GameTest is Test {
         assertEq(state.monStates[0][1].isKnockedOut, true);
     }
 
-
     // environmental effect kills mon after switch in from other player move and forces switch
     function test_effectOnSwitchInFromSwitchMoveForOtherPlayerKOsAndForcesSwitch() public {
-
         // Initialize mons and moves
         IMoveSet switchAttack =
             new ForceSwitchMove(engine, ForceSwitchMove.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1}));
         IEffect instantDeathOnSwitchIn = new InstantDeathOnSwitchInEffect(engine);
-        IMoveSet instantDeathOnSwitchInAttack =
-            new GlobalEffectAttack(engine, instantDeathOnSwitchIn, GlobalEffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 2}));
-        
+        IMoveSet instantDeathOnSwitchInAttack = new GlobalEffectAttack(
+            engine, instantDeathOnSwitchIn, GlobalEffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 2})
+        );
+
         IMoveSet[] memory moves = new IMoveSet[](2);
         moves[0] = switchAttack;
         moves[1] = instantDeathOnSwitchInAttack;
@@ -2087,14 +2088,14 @@ contract GameTest is Test {
 
     // environmental effect kills mon after switch in move (not as a side effect from move)
     function test_effectOnSwitchInFromDirectSwitchMoveKOsAndForcesSwitch() public {
-
         // Initialize mons and moves
         IEffect instantDeathOnSwitchIn = new InstantDeathOnSwitchInEffect(engine);
 
         // Set priority to be higher than switch
-        IMoveSet instantDeathOnSwitchInAttack =
-            new GlobalEffectAttack(engine, instantDeathOnSwitchIn, GlobalEffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 10}));
-        
+        IMoveSet instantDeathOnSwitchInAttack = new GlobalEffectAttack(
+            engine, instantDeathOnSwitchIn, GlobalEffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 10})
+        );
+
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = instantDeathOnSwitchInAttack;
 
@@ -2159,7 +2160,6 @@ contract GameTest is Test {
 
     // ability triggers effect leading to death on self after switch-in (lol)
     function test_abilityOnSwitchInKOsAndLeadsToGameOver() public {
-
         // Initialize mons and moves
         IMoveSet[] memory moves = new IMoveSet[](0);
         IEffect instantDeathAtEndOfTurn = new InstantDeathEffect(engine);
@@ -2225,10 +2225,9 @@ contract GameTest is Test {
         BattleState memory state = engine.getBattleState(battleKey);
         assertEq(state.winner, BOB);
     }
-    
+
     // ability triggers effect leading to death on self after being switched in from self move
     function test_abilityOnSwitchInFromSwitchInMoveKOsAndLeadsToGameOver() public {
-
         IMoveSet switchAttack =
             new ForceSwitchMove(engine, ForceSwitchMove.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 2}));
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
@@ -2283,7 +2282,7 @@ contract GameTest is Test {
             moves: moves,
             ability: IAbility(address(0))
         });
-        
+
         Mon[] memory suicideTeam = new Mon[](2);
         suicideTeam[0] = switchMon;
         suicideTeam[1] = suicideMon;
@@ -2384,7 +2383,7 @@ contract GameTest is Test {
             moves: moves,
             ability: IAbility(address(0))
         });
-        
+
         Mon[] memory suicideTeam = new Mon[](2);
         suicideTeam[0] = switchMon;
         suicideTeam[1] = suicideMon;
@@ -2427,5 +2426,66 @@ contract GameTest is Test {
 
         // Assert that player switch flag for turn is now 0, indicating Alice has to switch
         assertEq(state.playerSwitchForTurnFlag, 0);
+    }
+
+    // attack that applies effect can only apply once (checks using an effect that writes to global KV)
+    function test_attackThatAppliesEffectCanOnlyApplyOnce() public {
+        // Single instance effect
+        IEffect singleInstanceEffect = new SingleInstanceEffect(engine);
+        IMoveSet effectAttack = new EffectAttack(
+            engine, singleInstanceEffect, EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = effectAttack;
+        Mon memory mon = Mon({
+            hp: 10,
+            stamina: 2,
+            speed: 2,
+            attack: 1,
+            defence: 1,
+            specialAttack: 1,
+            specialDefence: 1,
+            type1: Type.Fire,
+            type2: Type.None,
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon[] memory team = new Mon[](1);
+        team[0] = mon;
+        Mon[][] memory teams = new Mon[][](2);
+        teams[0] = team;
+        teams[1] = team;
+
+        DefaultValidator oneMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        Battle memory battle = Battle({
+            p0: ALICE,
+            p1: BOB,
+            validator: oneMonValidator,
+            teams: teams,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0))
+        });
+
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.start(battle);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice and Bob both select attacks (they should apply the single instance effect on hit)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Alice and Bob again both select attacks again
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Assert that the effect was only applied once
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][0].targetedEffects.length, 1);
+        assertEq(state.monStates[1][0].targetedEffects.length, 1);
     }
 }

@@ -32,19 +32,11 @@ contract ForceSwitchMove is IMoveSet {
         return "Force Switch";
     }
 
-    function move(bytes32, uint256, bytes memory, uint256)
-        external
-        pure
-        returns (bool)
-    {
+    function move(bytes32, uint256, bytes memory, uint256) external pure returns (bool) {
         return true;
     }
 
-    function postMoveSwitch(bytes32, uint256, bytes calldata extraData)
-        external
-        pure
-        returns (uint256, uint256)
-    {
+    function postMoveSwitch(bytes32, uint256, bytes calldata extraData) external pure returns (uint256, uint256) {
         // Decode data as (uint256 playerIndex, uint256 monToSwitchIndex)
         (uint256 playerIndex, uint256 monToSwitchIndex) = abi.decode(extraData, (uint256, uint256));
         return (playerIndex, monToSwitchIndex);

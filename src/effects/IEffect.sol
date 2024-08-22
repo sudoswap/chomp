@@ -29,6 +29,8 @@ interface IEffect {
         returns (bytes memory updatedExtraData, bool removeAfterRun);
 
     // Lifecycle hooks when being applied or removed
-    function onApply(uint256 targetIndex, uint256 monIndex, bytes memory extraData) external returns (bytes memory updatedExtraData);
+    function onApply(uint256 targetIndex, uint256 monIndex, bytes memory extraData)
+        external
+        returns (bytes memory updatedExtraData);
     function onRemove(bytes memory extraData) external;
 }

@@ -5,7 +5,6 @@ import "./Enums.sol";
 import "./Structs.sol";
 
 interface IEngine {
-
     // Global battle key to determine which battle to apply state mutations
     function battleKeyForWrite() external view returns (bytes32);
 

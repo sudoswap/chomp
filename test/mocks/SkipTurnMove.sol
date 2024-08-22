@@ -55,11 +55,7 @@ contract SkipTurnMove is IMoveSet {
         return true;
     }
 
-    function postMoveSwitch(bytes32, uint256, bytes calldata)
-        external
-        pure
-        returns (uint256, uint256)
-    {
+    function postMoveSwitch(bytes32, uint256, bytes calldata) external pure returns (uint256, uint256) {
         // No-op
         return (NO_SWITCH_FLAG, NO_SWITCH_FLAG);
     }

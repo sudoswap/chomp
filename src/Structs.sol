@@ -31,7 +31,7 @@ struct BattleState {
     bytes[] extraDataForGlobalEffects;
 }
 
-struct Mon {
+struct MonStats {
     uint32 hp;
     uint32 stamina;
     uint32 speed;
@@ -41,6 +41,10 @@ struct Mon {
     uint32 specialDefence;
     Type type1;
     Type type2;
+}
+
+struct Mon {
+    MonStats stats;
     IMoveSet[] moves;
     IAbility ability;
 }

@@ -1,6 +1,6 @@
 # untitled battle game
 
-on-chain turn-based pvp battling game, inspired by pokemon showdown x mugen
+on-chain turn-based pvp battling game, (heavily) inspired by pokemon showdown x mugen
 
 designed to be highly extensible
 

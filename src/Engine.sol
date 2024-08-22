@@ -732,11 +732,11 @@ contract Engine is IEngine {
             return 1;
         } else {
             uint32 p0MonSpeed = uint32(
-                int32(battle.teams[0][state.activeMonIndex[0]].speed)
+                int32(battle.teams[0][state.activeMonIndex[0]].stats.speed)
                     + state.monStates[0][state.activeMonIndex[0]].speedDelta
             );
             uint32 p1MonSpeed = uint32(
-                int32(battle.teams[1][state.activeMonIndex[1]].speed)
+                int32(battle.teams[1][state.activeMonIndex[1]].stats.speed)
                     + state.monStates[1][state.activeMonIndex[1]].speedDelta
             );
             if (p0MonSpeed > p1MonSpeed) {

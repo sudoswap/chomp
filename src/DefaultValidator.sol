@@ -89,7 +89,7 @@ contract DefaultValidator is IValidator {
         // Otherwise, a move cannot be selected if its stamina costs more than the mon's current stamina
         IMoveSet moveSet = teams[playerIndex][activeMonIndex[playerIndex]].moves[moveIndex];
         int256 monStaminaDelta = monStates[playerIndex][activeMonIndex[playerIndex]].staminaDelta;
-        uint256 monBaseStamina = teams[playerIndex][activeMonIndex[playerIndex]].stamina;
+        uint256 monBaseStamina = teams[playerIndex][activeMonIndex[playerIndex]].stats.stamina;
         uint256 monCurrentStamina = uint256(int256(monBaseStamina) + monStaminaDelta);
         if (moveSet.stamina(battleKey) > monCurrentStamina) {
             return false;

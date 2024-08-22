@@ -54,16 +54,17 @@ abstract contract AttackCalculator {
 
             // Grab the right atk/defense stats, and apply the delta if needed
             if (attackSupertype == AttackSupertype.Physical) {
-                attackStat = uint32(int32(attackerMon.attack) + attackerMonState.attackDelta);
-                defenceStat = uint32(int32(defenderMon.defence) + defenderMonState.defenceDelta);
+                attackStat = uint32(int32(attackerMon.stats.attack) + attackerMonState.attackDelta);
+                defenceStat = uint32(int32(defenderMon.stats.defence) + defenderMonState.defenceDelta);
             } else {
-                attackStat = uint32(int32(attackerMon.specialAttack) + attackerMonState.specialAttackDelta);
-                defenceStat = uint32(int32(defenderMon.specialDefence) + defenderMonState.specialDefenceDelta);
+                attackStat = uint32(int32(attackerMon.stats.specialAttack) + attackerMonState.specialAttackDelta);
+                defenceStat = uint32(int32(defenderMon.stats.specialDefence) + defenderMonState.specialDefenceDelta);
             }
 
-            uint32 typeMultiplier = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.type1);
-            if (defenderMon.type2 != Type.None) {
-                uint32 secondaryTypeMultiplier = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.type2);
+            uint32 typeMultiplier = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.stats.type1);
+            if (defenderMon.stats.type2 != Type.None) {
+                uint32 secondaryTypeMultiplier =
+                    TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.stats.type2);
                 typeMultiplier = typeMultiplier * secondaryTypeMultiplier;
             }
 
@@ -81,7 +82,7 @@ abstract contract AttackCalculator {
         );
 
         // Check for KO and set if so on defending mon
-        int32 newTotalHealth = int32(defenderMon.hp)
+        int32 newTotalHealth = int32(defenderMon.stats.hp)
             + state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta - int32(damage);
         if (newTotalHealth <= 0) {
             ENGINE.updateMonState(

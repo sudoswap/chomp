@@ -220,7 +220,7 @@ contract Engine is IEngine {
         });
 
         // validate the battle
-        if (!args.validator.validateGameStart(battles[battleKey], msg.sender)) {
+        if (!args.validator.validateGameStart(battles[battleKey], battleKey, msg.sender)) {
             revert InvalidBattleConfig();
         }
         return battleKey;

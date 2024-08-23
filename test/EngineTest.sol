@@ -671,15 +671,18 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None,
+                speed: 2
+            }),
+            // need to have enough stamina for 2 moves
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -731,15 +734,18 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = superFastAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None,
+                speed: 2
+            }),
+            // need to have enough stamina for 2 moves
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -791,15 +797,18 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = superFastAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None,
+                speed: 2
+            }),
+            // need to have enough stamina for 2 moves
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -850,15 +859,18 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = superFastAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None,
+                speed: 2
+            }),
+            // need to have enough stamina for 2 moves
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -922,28 +934,34 @@ contract EngineTest is Test {
         IMoveSet[] memory inaccurateMoves = new IMoveSet[](1);
         inaccurateMoves[0] = inaccurateAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None,
+                speed: 2
+            }),
+            // need to have enough stamina for 2 moves
             moves: normalMoves,
             ability: IAbility(address(0))
         });
         Mon memory inaccurateMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None,
+                speed: 2
+            }),
+            // need to have enough stamina for 2 moves
             moves: inaccurateMoves,
             ability: IAbility(address(0))
         });
@@ -1002,28 +1020,32 @@ contract EngineTest is Test {
         IMoveSet[] memory normalStaminaMoves = new IMoveSet[](1);
         normalStaminaMoves[0] = normalStaminaAttack;
         Mon memory highStaminaMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: highStaminaMoves,
             ability: IAbility(address(0))
         });
         Mon memory normalStaminaMon = Mon({
-            hp: 10,
-            stamina: 2,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: normalStaminaMoves,
             ability: IAbility(address(0))
         });
@@ -1101,15 +1123,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalStaminaAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1120,15 +1144,17 @@ contract EngineTest is Test {
         IMoveSet[] memory deathMoves = new IMoveSet[](1);
         deathMoves[0] = instantDeathAttack;
         Mon memory instantDeathMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: deathMoves,
             ability: IAbility(address(0))
         });
@@ -1178,15 +1204,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalStaminaAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1197,15 +1225,17 @@ contract EngineTest is Test {
         IMoveSet[] memory deathMoves = new IMoveSet[](1);
         deathMoves[0] = instantDeathAttack;
         Mon memory instantDeathMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: deathMoves,
             ability: IAbility(address(0))
         });
@@ -1270,15 +1300,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = lethalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1289,15 +1321,17 @@ contract EngineTest is Test {
         IMoveSet[] memory deathMoves = new IMoveSet[](1);
         deathMoves[0] = instantDeathAttack;
         Mon memory instantDeathMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: deathMoves,
             ability: IAbility(address(0))
         });
@@ -1314,7 +1348,8 @@ contract EngineTest is Test {
             validator: validator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -1347,15 +1382,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = lethalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1366,15 +1403,17 @@ contract EngineTest is Test {
         IMoveSet[] memory deathMoves = new IMoveSet[](1);
         deathMoves[0] = instantDeathAttack;
         Mon memory instantDeathMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: deathMoves,
             ability: IAbility(address(0))
         });
@@ -1398,7 +1437,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -1449,15 +1489,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = lethalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1468,15 +1510,17 @@ contract EngineTest is Test {
         IMoveSet[] memory deathMoves = new IMoveSet[](1);
         deathMoves[0] = instantDeathAttack;
         Mon memory instantDeathMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: deathMoves,
             ability: IAbility(address(0))
         });
@@ -1500,7 +1544,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -1534,15 +1579,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1552,15 +1599,17 @@ contract EngineTest is Test {
         IMoveSet[] memory skipMoves = new IMoveSet[](1);
         skipMoves[0] = skipAttack;
         Mon memory skipMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: skipMoves,
             ability: IAbility(address(0))
         });
@@ -1577,7 +1626,8 @@ contract EngineTest is Test {
             validator: validator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -1610,15 +1660,17 @@ contract EngineTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
@@ -1635,15 +1687,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1663,7 +1717,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -1693,15 +1748,17 @@ contract EngineTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
@@ -1713,15 +1770,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1746,7 +1805,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -1776,15 +1836,17 @@ contract EngineTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
@@ -1796,15 +1858,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1829,7 +1893,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -1868,15 +1933,17 @@ contract EngineTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
@@ -1888,15 +1955,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1921,7 +1990,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -1961,15 +2031,17 @@ contract EngineTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
@@ -1984,15 +2056,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = instantDeathOnSwitchInAttack;
         Mon memory stageHazardMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -2018,7 +2092,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -2057,15 +2132,17 @@ contract EngineTest is Test {
         moves[1] = instantDeathOnSwitchInAttack;
 
         Mon memory mon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -2092,7 +2169,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -2130,15 +2208,17 @@ contract EngineTest is Test {
         moves[0] = instantDeathOnSwitchInAttack;
 
         Mon memory mon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -2165,7 +2245,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -2195,28 +2276,32 @@ contract EngineTest is Test {
         IEffect instantDeathAtEndOfTurn = new InstantDeathEffect(engine);
         IAbility suicideAbility = new EffectAbility(engine, instantDeathAtEndOfTurn);
         Mon memory suicideMon = Mon({
-            hp: 1,
-            stamina: 1,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 1,
+                stamina: 1,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: suicideAbility
         });
         Mon memory normalMon = Mon({
-            hp: 1,
-            stamina: 1,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 1,
+                stamina: 1,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -2239,7 +2324,8 @@ contract EngineTest is Test {
             validator: oneMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -2263,30 +2349,34 @@ contract EngineTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
         IEffect instantDeathAtEndOfTurn = new InstantDeathEffect(engine);
         IAbility suicideAbility = new EffectAbility(engine, instantDeathAtEndOfTurn);
         Mon memory suicideMon = Mon({
-            hp: 1,
-            stamina: 1,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 1,
+                stamina: 1,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: suicideAbility
         });
@@ -2300,15 +2390,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -2335,7 +2427,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -2364,30 +2457,34 @@ contract EngineTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
         IEffect instantDeathAtEndOfTurn = new InstantDeathEffect(engine);
         IAbility suicideAbility = new EffectAbility(engine, instantDeathAtEndOfTurn);
         Mon memory suicideMon = Mon({
-            hp: 1,
-            stamina: 1,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 1,
+                stamina: 1,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: suicideAbility
         });
@@ -2401,15 +2498,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -2436,7 +2535,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -2468,15 +2568,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = effectAttack;
         Mon memory mon = Mon({
-            hp: 10,
-            stamina: 2,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -2496,7 +2598,8 @@ contract EngineTest is Test {
             validator: oneMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);

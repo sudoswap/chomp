@@ -7,7 +7,6 @@ import "../../src/Structs.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 
 contract TestTeamRegistry is ITeamRegistry {
-
     mapping(address => Mon[]) public teams;
 
     function setTeam(address player, Mon[] memory team) public {

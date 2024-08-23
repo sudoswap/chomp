@@ -23,4 +23,8 @@ interface IMonRegistry {
     function getMonData(uint256 monId)
         external
         returns (MonStats memory mon, address[] memory moves, address[] memory abilities);
+
+    function getMonStats(uint256 monId) external view returns (MonStats memory);
+    function isValidMove(uint256 monId, IMoveSet move) external view returns (bool);
+    function isValidAbility(uint256 monId, IAbility ability) external view returns (bool);
 }

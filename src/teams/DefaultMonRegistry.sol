@@ -10,7 +10,7 @@ import {Ownable} from "../lib/Ownable.sol";
 contract DefaultMonRegistry is IMonRegistry, Ownable {
     using EnumerableSetLib for *;
 
-    mapping(uint256 monId => MonStats) public monData;
+    mapping(uint256 monId => MonStats) public monStats;
     mapping(uint256 monId => EnumerableSetLib.AddressSet) monMoves;
     mapping(uint256 monId => EnumerableSetLib.AddressSet) monAbilities;
 
@@ -23,15 +23,15 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
 
     function createMon(
         uint256 monId,
-        MonStats memory mon,
+        MonStats memory _monStats,
         IMoveSet[] memory allowedMoves,
         IAbility[] memory allowedAbilities
-    ) external {
-        MonStats storage existingMon = monData[monId];
+    ) external onlyOwner {
+        MonStats storage existingMon = monStats[monId];
         if (existingMon.hp != 0 && existingMon.stamina != 0) {
             revert MonAlreadyCreated();
         }
-        monData[monId] = mon;
+        monStats[monId] = _monStats;
         EnumerableSetLib.AddressSet storage moves = monMoves[monId];
         uint256 numMoves = allowedMoves.length;
         for (uint256 i; i < numMoves; ++i) {
@@ -46,17 +46,17 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
 
     function modifyMon(
         uint256 monId,
-        MonStats memory mon,
+        MonStats memory _monStats,
         IMoveSet[] memory movesToAdd,
         IMoveSet[] memory movesToRemove,
         IAbility[] memory abilitiesToAdd,
         IAbility[] memory abilitiesToRemove
-    ) external {
-        MonStats storage existingMon = monData[monId];
+    ) external onlyOwner {
+        MonStats storage existingMon = monStats[monId];
         if (existingMon.hp == 0 && existingMon.stamina == 0) {
             revert MonNotyetCreated();
         }
-        monData[monId] = mon;
+        monStats[monId] = _monStats;
         EnumerableSetLib.AddressSet storage moves = monMoves[monId];
         {
             uint256 numMovesToAdd = movesToAdd.length;
@@ -88,10 +88,22 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
     function getMonData(uint256 monId)
         external
         view
-        returns (MonStats memory mon, address[] memory moves, address[] memory abilities)
+        returns (MonStats memory _monStats, address[] memory moves, address[] memory abilities)
     {
-        mon = monData[monId];
+        _monStats = monStats[monId];
         moves = monMoves[monId].values();
         abilities = monAbilities[monId].values();
+    }
+
+    function getMonStats(uint256 monId) external view returns (MonStats memory) {
+        return monStats[monId];
+    }
+
+    function isValidMove(uint256 monId, IMoveSet move) external view returns (bool) {
+        return monMoves[monId].contains(address(move));
+    }
+
+    function isValidAbility(uint256 monId, IAbility ability) external view returns (bool) {
+        return monAbilities[monId].contains(address(ability));
     }
 }

@@ -10,6 +10,19 @@ import {IEffect} from "./effects/IEffect.sol";
 import {IMoveSet} from "./moves/IMoveSet.sol";
 import {IRandomnessOracle} from "./rng/IRandomnessOracle.sol";
 
+import {ITeamRegistry} from "./teams/ITeamRegistry.sol";
+
+struct StartBattleArgs {
+    address p0;
+    address p1;
+    IValidator validator;
+    IRandomnessOracle rngOracle;
+    IRuleset ruleset;
+    ITeamRegistry teamRegistry;
+    uint96 p0TeamIndex;
+    uint96 p1TeamIndex;
+}
+
 struct Battle {
     address p0;
     address p1;

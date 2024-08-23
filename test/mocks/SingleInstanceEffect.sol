@@ -30,10 +30,7 @@ contract SingleInstanceEffect is IEffect {
         return false;
     }
 
-    function onApply(uint256 targetIndex, uint256 monIndex, bytes memory)
-        external
-        returns (bytes memory)
-    {
+    function onApply(uint256 targetIndex, uint256 monIndex, bytes memory) external returns (bytes memory) {
         bytes32 indexHash = keccak256(abi.encode(targetIndex, monIndex));
         ENGINE.setGlobalKV(indexHash, bytes32("true"));
         return "";

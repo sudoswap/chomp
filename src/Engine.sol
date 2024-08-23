@@ -179,11 +179,33 @@ contract Engine is IEngine {
     /**
      * - Core game functions
      */
+
+    function proposeBattle(StartBattleArgs memory args) external {
+        /**
+            - ensure caller is either p0 or p1
+            - store data (reduce redundant writes)
+            - call validator (?) to validate the args work
+            - call the team registry to get the actual teams
+            - (e.g. that the player is not mutating their teams)
+            - can store the battle but keep its status in unaccepted
+            - the other player could overwrite it with a diff proposed battle
+         */
+    }
+
+    function acceptBattle(bytes32 battleKey) external {
+        /*
+            - ensure caller is either p0 or p1
+            - verify the data stored above is correct (?)
+            - set the battle to accepted, now players can commit moves
+        */
+    }
+
+     
     function start(Battle calldata battle) external returns (bytes32) {
-        // validate battle
-        if (!battle.validator.validateGameStart(battle, msg.sender)) {
-            revert InvalidBattleConfig();
-        }
+        // // validate battle
+        // if (!battle.validator.validateGameStart(battle, msg.sender)) {
+        //     revert InvalidBattleConfig();
+        // }
 
         // Compute unique identifier for the battle
         // pairhash is keccak256(p0, p1) or keccak256(p1, p0), the lower address comes first

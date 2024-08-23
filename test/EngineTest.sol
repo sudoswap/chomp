@@ -8,6 +8,7 @@ import "../src/Enums.sol";
 import "../src/Structs.sol";
 
 import {DefaultValidator} from "../src/DefaultValidator.sol";
+
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
 
@@ -55,7 +56,7 @@ import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
  * shouldSkipTurn flag works as expected (create an effect that skips move, and a move that skips move) [x]
  * Moves that force switch work and revert when expected (e.g. invalid switch) [ ]
  */
-contract GameTest is Test {
+contract EngineTest is Test {
     Engine engine;
     DefaultValidator validator;
     TypeCalculator typeCalc;

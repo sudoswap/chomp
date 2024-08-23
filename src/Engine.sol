@@ -20,6 +20,8 @@ contract Engine is IEngine {
     mapping(bytes32 battleKey => mapping(bytes32 => bytes32)) public globalKV;
 
     error NoWriteAllowed();
+    error NotProposer();
+    error NotAccepter();
     error NotP0OrP1();
     error AlreadyCommited();
     error RevealBeforeOtherCommit();
@@ -180,24 +182,80 @@ contract Engine is IEngine {
      * - Core game functions
      */
 
-    function proposeBattle(StartBattleArgs memory args) external {
-        /**
-            - ensure caller is either p0 or p1
-            - store data (reduce redundant writes)
-            - call validator (?) to validate the args work
-            - call the team registry to get the actual teams
-            - (e.g. that the player is not mutating their teams)
-            - can store the battle but keep its status in unaccepted
-            - the other player could overwrite it with a diff proposed battle
-         */
+    function proposeBattle(StartBattleArgs memory args) external returns (bytes32) {
+
+        // Caller must be p0
+        if (msg.sender != args.p0) {
+            revert NotProposer();
+        }
+
+        bytes32 pairHash = keccak256(abi.encode(args.p0, args.p1));
+        if (uint256(uint160(args.p0)) > uint256(uint160(args.p1))) {
+            pairHash = keccak256(abi.encode(args.p1, args.p0));
+        }
+        uint256 pairHashNonce = pairHashNonces[pairHash];
+        bytes32 battleKey = keccak256(abi.encode(pairHash, pairHashNonce));
+
+        Battle storage existingBattle = battles[battleKey];
+
+        // Update nonce if the previous battle was already accepted
+        if (existingBattle.status == BattleProposalStatus.Accepted) {
+            pairHashNonces[pairHash] += 1;
+        }
+
+        // Get the team from the registry
+        Mon[][] memory teams = new Mon[][](2);
+        teams[0] = args.teamRegistry.getTeam(args.p0, args.p0TeamIndex);
+        teams[1] = args.teamRegistry.getTeam(args.p1, args.p1TeamIndex);
+
+        // Store the battle
+        battles[battleKey] = Battle({
+            p0: args.p0,
+            p1: args.p1,
+            validator: args.validator,
+            rngOracle: args.rngOracle,
+            ruleset: args.ruleset,
+            status: BattleProposalStatus.Proposed,
+            teams: teams
+        });
+
+        // validate the battle
+        if (!args.validator.validateGameStart(battles[battleKey], msg.sender)) {
+            revert InvalidBattleConfig();
+        }
+        return battleKey;
     }
 
     function acceptBattle(bytes32 battleKey) external {
-        /*
-            - ensure caller is either p0 or p1
-            - verify the data stored above is correct (?)
-            - set the battle to accepted, now players can commit moves
-        */
+        Battle storage battle = battles[battleKey];
+        if (msg.sender != battle.p1) {
+            revert NotAccepter();
+        }
+        battle.status = BattleProposalStatus.Accepted;
+
+        // Initialize empty mon state, move history, and active mon index for each team
+        for (uint256 i; i < 2; ++i) {
+            battleStates[battleKey].monStates.push();
+            battleStates[battleKey].moveHistory.push();
+            battleStates[battleKey].activeMonIndex.push();
+
+            // Initialize empty mon delta states for each mon on the team
+            for (uint256 j; j < battle.teams[i].length; ++j) {
+                battleStates[battleKey].monStates[i].push();
+            }
+        }
+
+        // Get the global effects and data to start the game if any
+        if (address(battle.ruleset) != address(0)) {
+            (IEffect[] memory effects, bytes[] memory data) = battle.ruleset.getInitialGlobalEffects();
+            if (effects.length > 0) {
+                battleStates[battleKey].globalEffects = effects;
+                battleStates[battleKey].extraDataForGlobalEffects = data;
+            }
+        }
+
+        // Set flag to be 2 which means both players act
+        battleStates[battleKey].playerSwitchForTurnFlag = 2;
     }
 
      

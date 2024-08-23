@@ -20,6 +20,8 @@ contract DefaultValidator is IValidator {
     uint256 immutable TIMEOUT_DURATION;
     IEngine immutable ENGINE;
 
+    mapping(address => mapping(bytes32 => uint256)) proposalTimestampForProposer;
+
     constructor(IEngine _ENGINE, Args memory args) {
         ENGINE = _ENGINE;
         MONS_PER_TEAM = args.MONS_PER_TEAM;
@@ -27,14 +29,8 @@ contract DefaultValidator is IValidator {
         TIMEOUT_DURATION = args.TIMEOUT_DURATION;
     }
 
-    // Validates that e.g. there are 6 mons per team w/ 4 moves each
-    function validateGameStart(Battle calldata b, address gameStartCaller) external view returns (bool) {
-        // game can only start if p0 or p1 calls game start
-        // later can change so that matchmaking needs to happen beforehand
-        // otherwise users can be griefed into matches they didn't want to join
-        if (gameStartCaller != b.p0 && gameStartCaller != b.p1) {
-            return false;
-        }
+    // Validates that there are MONS_PER_TEAM mons per team w/ MOVES_PER_MON moves each
+    function validateGameStart(Battle calldata b, bytes32 battleKey, address gameStartCaller) external returns (bool) {
         // p0 and p1 each have 6 mons, each mon has 4 moves
         uint256[2] memory playerIndices = [uint256(0), uint256(1)];
         for (uint256 i; i < playerIndices.length; ++i) {
@@ -47,10 +43,18 @@ contract DefaultValidator is IValidator {
                 }
             }
         }
-        // TODO: each mon allows it to learn the move, and each mon is in the same allowed mon list
+        uint256 previousProposalTimestamp = proposalTimestampForProposer[gameStartCaller][battleKey];
+        // Ensures that proposers cannot quickly modify in-flight proposed matches
+        if (previousProposalTimestamp != 0) {
+            if (block.timestamp - previousProposalTimestamp < TIMEOUT_DURATION) {
+                return false;
+            }
+        }
+        proposalTimestampForProposer[gameStartCaller][battleKey] = block.timestamp;
         return true;
     }
 
+    // A switch is valid if the new mon isn't knocked out and the index is valid (not out of range or the same one)
     function validateSwitch(bytes32 battleKey, uint256 playerIndex, uint256 monToSwitchIndex)
         public
         view
@@ -86,7 +90,7 @@ contract DefaultValidator is IValidator {
         MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
 
-        // Otherwise, a move cannot be selected if its stamina costs more than the mon's current stamina
+        // A move cannot be selected if its stamina costs more than the mon's current stamina
         IMoveSet moveSet = teams[playerIndex][activeMonIndex[playerIndex]].moves[moveIndex];
         int256 monStaminaDelta = monStates[playerIndex][activeMonIndex[playerIndex]].staminaDelta;
         uint256 monBaseStamina = teams[playerIndex][activeMonIndex[playerIndex]].stats.stamina;

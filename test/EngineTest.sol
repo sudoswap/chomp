@@ -85,15 +85,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = dummyAttack;
         dummyMon = Mon({
-            hp: 1,
-            stamina: 1,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 1,
+                stamina: 1,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -112,7 +114,8 @@ contract EngineTest is Test {
             validator: validator,
             teams: dummyTeams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
         vm.startPrank(ALICE);
         return engine.start(dummyBattle);
@@ -276,28 +279,32 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory fastMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
         Mon memory slowMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -314,7 +321,8 @@ contract EngineTest is Test {
             validator: validator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -354,28 +362,32 @@ contract EngineTest is Test {
         IMoveSet[] memory fastMoves = new IMoveSet[](1);
         fastMoves[0] = fastAttack;
         Mon memory fastMon = Mon({
-            hp: 10,
-            stamina: 2,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: slowMoves,
             ability: IAbility(address(0))
         });
         Mon memory slowMon = Mon({
-            hp: 10,
-            stamina: 2,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: fastMoves,
             ability: IAbility(address(0))
         });
@@ -392,7 +404,8 @@ contract EngineTest is Test {
             validator: validator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -431,28 +444,32 @@ contract EngineTest is Test {
         IMoveSet[] memory fastMoves = new IMoveSet[](1);
         fastMoves[0] = fastAttack;
         Mon memory fastMon = Mon({
-            hp: 10,
-            stamina: 2,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: slowMoves,
             ability: IAbility(address(0))
         });
         Mon memory slowMon = Mon({
-            hp: 10,
-            stamina: 2,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: fastMoves,
             ability: IAbility(address(0))
         });
@@ -476,7 +493,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -590,15 +608,17 @@ contract EngineTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2, // need to have enough stamina for 2 moves
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -613,7 +633,8 @@ contract EngineTest is Test {
             validator: validator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -677,7 +698,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         // Start the battle
@@ -736,7 +758,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         // Start the battle
@@ -795,7 +818,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         // Start the battle
@@ -855,7 +879,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: rules
+            ruleset: rules,
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -937,7 +962,8 @@ contract EngineTest is Test {
             validator: validator,
             teams: teams,
             rngOracle: mockOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -1014,7 +1040,8 @@ contract EngineTest is Test {
             validator: validator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -1118,7 +1145,8 @@ contract EngineTest is Test {
             validator: validator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);
@@ -1201,7 +1229,8 @@ contract EngineTest is Test {
             validator: twoMonValidator,
             teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            status: BattleProposalStatus.Accepted
         });
 
         vm.startPrank(ALICE);

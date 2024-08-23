@@ -20,6 +20,11 @@ enum Type {
     None
 }
 
+enum BattleProposalStatus {
+    Proposed,
+    Accepted
+}
+
 enum EffectStep {
     OnApply,
     RoundStart,

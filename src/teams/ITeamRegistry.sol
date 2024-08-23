@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "../Structs.sol";
+import "../moves/IMoveSet.sol";
+import "../abilities/IAbility.sol";
 
 interface ITeamRegistry {
     function createTeam(uint256[] memory monIndices, IMoveSet[][] memory moves, IAbility[] memory abilities) external;

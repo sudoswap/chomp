@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "../Structs.sol";
+import "../moves/IMoveSet.sol";
+import "../abilities/IAbility.sol";
 
 interface IMonRegistry {
     function createMon(

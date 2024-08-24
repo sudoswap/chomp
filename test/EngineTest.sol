@@ -111,17 +111,29 @@ contract EngineTest is Test {
         dummyTeam[0] = dummyMon;
         dummyTeams[0] = dummyTeam;
         dummyTeams[1] = dummyTeam;
-        Battle memory dummyBattle = Battle({
+
+        // Register teams
+        defaultRegistry.setTeam(ALICE, dummyTeams[0]);
+        defaultRegistry.setTeam(BOB, dummyTeams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: dummyTeams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-        vm.startPrank(ALICE);
-        return engine.start(dummyBattle);
+
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
+
+        return battleKey;
     }
 
     function _commitRevealExecuteForAliceAndBob(
@@ -318,18 +330,24 @@ contract EngineTest is Test {
         slowTeam[0] = slowMon;
         teams[0] = fastTeam;
         teams[1] = slowTeam;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -401,18 +419,24 @@ contract EngineTest is Test {
         slowTeam[0] = slowMon;
         teams[0] = fastTeam;
         teams[1] = slowTeam;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -490,18 +514,24 @@ contract EngineTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -630,18 +660,24 @@ contract EngineTest is Test {
         team[0] = normalMon;
         teams[0] = team;
         teams[1] = team;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -698,19 +734,24 @@ contract EngineTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        // Start the battle
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -761,19 +802,24 @@ contract EngineTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        // Start the battle
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -824,19 +870,24 @@ contract EngineTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        // Start the battle
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -888,18 +939,24 @@ contract EngineTest is Test {
         );
         DefaultStaminaRegen regen = new DefaultStaminaRegen(engine);
         DefaultRuleset rules = new DefaultRuleset(engine, IEffect(address(regen)));
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: rules,
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -977,18 +1034,24 @@ contract EngineTest is Test {
         teams[1] = inaccurateTeam;
 
         // Initialize battle with custom rng oracle
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: mockOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1059,18 +1122,25 @@ contract EngineTest is Test {
         normalStaminaTeam[0] = normalStaminaMon;
         teams[0] = highStaminaTeam;
         teams[1] = normalStaminaTeam;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
         _commitRevealExecuteForAliceAndBob(
             battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
         );
@@ -1168,18 +1238,24 @@ contract EngineTest is Test {
         deathTeam[0] = instantDeathMon;
         teams[0] = team;
         teams[1] = deathTeam;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1256,18 +1332,24 @@ contract EngineTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1345,18 +1427,24 @@ contract EngineTest is Test {
         deathTeam[0] = instantDeathMon;
         teams[0] = team;
         teams[1] = deathTeam;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1434,18 +1522,24 @@ contract EngineTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1541,18 +1635,24 @@ contract EngineTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1623,18 +1723,24 @@ contract EngineTest is Test {
         skipTeam[0] = skipMon;
         teams[0] = team;
         teams[1] = skipTeam;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1714,18 +1820,24 @@ contract EngineTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1802,18 +1914,24 @@ contract EngineTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1890,18 +2008,24 @@ contract EngineTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1987,18 +2111,24 @@ contract EngineTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2089,18 +2219,24 @@ contract EngineTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2166,18 +2302,24 @@ contract EngineTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 2, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2242,18 +2384,24 @@ contract EngineTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2321,18 +2469,24 @@ contract EngineTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 0, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: oneMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2424,18 +2578,24 @@ contract EngineTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2532,18 +2692,24 @@ contract EngineTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2595,18 +2761,24 @@ contract EngineTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: oneMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
-            status: BattleProposalStatus.Accepted
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(

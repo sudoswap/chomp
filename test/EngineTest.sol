@@ -158,13 +158,12 @@ contract EngineTest is Test {
     }
 
     function test_commitBattleWithoutAcceptReverts() public {
-
         /*
         - both players can propose (without accepting) and nonce will not increase (i.e. battle key does not change)
         - accepting a battle increments the nonce for the next propose (i.e. battle key changes)
         - committing should fail if the battle is not accepted
         */
-        
+
         Mon[] memory dummyTeam = new Mon[](1);
         dummyTeam[0] = dummyMon;
 

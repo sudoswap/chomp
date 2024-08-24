@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import {Type} from "./Enums.sol";
+import {Type, BattleProposalStatus} from "./Enums.sol";
 import {IRuleset} from "./IRuleset.sol";
 import {IValidator} from "./IValidator.sol";
 
@@ -10,6 +10,19 @@ import {IEffect} from "./effects/IEffect.sol";
 import {IMoveSet} from "./moves/IMoveSet.sol";
 import {IRandomnessOracle} from "./rng/IRandomnessOracle.sol";
 
+import {ITeamRegistry} from "./teams/ITeamRegistry.sol";
+
+struct StartBattleArgs {
+    address p0;
+    address p1;
+    IValidator validator;
+    IRandomnessOracle rngOracle;
+    IRuleset ruleset;
+    ITeamRegistry teamRegistry;
+    uint96 p0TeamIndex;
+    uint96 p1TeamIndex;
+}
+
 struct Battle {
     address p0;
     address p1;
@@ -17,6 +30,7 @@ struct Battle {
     IRandomnessOracle rngOracle;
     IRuleset ruleset;
     Mon[][] teams;
+    BattleProposalStatus status;
 }
 
 struct BattleState {
@@ -31,7 +45,7 @@ struct BattleState {
     bytes[] extraDataForGlobalEffects;
 }
 
-struct Mon {
+struct MonStats {
     uint32 hp;
     uint32 stamina;
     uint32 speed;
@@ -41,6 +55,10 @@ struct Mon {
     uint32 specialDefence;
     Type type1;
     Type type2;
+}
+
+struct Mon {
+    MonStats stats;
     IMoveSet[] moves;
     IAbility ability;
 }

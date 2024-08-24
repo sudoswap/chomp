@@ -20,6 +20,9 @@ contract Engine is IEngine {
     mapping(bytes32 battleKey => mapping(bytes32 => bytes32)) public globalKV;
 
     error NoWriteAllowed();
+    error NotProposer();
+    error NotAccepter();
+    error BattleNotAccepted();
     error NotP0OrP1();
     error AlreadyCommited();
     error RevealBeforeOtherCommit();
@@ -179,23 +182,61 @@ contract Engine is IEngine {
     /**
      * - Core game functions
      */
-    function start(Battle calldata battle) external returns (bytes32) {
-        // validate battle
-        if (!battle.validator.validateGameStart(battle, msg.sender)) {
-            revert InvalidBattleConfig();
+
+    function proposeBattle(StartBattleArgs memory args) external returns (bytes32) {
+
+        // Caller must be p0
+        if (msg.sender != args.p0) {
+            revert NotProposer();
         }
 
-        // Compute unique identifier for the battle
-        // pairhash is keccak256(p0, p1) or keccak256(p1, p0), the lower address comes first
-        // then compute keccak256(pair hash, nonce)
-        bytes32 pairHash = keccak256(abi.encode(battle.p0, battle.p1));
-        if (uint256(uint160(battle.p0)) > uint256(uint160(battle.p1))) {
-            pairHash = keccak256(abi.encode(battle.p1, battle.p0));
+        (bytes32 battleKey, bytes32 pairHash) = _computeBattleKey(args);
+        Battle storage existingBattle = battles[battleKey];
+
+        // Update nonce if the previous battle was already accepted and update battle key
+        if (existingBattle.status == BattleProposalStatus.Accepted) {
+            pairHashNonces[pairHash] += 1;
+            (battleKey, ) = _computeBattleKey(args);
+        }
+
+        // Get the team from the registry
+        Mon[][] memory teams = new Mon[][](2);
+        teams[0] = args.teamRegistry.getTeam(args.p0, args.p0TeamIndex);
+        teams[1] = args.teamRegistry.getTeam(args.p1, args.p1TeamIndex);
+
+        // Store the battle
+        battles[battleKey] = Battle({
+            p0: args.p0,
+            p1: args.p1,
+            validator: args.validator,
+            rngOracle: args.rngOracle,
+            ruleset: args.ruleset,
+            status: BattleProposalStatus.Proposed,
+            teams: teams
+        });
+
+        // validate the battle config
+        if (!args.validator.validateGameStart(battles[battleKey], battleKey, msg.sender)) {
+            revert InvalidBattleConfig();
+        }
+        return battleKey;
+    }
+
+    function _computeBattleKey(StartBattleArgs memory args) internal view returns (bytes32 battleKey, bytes32 pairHash) {
+        pairHash = keccak256(abi.encode(args.p0, args.p1));
+        if (uint256(uint160(args.p0)) > uint256(uint160(args.p1))) {
+            pairHash = keccak256(abi.encode(args.p1, args.p0));
         }
         uint256 pairHashNonce = pairHashNonces[pairHash];
-        pairHashNonces[pairHash] += 1;
-        bytes32 battleKey = keccak256(abi.encode(pairHash, pairHashNonce));
-        battles[battleKey] = battle;
+        battleKey = keccak256(abi.encode(pairHash, pairHashNonce));
+    }
+
+    function acceptBattle(bytes32 battleKey) external {
+        Battle storage battle = battles[battleKey];
+        if (msg.sender != battle.p1) {
+            revert NotAccepter();
+        }
+        battle.status = BattleProposalStatus.Accepted;
 
         // Initialize empty mon state, move history, and active mon index for each team
         for (uint256 i; i < 2; ++i) {
@@ -220,8 +261,6 @@ contract Engine is IEngine {
 
         // Set flag to be 2 which means both players act
         battleStates[battleKey].playerSwitchForTurnFlag = 2;
-
-        return battleKey;
     }
 
     function commitMove(bytes32 battleKey, bytes32 moveHash) external {
@@ -231,6 +270,13 @@ contract Engine is IEngine {
         // only battle participants can commit
         if (msg.sender != battle.p0 && msg.sender != battle.p1) {
             revert NotP0OrP1();
+        }
+
+        // can only commit moves to battles with an accepted status
+        // (reveal relies on commit, and execute relies on both of those)
+        // (so transitively, it's safe to just check battle proposal status on commit)
+        if (battle.status != BattleProposalStatus.Accepted) {
+            revert BattleNotAccepted();
         }
 
         // validate no commitment already exists for this turn
@@ -732,11 +778,11 @@ contract Engine is IEngine {
             return 1;
         } else {
             uint32 p0MonSpeed = uint32(
-                int32(battle.teams[0][state.activeMonIndex[0]].speed)
+                int32(battle.teams[0][state.activeMonIndex[0]].stats.speed)
                     + state.monStates[0][state.activeMonIndex[0]].speedDelta
             );
             uint32 p1MonSpeed = uint32(
-                int32(battle.teams[1][state.activeMonIndex[1]].speed)
+                int32(battle.teams[1][state.activeMonIndex[1]].stats.speed)
                     + state.monStates[1][state.activeMonIndex[1]].speedDelta
             );
             if (p0MonSpeed > p1MonSpeed) {

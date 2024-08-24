@@ -8,6 +8,7 @@ import "../src/Enums.sol";
 import "../src/Structs.sol";
 
 import {DefaultValidator} from "../src/DefaultValidator.sol";
+
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
 
@@ -25,6 +26,7 @@ import {SingleInstanceEffect} from "./mocks/SingleInstanceEffect.sol";
 import {ForceSwitchMove} from "./mocks/ForceSwitchMove.sol";
 import {InstantDeathEffect} from "./mocks/InstantDeathEffect.sol";
 import {InstantDeathOnSwitchInEffect} from "./mocks/InstantDeathOnSwitchInEffect.sol";
+import {TestTeamRegistry} from "./mocks/TestTeamRegistry.sol";
 
 import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
 import {SkipTurnMove} from "./mocks/SkipTurnMove.sol";
@@ -55,11 +57,12 @@ import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
  * shouldSkipTurn flag works as expected (create an effect that skips move, and a move that skips move) [x]
  * Moves that force switch work and revert when expected (e.g. invalid switch) [ ]
  */
-contract GameTest is Test {
+contract EngineTest is Test {
     Engine engine;
     DefaultValidator validator;
     TypeCalculator typeCalc;
     DefaultRandomnessOracle defaultOracle;
+    TestTeamRegistry defaultRegistry;
 
     address constant ALICE = address(1);
     address constant BOB = address(2);
@@ -84,18 +87,21 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = dummyAttack;
         dummyMon = Mon({
-            hp: 1,
-            stamina: 1,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 1,
+                stamina: 1,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
+        defaultRegistry = new TestTeamRegistry();
     }
 
     // Helper function, creates a battle with two mons for Alice and Bob
@@ -105,16 +111,29 @@ contract GameTest is Test {
         dummyTeam[0] = dummyMon;
         dummyTeams[0] = dummyTeam;
         dummyTeams[1] = dummyTeam;
-        Battle memory dummyBattle = Battle({
+
+        // Register teams
+        defaultRegistry.setTeam(ALICE, dummyTeams[0]);
+        defaultRegistry.setTeam(BOB, dummyTeams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: dummyTeams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-        vm.startPrank(ALICE);
-        return engine.start(dummyBattle);
+
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
+
+        return battleKey;
     }
 
     function _commitRevealExecuteForAliceAndBob(
@@ -136,6 +155,74 @@ contract GameTest is Test {
         vm.startPrank(BOB);
         engine.revealMove(battleKey, bobMoveIndex, salt, bobExtraData);
         engine.execute(battleKey);
+    }
+
+    function test_commitBattleWithoutAcceptReverts() public {
+
+        /*
+        - both players can propose (without accepting) and nonce will not increase (i.e. battle key does not change)
+        - accepting a battle increments the nonce for the next propose (i.e. battle key changes)
+        - committing should fail if the battle is not accepted
+        */
+        
+        Mon[] memory dummyTeam = new Mon[](1);
+        dummyTeam[0] = dummyMon;
+
+        // Register teams
+        defaultRegistry.setTeam(ALICE, dummyTeam);
+        defaultRegistry.setTeam(BOB, dummyTeam);
+
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
+        });
+
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+
+        StartBattleArgs memory bobArgs = StartBattleArgs({
+            p0: BOB,
+            p1: ALICE,
+            validator: validator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
+        });
+        vm.prank(BOB);
+        bytes32 updatedBattleKey = engine.proposeBattle(bobArgs);
+
+        // Battle key should be the same when no one accepts
+        assertEq(battleKey, updatedBattleKey);
+
+        // Assert it reverts for Alice
+        vm.expectRevert(Engine.BattleNotAccepted.selector);
+        vm.startPrank(ALICE);
+        engine.commitMove(battleKey, "");
+
+        // Assert it reverts for Bob
+        vm.expectRevert(Engine.BattleNotAccepted.selector);
+        vm.startPrank(BOB);
+        engine.commitMove(battleKey, "");
+
+        // Have Alice accept the battle
+        vm.startPrank(ALICE);
+        engine.acceptBattle(battleKey);
+
+        // Have Bob start a new battle
+        vm.warp(validator.TIMEOUT_DURATION() + 1);
+        vm.startPrank(BOB);
+        bytes32 newBattleKey = engine.proposeBattle(bobArgs);
+
+        // Battle key should be different when one accepts
+        assertNotEq(battleKey, newBattleKey);
     }
 
     function test_canStartBattle() public {
@@ -275,28 +362,32 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory fastMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
         Mon memory slowMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -307,17 +398,24 @@ contract GameTest is Test {
         slowTeam[0] = slowMon;
         teams[0] = fastTeam;
         teams[1] = slowTeam;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -353,28 +451,32 @@ contract GameTest is Test {
         IMoveSet[] memory fastMoves = new IMoveSet[](1);
         fastMoves[0] = fastAttack;
         Mon memory fastMon = Mon({
-            hp: 10,
-            stamina: 2,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: slowMoves,
             ability: IAbility(address(0))
         });
         Mon memory slowMon = Mon({
-            hp: 10,
-            stamina: 2,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: fastMoves,
             ability: IAbility(address(0))
         });
@@ -385,17 +487,24 @@ contract GameTest is Test {
         slowTeam[0] = slowMon;
         teams[0] = fastTeam;
         teams[1] = slowTeam;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -430,28 +539,32 @@ contract GameTest is Test {
         IMoveSet[] memory fastMoves = new IMoveSet[](1);
         fastMoves[0] = fastAttack;
         Mon memory fastMon = Mon({
-            hp: 10,
-            stamina: 2,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: slowMoves,
             ability: IAbility(address(0))
         });
         Mon memory slowMon = Mon({
-            hp: 10,
-            stamina: 2,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: fastMoves,
             ability: IAbility(address(0))
         });
@@ -469,17 +582,24 @@ contract GameTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -589,15 +709,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2, // need to have enough stamina for 2 moves
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -606,17 +728,24 @@ contract GameTest is Test {
         team[0] = normalMon;
         teams[0] = team;
         teams[1] = team;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -649,15 +778,18 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None,
+                speed: 2
+            }),
+            // need to have enough stamina for 2 moves
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -670,18 +802,24 @@ contract GameTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        // Start the battle
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -708,15 +846,18 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = superFastAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None,
+                speed: 2
+            }),
+            // need to have enough stamina for 2 moves
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -729,18 +870,24 @@ contract GameTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        // Start the battle
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -767,15 +914,18 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = superFastAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None,
+                speed: 2
+            }),
+            // need to have enough stamina for 2 moves
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -788,18 +938,24 @@ contract GameTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        // Start the battle
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -825,15 +981,18 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = superFastAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None,
+                speed: 2
+            }),
+            // need to have enough stamina for 2 moves
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -848,17 +1007,24 @@ contract GameTest is Test {
         );
         DefaultStaminaRegen regen = new DefaultStaminaRegen(engine);
         DefaultRuleset rules = new DefaultRuleset(engine, IEffect(address(regen)));
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: rules
+            ruleset: rules,
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -896,28 +1062,34 @@ contract GameTest is Test {
         IMoveSet[] memory inaccurateMoves = new IMoveSet[](1);
         inaccurateMoves[0] = inaccurateAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None,
+                speed: 2
+            }),
+            // need to have enough stamina for 2 moves
             moves: normalMoves,
             ability: IAbility(address(0))
         });
         Mon memory inaccurateMon = Mon({
-            hp: 10,
-            stamina: 2, // need to have enough stamina for 2 moves
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None,
+                speed: 2
+            }),
+            // need to have enough stamina for 2 moves
             moves: inaccurateMoves,
             ability: IAbility(address(0))
         });
@@ -930,17 +1102,24 @@ contract GameTest is Test {
         teams[1] = inaccurateTeam;
 
         // Initialize battle with custom rng oracle
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: mockOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -975,28 +1154,32 @@ contract GameTest is Test {
         IMoveSet[] memory normalStaminaMoves = new IMoveSet[](1);
         normalStaminaMoves[0] = normalStaminaAttack;
         Mon memory highStaminaMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: highStaminaMoves,
             ability: IAbility(address(0))
         });
         Mon memory normalStaminaMon = Mon({
-            hp: 10,
-            stamina: 2,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: normalStaminaMoves,
             ability: IAbility(address(0))
         });
@@ -1007,17 +1190,25 @@ contract GameTest is Test {
         normalStaminaTeam[0] = normalStaminaMon;
         teams[0] = highStaminaTeam;
         teams[1] = normalStaminaTeam;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
         _commitRevealExecuteForAliceAndBob(
             battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
         );
@@ -1073,15 +1264,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalStaminaAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1092,15 +1285,17 @@ contract GameTest is Test {
         IMoveSet[] memory deathMoves = new IMoveSet[](1);
         deathMoves[0] = instantDeathAttack;
         Mon memory instantDeathMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: deathMoves,
             ability: IAbility(address(0))
         });
@@ -1111,17 +1306,24 @@ contract GameTest is Test {
         deathTeam[0] = instantDeathMon;
         teams[0] = team;
         teams[1] = deathTeam;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1149,15 +1351,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalStaminaAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1168,15 +1372,17 @@ contract GameTest is Test {
         IMoveSet[] memory deathMoves = new IMoveSet[](1);
         deathMoves[0] = instantDeathAttack;
         Mon memory instantDeathMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: deathMoves,
             ability: IAbility(address(0))
         });
@@ -1194,17 +1400,24 @@ contract GameTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1240,15 +1453,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = lethalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1259,15 +1474,17 @@ contract GameTest is Test {
         IMoveSet[] memory deathMoves = new IMoveSet[](1);
         deathMoves[0] = instantDeathAttack;
         Mon memory instantDeathMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: deathMoves,
             ability: IAbility(address(0))
         });
@@ -1278,17 +1495,24 @@ contract GameTest is Test {
         deathTeam[0] = instantDeathMon;
         teams[0] = team;
         teams[1] = deathTeam;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1317,15 +1541,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = lethalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1336,15 +1562,17 @@ contract GameTest is Test {
         IMoveSet[] memory deathMoves = new IMoveSet[](1);
         deathMoves[0] = instantDeathAttack;
         Mon memory instantDeathMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: deathMoves,
             ability: IAbility(address(0))
         });
@@ -1362,17 +1590,24 @@ contract GameTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1419,15 +1654,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = lethalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1438,15 +1675,17 @@ contract GameTest is Test {
         IMoveSet[] memory deathMoves = new IMoveSet[](1);
         deathMoves[0] = instantDeathAttack;
         Mon memory instantDeathMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: deathMoves,
             ability: IAbility(address(0))
         });
@@ -1464,17 +1703,24 @@ contract GameTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1504,15 +1750,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1522,15 +1770,17 @@ contract GameTest is Test {
         IMoveSet[] memory skipMoves = new IMoveSet[](1);
         skipMoves[0] = skipAttack;
         Mon memory skipMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: skipMoves,
             ability: IAbility(address(0))
         });
@@ -1541,17 +1791,24 @@ contract GameTest is Test {
         skipTeam[0] = skipMon;
         teams[0] = team;
         teams[1] = skipTeam;
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: validator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1580,15 +1837,17 @@ contract GameTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
@@ -1605,15 +1864,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1627,17 +1888,24 @@ contract GameTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1663,15 +1931,17 @@ contract GameTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
@@ -1683,15 +1953,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1710,17 +1982,24 @@ contract GameTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1746,15 +2025,17 @@ contract GameTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
@@ -1766,15 +2047,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1793,17 +2076,24 @@ contract GameTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1838,15 +2128,17 @@ contract GameTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
@@ -1858,15 +2150,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1885,17 +2179,24 @@ contract GameTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1931,15 +2232,17 @@ contract GameTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
@@ -1954,15 +2257,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = instantDeathOnSwitchInAttack;
         Mon memory stageHazardMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -1982,17 +2287,24 @@ contract GameTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2027,15 +2339,17 @@ contract GameTest is Test {
         moves[1] = instantDeathOnSwitchInAttack;
 
         Mon memory mon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -2056,17 +2370,24 @@ contract GameTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 2, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2100,15 +2421,17 @@ contract GameTest is Test {
         moves[0] = instantDeathOnSwitchInAttack;
 
         Mon memory mon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -2129,17 +2452,24 @@ contract GameTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2165,28 +2495,32 @@ contract GameTest is Test {
         IEffect instantDeathAtEndOfTurn = new InstantDeathEffect(engine);
         IAbility suicideAbility = new EffectAbility(engine, instantDeathAtEndOfTurn);
         Mon memory suicideMon = Mon({
-            hp: 1,
-            stamina: 1,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 1,
+                stamina: 1,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: suicideAbility
         });
         Mon memory normalMon = Mon({
-            hp: 1,
-            stamina: 1,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 1,
+                stamina: 1,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -2203,17 +2537,24 @@ contract GameTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 0, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: oneMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2233,30 +2574,34 @@ contract GameTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
         IEffect instantDeathAtEndOfTurn = new InstantDeathEffect(engine);
         IAbility suicideAbility = new EffectAbility(engine, instantDeathAtEndOfTurn);
         Mon memory suicideMon = Mon({
-            hp: 1,
-            stamina: 1,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 1,
+                stamina: 1,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: suicideAbility
         });
@@ -2270,15 +2615,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -2299,17 +2646,24 @@ contract GameTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2334,30 +2688,34 @@ contract GameTest is Test {
         IMoveSet[] memory switchMoves = new IMoveSet[](1);
         switchMoves[0] = switchAttack;
         Mon memory switchMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: IAbility(address(0))
         });
         IEffect instantDeathAtEndOfTurn = new InstantDeathEffect(engine);
         IAbility suicideAbility = new EffectAbility(engine, instantDeathAtEndOfTurn);
         Mon memory suicideMon = Mon({
-            hp: 1,
-            stamina: 1,
-            speed: 1,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 1,
+                stamina: 1,
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: switchMoves,
             ability: suicideAbility
         });
@@ -2371,15 +2729,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = normalAttack;
         Mon memory normalMon = Mon({
-            hp: 10,
-            stamina: 1,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -2400,17 +2760,24 @@ contract GameTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: twoMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2438,15 +2805,17 @@ contract GameTest is Test {
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = effectAttack;
         Mon memory mon = Mon({
-            hp: 10,
-            stamina: 2,
-            speed: 2,
-            attack: 1,
-            defence: 1,
-            specialAttack: 1,
-            specialDefence: 1,
-            type1: Type.Fire,
-            type2: Type.None,
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
             moves: moves,
             ability: IAbility(address(0))
         });
@@ -2460,17 +2829,24 @@ contract GameTest is Test {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        Battle memory battle = Battle({
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
             validator: oneMonValidator,
-            teams: teams,
             rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0))
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
         });
-
-        vm.startPrank(ALICE);
-        bytes32 battleKey = engine.start(battle);
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(

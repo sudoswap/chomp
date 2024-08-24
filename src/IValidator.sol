@@ -5,7 +5,7 @@ import "./Structs.sol";
 
 interface IValidator {
     // Validates that e.g. there are 6 mons per team w/ 4 moves each
-    function validateGameStart(Battle calldata b, address gameStartCaller) external returns (bool);
+    function validateGameStart(Battle calldata b, bytes32 battleKey, address gameStartCaller) external returns (bool);
 
     // Validates that you can't switch to the same mon, you have enough stamina, the move isn't disabled, etc.
     function validatePlayerMove(bytes32 battleKey, uint256 moveIndex, uint256 playerIndex, bytes calldata extraData)

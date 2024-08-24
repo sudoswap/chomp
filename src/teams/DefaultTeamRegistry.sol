@@ -99,4 +99,8 @@ contract DefaultTeamRegistry is ITeamRegistry {
     function getTeam(address player, uint256 teamIndex) external view returns (Mon[] memory) {
         return teams[player][teamIndex];
     }
+
+    function getTeamCount(address player) external view returns (uint256) {
+        return numTeams[player];
+    }
 }

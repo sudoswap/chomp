@@ -17,17 +17,7 @@ contract TestTeamRegistry is ITeamRegistry {
         return teams[player];
     }
 
-    function updateTeam(
-        uint256 teamIndex,
-        uint256[] memory teamIndicesToOverride,
-        uint256[] memory newMonIndices,
-        IMoveSet[][] memory newMoves,
-        IAbility[] memory newAbilities
-    ) external {
-        // No Op
-    }
-
-    function createTeam(uint256[] memory monIndices, IMoveSet[][] memory moves, IAbility[] memory abilities) external {
-        // No Op
+    function getTeamCount(address player) external view returns (uint256) {
+        return teams[player].length;
     }
 }

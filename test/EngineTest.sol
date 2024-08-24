@@ -26,6 +26,7 @@ import {SingleInstanceEffect} from "./mocks/SingleInstanceEffect.sol";
 import {ForceSwitchMove} from "./mocks/ForceSwitchMove.sol";
 import {InstantDeathEffect} from "./mocks/InstantDeathEffect.sol";
 import {InstantDeathOnSwitchInEffect} from "./mocks/InstantDeathOnSwitchInEffect.sol";
+import {TestTeamRegistry} from "./mocks/TestTeamRegistry.sol";
 
 import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
 import {SkipTurnMove} from "./mocks/SkipTurnMove.sol";
@@ -61,6 +62,7 @@ contract EngineTest is Test {
     DefaultValidator validator;
     TypeCalculator typeCalc;
     DefaultRandomnessOracle defaultOracle;
+    TestTeamRegistry defaultRegistry;
 
     address constant ALICE = address(1);
     address constant BOB = address(2);
@@ -99,6 +101,7 @@ contract EngineTest is Test {
             moves: moves,
             ability: IAbility(address(0))
         });
+        defaultRegistry = new TestTeamRegistry();
     }
 
     // Helper function, creates a battle with two mons for Alice and Bob

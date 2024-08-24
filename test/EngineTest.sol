@@ -157,6 +157,74 @@ contract EngineTest is Test {
         engine.execute(battleKey);
     }
 
+    function test_commitBattleWithoutAcceptReverts() public {
+
+        /*
+        - both players can propose (without accepting) and nonce will not increase (i.e. battle key does not change)
+        - accepting a battle increments the nonce for the next propose (i.e. battle key changes)
+        - committing should fail if the battle is not accepted
+        */
+        
+        Mon[] memory dummyTeam = new Mon[](1);
+        dummyTeam[0] = dummyMon;
+
+        // Register teams
+        defaultRegistry.setTeam(ALICE, dummyTeam);
+        defaultRegistry.setTeam(BOB, dummyTeam);
+
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
+        });
+
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+
+        StartBattleArgs memory bobArgs = StartBattleArgs({
+            p0: BOB,
+            p1: ALICE,
+            validator: validator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
+        });
+        vm.prank(BOB);
+        bytes32 updatedBattleKey = engine.proposeBattle(bobArgs);
+
+        // Battle key should be the same when no one accepts
+        assertEq(battleKey, updatedBattleKey);
+
+        // Assert it reverts for Alice
+        vm.expectRevert(Engine.BattleNotAccepted.selector);
+        vm.startPrank(ALICE);
+        engine.commitMove(battleKey, "");
+
+        // Assert it reverts for Bob
+        vm.expectRevert(Engine.BattleNotAccepted.selector);
+        vm.startPrank(BOB);
+        engine.commitMove(battleKey, "");
+
+        // Have Alice accept the battle
+        vm.startPrank(ALICE);
+        engine.acceptBattle(battleKey);
+
+        // Have Bob start a new battle
+        vm.warp(validator.TIMEOUT_DURATION() + 1);
+        vm.startPrank(BOB);
+        bytes32 newBattleKey = engine.proposeBattle(bobArgs);
+
+        // Battle key should be different when one accepts
+        assertNotEq(battleKey, newBattleKey);
+    }
+
     function test_canStartBattle() public {
         _startDummyBattle();
     }

@@ -17,7 +17,7 @@ contract DefaultValidator is IValidator {
 
     uint256 immutable MONS_PER_TEAM;
     uint256 immutable MOVES_PER_MON;
-    uint256 immutable TIMEOUT_DURATION;
+    uint256 immutable public TIMEOUT_DURATION;
     IEngine immutable ENGINE;
 
     mapping(address => mapping(bytes32 => uint256)) proposalTimestampForProposer;
@@ -44,7 +44,7 @@ contract DefaultValidator is IValidator {
             }
         }
         uint256 previousProposalTimestamp = proposalTimestampForProposer[gameStartCaller][battleKey];
-        // Ensures that proposers cannot quickly modify in-flight proposed matches
+        // Ensures that proposers cannot quickly modify in-flight proposed matches by rate limiting
         if (previousProposalTimestamp != 0) {
             if (block.timestamp - previousProposalTimestamp < TIMEOUT_DURATION) {
                 return false;

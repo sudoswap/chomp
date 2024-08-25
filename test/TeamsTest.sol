@@ -69,5 +69,48 @@ contract TeamsTest is Test {
         vm.startPrank(BOB);
         vm.expectRevert();
         monRegistry.createMon(stats, moves, abilities);
+
+        MonStats memory newStats = MonStats({
+            hp: 2,
+            stamina: 2,
+            speed: 2,
+            attack: 2,
+            defence: 2,
+            specialAttack: 2,
+            specialDefence: 2,
+            type1: Type.Fire,
+            type2: Type.None
+        });
+
+        IMoveSet newMove = new EffectAttack(IEngine(address(0)), IEffect(address(0)), EffectAttack.Args({
+            TYPE: Type.Fire,
+            STAMINA_COST: 2,
+            PRIORITY: 2
+        }));
+        IMoveSet[] memory newMoves = new IMoveSet[](1);
+        newMoves[0] = newMove;
+
+        IAbility newAbility = new EffectAbility(IEngine(address(0)), IEffect(address(0)));
+        IAbility[] memory newAbilities = new IAbility[](1);
+        newAbilities[0] = newAbility;
+
+        // Assert that Alice can edit a mon 
+        vm.startPrank(ALICE);
+        monRegistry.modifyMon(0, newStats, newMoves, moves, newAbilities, abilities);
+
+        // Assert that the old move is no longer valid from the mon registry 
+        // and that the new move is
+        assertEq(monRegistry.isValidMove(0, move), false);
+        assertEq(monRegistry.isValidMove(0, newMove), true);
+
+        // Assert that the old ability is no longer valid from the mon registry
+        // and that the new ability is
+        assertEq(monRegistry.isValidAbility(0, ability), false);
+        assertEq(monRegistry.isValidAbility(0, newAbility), true);
+
+        // Assert that Bob cannot edit a mon
+        vm.startPrank(BOB);
+        vm.expectRevert();
+        monRegistry.modifyMon(0, newStats, newMoves, moves, newAbilities, abilities);
     }
 }

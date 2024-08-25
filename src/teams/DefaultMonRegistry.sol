@@ -69,7 +69,7 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
         {
             uint256 numMovesToRemove = movesToRemove.length;
             for (uint256 i; i < numMovesToRemove; ++i) {
-                moves.remove(address(movesToAdd[i]));
+                moves.remove(address(movesToRemove[i]));
             }
         }
         EnumerableSetLib.AddressSet storage abilities = monAbilities[monId];
@@ -82,7 +82,7 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
         {
             uint256 numAbilitiesToRemove = abilitiesToRemove.length;
             for (uint256 i; i < numAbilitiesToRemove; ++i) {
-                abilities.remove(address(abilitiesToAdd[i]));
+                abilities.remove(address(abilitiesToRemove[i]));
             }
         }
     }

@@ -1,14 +1,26 @@
-dev TODO:
+TODO
 
-NOTE: KNOWN BUGGY INTERACTION
-- If a move forces a switch and triggers before the other player can make its move, it might be an invalid move
-- The Engine handles the case where the stamina is insufficient (it just skips the move)
-- But other weird cases might happen!
+- finish up tests for mon registry / team registry
+- clean up the type to decode pipeline to reduce gas
+- start thinking through mons / moves
+- implement mons / moves / write tests
 
-DO THIS NEXT:
-****************************
-- add canonical mon registry to prefill mon struct / moves / abilities
-****************************
+---------------------------------------------------------------------------------------------
+
+- to think about move implementations:
+    - tricky moves to use as examples for edge cases:
+        - parting shot
+        - destiny bond
+        - substitute
+        - volt switch
+        - barrier/frost veil
+
+    - categorizing move types
+        - normal damaging moves (trade-off between accuracy and damage)
+        - normal damaging move + % to inflict additional effect (status, stat boost, stamina, etc.)
+        - stat boost (2 stages to any one stat) / (1 stage to two stats)
+        - healing (reduced healing over time)
+        - environmental (hazards/weather/etc.)
 
 Negative Status Effects:
 
@@ -25,28 +37,7 @@ Negative Status Effects:
 
 ---------------------------------------------------------------------------------------------
 
-Feature thinking:
-
-- make/take model for starting matches (e.g. p1 starts a challenge, p2 can accept)
-    - let users specify if they want to be filled against anyone or a specific person
-
-- add held items to monData
-    - static and triggered
-
-- add abilities to monData
-    - static and triggered
-
-- to think about move implementations:
-    - tricky moves to use as examples for edge cases:
-        - parting shot
-        - destiny bond
-        - substitute
-        - volt switch
-        - barrier/frost veil
-
-    - categorizing move types
-        - normal damaging moves (trade-off between accuracy and damage)
-        - normal damaging move + % to inflict additional effect (status, stat boost, stamina, etc.)
-        - stat boost (2 stages to any one stat) / (1 stage to two stats)
-        - healing (reduced healing over time)
-        - environmental (hazards/weather/etc.)
+NOTE: KNOWN BUGGY INTERACTION
+- If a move forces a switch and triggers before the other player can make its move, it might be an invalid move
+- The Engine handles the case where the stamina is insufficient (it just skips the move)
+- But other weird cases might happen!

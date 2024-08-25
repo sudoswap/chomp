@@ -14,6 +14,7 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
     mapping(uint256 monId => MonStats) public monStats;
     mapping(uint256 monId => EnumerableSetLib.AddressSet) private monMoves;
     mapping(uint256 monId => EnumerableSetLib.AddressSet) private monAbilities;
+    mapping(uint256 monId => mapping(bytes32 => string)) private monMetadata;
 
     error MonAlreadyCreated();
     error MonNotyetCreated();
@@ -84,6 +85,16 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
             for (uint256 i; i < numAbilitiesToRemove; ++i) {
                 abilities.remove(address(abilitiesToRemove[i]));
             }
+        }
+    }
+
+    function modifyMonMetadata(uint256 monId, bytes32[] memory keys, string[] memory values)
+        external
+        onlyOwner
+    {
+        mapping(bytes32 => string) storage metadata = monMetadata[monId];
+        for (uint256 i; i < keys.length; ++i) {
+            metadata[keys[i]] = values[i];
         }
     }
 

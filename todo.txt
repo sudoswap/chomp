@@ -1,6 +1,7 @@
 TODO
 
 - finish up tests for mon registry / team registry
+    - add arbitrary mapping from id to mapping to bytes32 to string to store arbitrary metadata
 - clean up the type to decode pipeline to reduce gas
 - start thinking through mons / moves
 - implement mons / moves / write tests

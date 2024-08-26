@@ -19,12 +19,8 @@ contract DefaultStaminaRegen is IEffect {
     }
 
     // Should run at end of round
-    function shouldRunAtStep(EffectStep r) external pure returns (bool) {
-        if (r == EffectStep.RoundEnd) {
-            return true;
-        } else {
-            return false;
-        }
+    function shouldRunAtStep(EffectStep r) external pure returns (bool roundEnd) {
+        roundEnd = r == EffectStep.RoundEnd;
     }
 
     function shouldClearAfterMonSwitch() external pure returns (bool) {

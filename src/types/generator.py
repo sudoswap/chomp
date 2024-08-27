@@ -7,8 +7,10 @@ def multiplier_to_bits(m):
         return '01'
     if m == 2:
         return '10'
-    else:
+    if m == 5:
         return '11'
+    else:
+        raise ValueError(f"Invalid multiplier: {m}")
 
 def parse_csv(file_path):
     v1 = ''

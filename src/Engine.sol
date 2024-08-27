@@ -624,8 +624,7 @@ contract Engine is IEngine {
     function _handlePlayerMove(bytes32 battleKey, uint256 rng, uint256 playerIndex) internal {
         Battle storage battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
-        uint256 turnId = state.turnId;
-        RevealedMove storage move = battleStates[battleKey].moveHistory[playerIndex][turnId];
+        RevealedMove storage move = battleStates[battleKey].moveHistory[playerIndex][state.turnId];
 
         // Handle shouldSkipTurn flag first and toggle it off if set
         MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
@@ -669,7 +668,18 @@ contract Engine is IEngine {
             battleKeyForWrite = battleKey;
 
             // Run the move and see if we need to handle a switch
-            (bool doSwitch) = moveSet.move(battleKey, playerIndex, move.extraData, rng);
+            (bool doSwitch, int32 damage) = moveSet.move(battleKey, playerIndex, move.extraData, rng);
+
+            uint256 defenderPlayerIndex = (playerIndex + 1) % 2;
+
+            // Do damage calculation and check for KO on the defending mon
+            state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta -= damage;
+
+            // Set the KO flag if needed
+            int32 newTotalHealth = int32(battle.teams[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].stats.hp) + state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta;
+            if (newTotalHealth <= 0) {
+                state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].isKnockedOut = true;
+            }
 
             // If we need to a switch, check to see what we switch
             if (doSwitch) {

@@ -31,7 +31,8 @@ import {TestTeamRegistry} from "./mocks/TestTeamRegistry.sol";
 import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
 import {SkipTurnMove} from "./mocks/SkipTurnMove.sol";
 
-import {TypeCalculator} from "../src/types/TypeCalculator.sol";
+import {ITypeCalculator} from "../src/types/ITypeCalculator.sol";
+import {TestTypeCalculator} from "./mocks/TestTypeCalculator.sol";
 
 import {CustomAttack} from "../src/moves/CustomAttack.sol";
 import {IMoveSet} from "../src/moves/IMoveSet.sol";
@@ -60,7 +61,7 @@ import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
 contract EngineTest is Test {
     Engine engine;
     DefaultValidator validator;
-    TypeCalculator typeCalc;
+    ITypeCalculator typeCalc;
     DefaultRandomnessOracle defaultOracle;
     TestTeamRegistry defaultRegistry;
 
@@ -77,7 +78,7 @@ contract EngineTest is Test {
         validator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        typeCalc = new TypeCalculator();
+        typeCalc = new TestTypeCalculator();
         dummyAttack = new CustomAttack(
             engine,
             typeCalc,

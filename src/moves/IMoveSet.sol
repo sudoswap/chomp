@@ -7,10 +7,11 @@ import "../Structs.sol";
 import {IEffect} from "../effects/IEffect.sol";
 
 interface IMoveSet {
+
     // A move can force up to one switch by returning which player index, which mon index to switch
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData, uint256 rng)
         external
-        returns (bool hasPostMoveSwitch);
+        returns (bool hasPostMoveSwitch, int32 damage);
 
     // A move can force up to one switch after its normal move execution has ended
     function postMoveSwitch(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData)

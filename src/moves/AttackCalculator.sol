@@ -27,12 +27,12 @@ abstract contract AttackCalculator {
         Type attackType,
         AttackSupertype attackSupertype,
         uint256 rng
-    ) public {
+    ) public view returns (int32) {
         BattleState memory state = ENGINE.getBattleState(battleKey);
 
         // Do accuracy check first to decide whether or not to short circuit
         if ((rng % 100) >= accuracy) {
-            return;
+            return 0;
         }
 
         uint32 damage;
@@ -76,18 +76,6 @@ abstract contract AttackCalculator {
             damage = (basePower * attackStat * (100 - rngScaling) * typeMultiplier) / (defenceStat * 100);
         }
 
-        // Do damage calc and check for KO on defending mon
-        ENGINE.updateMonState(
-            defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], MonStateIndexName.Hp, -1 * int32(damage)
-        );
-
-        // Check for KO and set if so on defending mon
-        int32 newTotalHealth = int32(defenderMon.stats.hp)
-            + state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta - int32(damage);
-        if (newTotalHealth <= 0) {
-            ENGINE.updateMonState(
-                defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], MonStateIndexName.IsKnockedOut, 1
-            );
-        }
+        return int32(damage);
     }
 }

@@ -1,10 +1,8 @@
 TODO
 
-- finish up tests for mon registry / team registry
-    - add arbitrary mapping from id to mapping to bytes32 to string to store arbitrary metadata
-- clean up the type to decode pipeline to reduce gas
-- start thinking through mons / moves
-- implement mons / moves / write tests
+- implement isValidTarget(false) to ensure the engine will fail if it's not a valid target and test for it
+- have moves return damage and have the engine handle it as a privileged action
+- add onDamage to effects for the mon receiving damage and handle it (preDamage and postDamage)
 
 ---------------------------------------------------------------------------------------------
 

@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../Enums.sol";
 import "../Structs.sol";
+import {IMoveSet} from "../moves/IMoveSet.sol";
 
 interface IEffect {
     function name() external returns (string memory);
@@ -17,7 +18,7 @@ interface IEffect {
     // (not valid for global effects, can disregard)
     function shouldClearAfterMonSwitch() external returns (bool);
 
-    // Lifecycle hooks during normal battle flow (either before or after start of round)
+    // Lifecycle hooks during normal battle flow 
     function onRoundStart(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);
@@ -27,6 +28,9 @@ interface IEffect {
     function onMonSwitchIn(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);
+    function onBeforeDamage(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex, IMoveSet move, int32 damage)
+        external
+        returns (bytes memory updatedExtraData, bool removeAfterRun, int32 updatedDamage);
 
     // Lifecycle hooks when being applied or removed
     function onApply(uint256 targetIndex, uint256 monIndex, bytes memory extraData)

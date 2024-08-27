@@ -57,4 +57,7 @@ contract SingleInstanceEffect is IEffect {
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {}
+    function onBeforeDamage(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex, IMoveSet move, int32 damage)
+        external
+        returns (bytes memory updatedExtraData, bool removeAfterRun, int32 updatedDamage) {}
 }

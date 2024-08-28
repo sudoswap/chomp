@@ -1,11 +1,7 @@
 TODO
 
 - implement isValidTarget(false) to ensure the engine will fail if it's not a valid target and test for it
-
-
-- have moves return damage and have the engine handle it as a privileged action
 - add onDamage to effects for the mon receiving damage and handle it (preDamage and postDamage)
-Figure out how to cleanly handle preDamage hook or remove it
 
 ---------------------------------------------------------------------------------------------
 

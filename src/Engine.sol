@@ -179,12 +179,29 @@ contract Engine is IEngine {
         globalKV[battleKey][key] = value;
     }
 
+    function dealDamage(uint256 playerIndex, uint256 monIndex, uint32 damage) external {
+        bytes32 battleKey = battleKeyForWrite;
+        if (battleKey == bytes32(0)) {
+            revert NoWriteAllowed();
+        }
+        MonState storage monState = battleStates[battleKey].monStates[playerIndex][monIndex];
+        monState.hpDelta -= int32(damage);
+        // Set KO flag if the total hpDelta is greater than the original mon HP
+        uint32 baseHp = battles[battleKey].teams[playerIndex][monIndex].stats.hp;
+        if (monState.hpDelta + int32(baseHp) <= 0) {
+            monState.isKnockedOut = true;
+        }
+        else {
+            uint256[] storage rngValues = battleStates[battleKey].pRNGStream;
+            uint256 rngValue = rngValues[rngValues.length - 1];
+            _runEffects(battleKey, rngValue, playerIndex, playerIndex, EffectStep.AfterDamage);
+        }
+    }
+
     /**
      * - Core game functions
      */
-
     function proposeBattle(StartBattleArgs memory args) external returns (bytes32) {
-
         // Caller must be p0
         if (msg.sender != args.p0) {
             revert NotProposer();
@@ -196,7 +213,7 @@ contract Engine is IEngine {
         // Update nonce if the previous battle was already accepted and update battle key
         if (existingBattle.status == BattleProposalStatus.Accepted) {
             pairHashNonces[pairHash] += 1;
-            (battleKey, ) = _computeBattleKey(args);
+            (battleKey,) = _computeBattleKey(args);
         }
 
         // Get the team from the registry
@@ -222,7 +239,11 @@ contract Engine is IEngine {
         return battleKey;
     }
 
-    function _computeBattleKey(StartBattleArgs memory args) internal view returns (bytes32 battleKey, bytes32 pairHash) {
+    function _computeBattleKey(StartBattleArgs memory args)
+        internal
+        view
+        returns (bytes32 battleKey, bytes32 pairHash)
+    {
         pairHash = keccak256(abi.encode(args.p0, args.p1));
         if (uint256(uint160(args.p0)) > uint256(uint160(args.p1))) {
             pairHash = keccak256(abi.encode(args.p1, args.p0));
@@ -668,10 +689,9 @@ contract Engine is IEngine {
             battleKeyForWrite = battleKey;
 
             // Run the move and see if we need to handle a switch
-            (bool doSwitch, int32 damage) = moveSet.move(battleKey, playerIndex, move.extraData, rng);
+            bool doSwitch = moveSet.move(battleKey, playerIndex, move.extraData, rng);
 
-            uint256 defenderPlayerIndex = (playerIndex + 1) % 2;
-
+            /*
             // Do damage calculation and check for KO on the defending mon
             state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta -= damage;
 
@@ -680,6 +700,7 @@ contract Engine is IEngine {
             if (newTotalHealth <= 0) {
                 state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].isKnockedOut = true;
             }
+            */
 
             // If we need to a switch, check to see what we switch
             if (doSwitch) {
@@ -707,7 +728,6 @@ contract Engine is IEngine {
             effects = state.monStates[effectIndex][state.activeMonIndex[effectIndex]].targetedEffects;
             extraData = state.monStates[effectIndex][state.activeMonIndex[effectIndex]].extraDataForTargetedEffects;
         }
-
         uint256 i;
         while (i < effects.length) {
             if (effects[i].shouldRunAtStep(round)) {

@@ -30,7 +30,7 @@ contract TeamsTest is Test {
         monRegistry = new DefaultMonRegistry();
         teamRegistry = new DefaultTeamRegistry(
             DefaultTeamRegistry.Args({REGISTRY: monRegistry, MONS_PER_TEAM: 1, MOVES_PER_MON: 1})
-        );  
+        );
 
         // Make Alice the mon registry owner
         monRegistry.transferOwnership(ALICE);
@@ -41,11 +41,9 @@ contract TeamsTest is Test {
         IAbility[] memory abilities = new IAbility[](1);
         abilities[0] = ability;
 
-        IMoveSet move = new EffectAttack(IEngine(address(0)), IEffect(address(0)), EffectAttack.Args({
-            TYPE: Type.Fire,
-            STAMINA_COST: 1,
-            PRIORITY: 1
-        }));
+        IMoveSet move = new EffectAttack(
+            IEngine(address(0)), IEffect(address(0)), EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1})
+        );
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = move;
 
@@ -82,11 +80,9 @@ contract TeamsTest is Test {
             type2: Type.None
         });
 
-        IMoveSet newMove = new EffectAttack(IEngine(address(0)), IEffect(address(0)), EffectAttack.Args({
-            TYPE: Type.Fire,
-            STAMINA_COST: 2,
-            PRIORITY: 2
-        }));
+        IMoveSet newMove = new EffectAttack(
+            IEngine(address(0)), IEffect(address(0)), EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 2, PRIORITY: 2})
+        );
         IMoveSet[] memory newMoves = new IMoveSet[](1);
         newMoves[0] = newMove;
 
@@ -94,11 +90,11 @@ contract TeamsTest is Test {
         IAbility[] memory newAbilities = new IAbility[](1);
         newAbilities[0] = newAbility;
 
-        // Assert that Alice can edit a mon 
+        // Assert that Alice can edit a mon
         vm.startPrank(ALICE);
         monRegistry.modifyMon(0, newStats, newMoves, moves, newAbilities, abilities);
 
-        // Assert that the old move is no longer valid from the mon registry 
+        // Assert that the old move is no longer valid from the mon registry
         // and that the new move is
         assertEq(monRegistry.isValidMove(0, move), false);
         assertEq(monRegistry.isValidMove(0, newMove), true);
@@ -132,17 +128,13 @@ contract TeamsTest is Test {
         IAbility[] memory abilities = new IAbility[](1);
         abilities[0] = ability;
 
-        IMoveSet move1 = new EffectAttack(IEngine(address(0)), IEffect(address(0)), EffectAttack.Args({
-            TYPE: Type.Fire,
-            STAMINA_COST: 1,
-            PRIORITY: 1
-        }));        
-        
-        IMoveSet move2 = new EffectAttack(IEngine(address(0)), IEffect(address(0)), EffectAttack.Args({
-            TYPE: Type.Fire,
-            STAMINA_COST: 1,
-            PRIORITY: 1
-        }));
+        IMoveSet move1 = new EffectAttack(
+            IEngine(address(0)), IEffect(address(0)), EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1})
+        );
+
+        IMoveSet move2 = new EffectAttack(
+            IEngine(address(0)), IEffect(address(0)), EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1})
+        );
 
         IMoveSet[] memory moves = new IMoveSet[](2);
         moves[0] = move1;
@@ -176,6 +168,6 @@ contract TeamsTest is Test {
         assertEq(teamRegistry.getTeamCount(ALICE), 1);
         Mon[] memory aliceTeam0 = teamRegistry.getTeam(ALICE, 0);
         assertEq(aliceTeam0.length, 1);
-        assertEq(uint(aliceTeam0[0].stats.type1), uint(Type.Fire));
+        assertEq(uint256(aliceTeam0[0].stats.type1), uint256(Type.Fire));
     }
 }

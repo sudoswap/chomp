@@ -17,7 +17,7 @@ contract DefaultValidator is IValidator {
 
     uint256 immutable MONS_PER_TEAM;
     uint256 immutable MOVES_PER_MON;
-    uint256 immutable public TIMEOUT_DURATION;
+    uint256 public immutable TIMEOUT_DURATION;
     IEngine immutable ENGINE;
 
     mapping(address => mapping(bytes32 => uint256)) proposalTimestampForProposer;

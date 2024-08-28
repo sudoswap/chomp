@@ -23,11 +23,10 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
         _initializeOwner(msg.sender);
     }
 
-    function createMon(
-        MonStats memory _monStats,
-        IMoveSet[] memory allowedMoves,
-        IAbility[] memory allowedAbilities
-    ) external onlyOwner {
+    function createMon(MonStats memory _monStats, IMoveSet[] memory allowedMoves, IAbility[] memory allowedAbilities)
+        external
+        onlyOwner
+    {
         uint256 monId = numMons;
         MonStats storage existingMon = monStats[monId];
         if (existingMon.hp != 0 && existingMon.stamina != 0) {
@@ -88,10 +87,7 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
         }
     }
 
-    function modifyMonMetadata(uint256 monId, bytes32[] memory keys, string[] memory values)
-        external
-        onlyOwner
-    {
+    function modifyMonMetadata(uint256 monId, bytes32[] memory keys, string[] memory values) external onlyOwner {
         mapping(bytes32 => string) storage metadata = monMetadata[monId];
         for (uint256 i; i < keys.length; ++i) {
             metadata[keys[i]] = values[i];

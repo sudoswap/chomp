@@ -27,12 +27,12 @@ abstract contract AttackCalculator {
         Type attackType,
         AttackSupertype attackSupertype,
         uint256 rng
-    ) public view returns (int32) {
+    ) public {
         BattleState memory state = ENGINE.getBattleState(battleKey);
 
         // Do accuracy check first to decide whether or not to short circuit
         if ((rng % 100) >= accuracy) {
-            return 0;
+            return;
         }
 
         uint32 damage;
@@ -72,10 +72,8 @@ abstract contract AttackCalculator {
             if (MOVE_VARIANCE > 0) {
                 rngScaling = uint32(rng % (MOVE_VARIANCE + 1));
             }
-
             damage = (basePower * attackStat * (100 - rngScaling) * typeMultiplier) / (defenceStat * 100);
         }
-
-        return int32(damage);
+        ENGINE.dealDamage(defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], damage);
     }
 }

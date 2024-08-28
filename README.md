@@ -16,6 +16,14 @@ mechanical differences are:
 - far greater support for state-based moves / mechanics
 - stamina-based resource system instead of PP for balancing moves
 
+## Getting Started
+
+This repo uses [foundry](https://book.getfoundry.sh/getting-started/installation).
+
+`forge install`
+
+`forge test`
+
 ### Engine.sol
 Main entry point for handling Battles.
 Handles committing, revealing, and executing moves to advance battle state.

@@ -2,8 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "../Structs.sol";
-import "../moves/IMoveSet.sol";
+
 import "../abilities/IAbility.sol";
+import "../moves/IMoveSet.sol";
 
 interface IMonRegistry {
     function getMonData(uint256 monId)

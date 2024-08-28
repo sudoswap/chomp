@@ -60,7 +60,8 @@ contract InstantDeathEffect is IEffect {
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {}
-    function onBeforeDamage(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex, IMoveSet move, int32 damage)
+    function onAfterDamage(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
         external
-        returns (bytes memory updatedExtraData, bool removeAfterRun, int32 updatedDamage) {}
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {}
 }

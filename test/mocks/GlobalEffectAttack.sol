@@ -60,4 +60,8 @@ contract GlobalEffectAttack is IMoveSet {
         // No-op
         return (NO_SWITCH_FLAG, NO_SWITCH_FLAG);
     }
+
+    function moveClass(bytes32 battleKey) external pure returns (MoveClass) {
+        return MoveClass.Physical;
+    }
 }

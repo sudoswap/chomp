@@ -84,6 +84,7 @@ contract Engine is IEngine {
         return commitments[battleKey][player];
     }
 
+
     /**
      * - Write functions for MonState, Effects, and GlobalKV
      */
@@ -198,6 +199,7 @@ contract Engine is IEngine {
         }
     }
 
+
     /**
      * - Core game functions
      */
@@ -237,19 +239,6 @@ contract Engine is IEngine {
             revert InvalidBattleConfig();
         }
         return battleKey;
-    }
-
-    function _computeBattleKey(StartBattleArgs memory args)
-        internal
-        view
-        returns (bytes32 battleKey, bytes32 pairHash)
-    {
-        pairHash = keccak256(abi.encode(args.p0, args.p1));
-        if (uint256(uint160(args.p0)) > uint256(uint160(args.p1))) {
-            pairHash = keccak256(abi.encode(args.p1, args.p0));
-        }
-        uint256 pairHashNonce = pairHashNonces[pairHash];
-        battleKey = keccak256(abi.encode(pairHash, pairHashNonce));
     }
 
     function acceptBattle(bytes32 battleKey) external {
@@ -554,9 +543,24 @@ contract Engine is IEngine {
         }
     }
 
+
     /**
-     * - Internal helper functions for execute()
+     * - Internal helper functions
      */
+
+    function _computeBattleKey(StartBattleArgs memory args)
+        internal
+        view
+        returns (bytes32 battleKey, bytes32 pairHash)
+    {
+        pairHash = keccak256(abi.encode(args.p0, args.p1));
+        if (uint256(uint160(args.p0)) > uint256(uint160(args.p1))) {
+            pairHash = keccak256(abi.encode(args.p1, args.p0));
+        }
+        uint256 pairHashNonce = pairHashNonces[pairHash];
+        battleKey = keccak256(abi.encode(pairHash, pairHashNonce));
+    }
+
     function _checkForGameOverOrKO(bytes32 battleKey, uint256 priorityPlayerIndex)
         internal
         returns (

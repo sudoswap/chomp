@@ -34,9 +34,11 @@ enum EffectStep {
     AfterDamage
 }
 
-enum AttackSupertype {
+enum MoveClass {
     Physical,
-    Special
+    Special,
+    Self,
+    Other
 }
 
 enum MonStateIndexName {

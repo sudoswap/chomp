@@ -39,6 +39,8 @@ import {IMoveSet} from "../src/moves/IMoveSet.sol";
 
 import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
 
+import {InvalidMove} from "./mocks/InvalidMove.sol";
+
 /**
  * Tests:
  * Battle initiated, stored to state [x]
@@ -2863,5 +2865,68 @@ contract EngineTest is Test {
         BattleState memory state = engine.getBattleState(battleKey);
         assertEq(state.monStates[0][0].targetedEffects.length, 1);
         assertEq(state.monStates[1][0].targetedEffects.length, 1);
+    }
+
+    function test_moveSpecificInvalidFlagsAreCheckedDuringReveal() public {
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        IMoveSet invalidMove = new InvalidMove(engine);
+        moves[0] = invalidMove;
+        Mon memory mon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon[] memory team = new Mon[](1);
+        team[0] = mon;
+
+        // Register teams
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
+        });
+
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Assert that Alice committing and trying to reveal move index 0 will fail
+        vm.startPrank(ALICE);
+        uint256 moveIndex = 0;
+        bytes32 aliceMoveHash = keccak256(abi.encodePacked(moveIndex, bytes32(""), ""));
+        engine.commitMove(battleKey, aliceMoveHash);
+
+        // Have Bob commit to do the same (it's fine bc we test Alice revert)
+        vm.startPrank(BOB);
+        engine.commitMove(battleKey, aliceMoveHash);
+
+        // Alice should revert when revealing
+        vm.startPrank(ALICE);
+        vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
+        engine.revealMove(battleKey, 0, bytes32(""), "");
     }
 }

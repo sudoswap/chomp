@@ -7,8 +7,6 @@ TODO
 - consider an onMonSwitchOut flag and write some tests to ensure that it runs so we can clear temporary effects 
 when a mon switches out
 
-- add super type to moves (phys/spec/self/other)
-
 ---------------------------------------------------------------------------------------------
 
 - to think about move implementations:

@@ -41,7 +41,7 @@ contract CustomAttack is AttackCalculator, IMoveSet {
         returns (bool)
     {
         calculateDamage(
-            battleKey, attackerPlayerIndex, BASE_POWER, ACCURACY, STAMINA_COST, TYPE, AttackSupertype.Physical, rng
+            battleKey, attackerPlayerIndex, BASE_POWER, ACCURACY, STAMINA_COST, TYPE, MoveClass.Physical, rng
         );
         return false;
     }
@@ -65,5 +65,9 @@ contract CustomAttack is AttackCalculator, IMoveSet {
     function postMoveSwitch(bytes32, uint256, bytes calldata) external pure returns (uint256, uint256) {
         // No-op
         return (NO_SWITCH_FLAG, NO_SWITCH_FLAG);
+    }
+
+    function moveClass(bytes32) external pure returns (MoveClass) {
+        return MoveClass.Physical;
     }
 }

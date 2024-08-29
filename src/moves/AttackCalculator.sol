@@ -25,7 +25,7 @@ abstract contract AttackCalculator {
         uint32 accuracy, // out of 100
         uint256,
         Type attackType,
-        AttackSupertype attackSupertype,
+        MoveClass attackSupertype,
         uint256 rng
     ) public {
         BattleState memory state = ENGINE.getBattleState(battleKey);
@@ -53,7 +53,7 @@ abstract contract AttackCalculator {
                 state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]];
 
             // Grab the right atk/defense stats, and apply the delta if needed
-            if (attackSupertype == AttackSupertype.Physical) {
+            if (attackSupertype == MoveClass.Physical) {
                 attackStat = uint32(int32(attackerMon.stats.attack) + attackerMonState.attackDelta);
                 defenceStat = uint32(int32(defenderMon.stats.defence) + defenderMonState.defenceDelta);
             } else {

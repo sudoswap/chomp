@@ -42,7 +42,7 @@ import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
 import {InvalidMove} from "./mocks/InvalidMove.sol";
 
 /**
- * Tests:
+ * Tests (inexhaustive):
  * Battle initiated, stored to state [x]
  * Battle initiated, MUST select swap [x]
  * Faster Speed Wins KO, leads to game over if team size = 1 [x]

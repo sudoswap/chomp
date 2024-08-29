@@ -1,11 +1,31 @@
 TODO
 
-- implement isValidTarget(false) to ensure the engine will fail if it's not a valid target and test for it
-
 - write tests for afterDamage hook
+    - effect that resets damage after taking damage
 
-- consider an onMonSwitchOut flag and write some tests to ensure that it runs so we can clear temporary effects 
-when a mon switches out
+- add onMonSwitchOut flag and write some tests to ensure that it runs so we can clear temporary effects 
+when a mon switches out for effects
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ---------------------------------------------------------------------------------------------
 

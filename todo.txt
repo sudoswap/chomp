@@ -1,7 +1,13 @@
 TODO
 
 - implement isValidTarget(false) to ensure the engine will fail if it's not a valid target and test for it
-- add onDamage to effects for the mon receiving damage and handle it (preDamage and postDamage)
+
+- write tests for afterDamage hook
+
+- consider an onMonSwitchOut flag and write some tests to ensure that it runs so we can clear temporary effects 
+when a mon switches out
+
+- add super type to moves (phys/spec/self/other)
 
 ---------------------------------------------------------------------------------------------
 

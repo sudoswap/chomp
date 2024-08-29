@@ -20,6 +20,9 @@ mechanical differences are:
 
 This repo uses [foundry](https://book.getfoundry.sh/getting-started/installation).
 
+
+To get started:
+
 `forge install`
 
 `forge test`
@@ -37,15 +40,16 @@ General flow:
 - anyone can execute to advance game state
 - validator ensures moves are legal at each stage
 
+During a player's turn, they can choose either a Move on their active Mon, or switch to a new Mon.
+
 ### Validator
 Validators do auxiliary verification outside of the game engine. They handle additional game ending conditions like timeouts and hook into the Battle's lifecycle, e.g. Battle start and Battle end.
 
 ### Mons
-Mons are the player's game pieces. They can each hold a number of Moves and have their own stats as well as a unique Ability.
+Mons are the player's game pieces. They can each hold a number of Moves and have their own stats as well as a unique Ability. Abilities trigger on switch in, and can either 
 
 ### Moves
-A Move takes in game state and returns any updates. It also has limited ability to write to a global key-value table. 
-See `IMove.sol` for the current working interface.
+A Move can mutate game state, e.g. alter stats, deal damage, or attach effects. Moves cost a Mon stamina to use, with stronger moves requiring more stamina. See `IMove.sol` for the current working interface.
 
 ### Effects
-Moves can return Effects, which are persistent side effects that alter game state. Effects can be called on several lifecycle hooks during a Battle's execution by the Engine. See `IEffect.sol` for the current working interface.
+Effects are persistent side effects that alter game state. Effects can be called on several lifecycle hooks during a Battle's execution by the Engine, e.g. during a Mon switching in, at the beginning of a round, etc. See `IEffect.sol` for the current working interface.

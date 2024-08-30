@@ -6,34 +6,41 @@ import "../Structs.sol";
 import {IMoveSet} from "../moves/IMoveSet.sol";
 
 interface IEffect {
+    // Self explanatory
     function name() external returns (string memory);
 
-    // Whether or not to add the effect
-    function shouldApply(uint256 targetIndex, uint256 monIndex, bytes memory extraData) external returns (bool);
-
-    // Whether to run the effect at the start of the round
+    // Whether to run the effect at a specific step
     function shouldRunAtStep(EffectStep r) external returns (bool);
 
+    // Whether or not to add the effect if the step condition is met
+    function shouldApply(bytes memory extraData, uint256 targetIndex, uint256 monIndex) external returns (bool);
+
     // Lifecycle hooks during normal battle flow
-    function onRoundStart(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
+    function onRoundStart(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);
-    function onRoundEnd(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
+    function onRoundEnd(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);
-    function onMonSwitchIn(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
+
+    // NOTE: ONLY RUN ON GLOBAL EFFECTS (mons have their Ability as their own hook to apply an effect on switch in)
+    function onMonSwitchIn(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);
-    function onMonSwitchOut(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
+
+    // NOTE: CURRENTLY ONLY RUN LOCALLY ON MONS (global effects do not have this hook)
+    function onMonSwitchOut(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);
-    function onAfterDamage(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
+
+    // NOTE: CURRENTLY ONLY RUN LOCALLY ON MONS (global effects do not have this hook)
+    function onAfterDamage(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);
 
     // Lifecycle hooks when being applied or removed
-    function onApply(uint256 targetIndex, uint256 monIndex, bytes memory extraData)
+    function onApply(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         returns (bytes memory updatedExtraData);
-    function onRemove(bytes memory extraData) external;
+    function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) external;
 }

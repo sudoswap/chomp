@@ -7,6 +7,15 @@ TODO
 
 ---------------------------------------------------------------------------------------------
 
+Later features:
+- name() for mons (use the mon registry)
+- store mon registry / index (need to get from team registry)
+- team registry should actually just index into the mon registry vs copying the entire struct over
+- default validator still needs to check team eligibility in case e.g. move eligibility has changed
+    - add validateTeam() helper?
+
+---------------------------------------------------------------------------------------------
+
 - to think about move implementations:
     - tricky moves to use as examples for edge cases:
         - parting shot
@@ -21,6 +30,8 @@ TODO
         - stat boost (2 stages to any one stat) / (1 stage to two stats)
         - healing (reduced healing over time)
         - environmental (hazards/weather/etc.)
+
+To implement: 
 
 Negative Status Effects:
 
@@ -41,3 +52,5 @@ NOTE: KNOWN BUGGY INTERACTION
 - If a move forces a switch and triggers before the other player can make its move, it might be an invalid move
 - The Engine handles the case where the stamina is insufficient (it just skips the move)
 - But other weird cases might happen!
+
+---------------------------------------------------------------------------------------------

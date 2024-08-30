@@ -711,9 +711,12 @@ contract Engine is IEngine {
             effects = state.globalEffects;
             extraData = state.extraDataForGlobalEffects;
         } else {
-            monIndex = state.activeMonIndex[effectIndex];
             effects = state.monStates[effectIndex][monIndex].targetedEffects;
             extraData = state.monStates[effectIndex][monIndex].extraDataForTargetedEffects;
+        }
+        // Grab the active mon (global effect won't know which player index to get, so we set it here)
+        if (playerIndex != 2) {
+            monIndex = state.activeMonIndex[playerIndex];
         }
         uint256 i;
         while (i < effects.length) {

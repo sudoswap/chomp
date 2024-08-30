@@ -23,10 +23,6 @@ contract DefaultStaminaRegen is IEffect {
         roundEnd = r == EffectStep.RoundEnd;
     }
 
-    function shouldClearAfterMonSwitch() external pure returns (bool) {
-        return false;
-    }
-
     function onRoundEnd(bytes32 battleKey, uint256, bytes memory, uint256) external returns (bytes memory, bool) {
         uint256 playerSwitchForTurnFlag = ENGINE.getPlayerSwitchForTurnFlagForBattleState(battleKey);
         MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
@@ -66,6 +62,10 @@ contract DefaultStaminaRegen is IEffect {
     function onMonSwitchIn(bytes32 battleKey, uint256, bytes memory, uint256 targetIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {}
+    function onMonSwitchOut(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
+        external
+        returns (bytes memory updatedExtraData, bool removeAfterRun) 
     {}
     function onAfterDamage(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
         external

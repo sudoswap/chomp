@@ -31,6 +31,7 @@ enum EffectStep {
     RoundEnd,
     OnRemove,
     OnMonSwitchIn,
+    OnMonSwitchOut,
     AfterDamage
 }
 

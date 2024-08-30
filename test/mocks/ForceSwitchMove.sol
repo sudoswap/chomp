@@ -58,7 +58,7 @@ contract ForceSwitchMove is IMoveSet {
         return true;
     }
 
-    function moveClass(bytes32 battleKey) external pure returns (MoveClass) {
+    function moveClass(bytes32) external pure returns (MoveClass) {
         return MoveClass.Physical;
     }
 }

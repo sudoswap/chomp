@@ -21,15 +21,7 @@ contract InstantDeathEffect is IEffect {
 
     // Should run at end of round
     function shouldRunAtStep(EffectStep r) external pure returns (bool) {
-        if (r == EffectStep.RoundEnd) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    function shouldClearAfterMonSwitch() external pure returns (bool) {
-        return false;
+        return r == EffectStep.RoundEnd;
     }
 
     function onRoundEnd(bytes32 battleKey, uint256, bytes memory, uint256 targetIndex)
@@ -59,6 +51,10 @@ contract InstantDeathEffect is IEffect {
     function onMonSwitchIn(bytes32, uint256, bytes memory, uint256)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {}
+    function onMonSwitchOut(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
+        external
+        returns (bytes memory updatedExtraData, bool removeAfterRun) 
     {}
     function onAfterDamage(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
         external

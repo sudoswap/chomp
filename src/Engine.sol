@@ -602,40 +602,20 @@ contract Engine is IEngine {
     function _handleSwitch(bytes32 battleKey, uint256 playerIndex, uint256 monToSwitchIndex) internal {
         BattleState storage state = battleStates[battleKey];
         MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
-        IEffect[] storage effects = currentMonState.targetedEffects;
-        bytes[] storage extraData = currentMonState.extraDataForTargetedEffects;
-        uint256 i = 0;
+        uint256 rng = state.pRNGStream[state.pRNGStream.length - 1];
 
         // If the current mon is not knocked out:
         // Go through each effect to see if it should be cleared after a switch,
         // If so, remove the effect and the extra data
         if (!currentMonState.isKnockedOut) {
-            while (i < effects.length) {
-                if (effects[i].shouldClearAfterMonSwitch()) {
-                    // effects and extra data should be synced
-                    effects[i] = effects[effects.length - 1];
-                    effects.pop();
-
-                    extraData[i] = extraData[effects.length - 1];
-                    extraData.pop();
-                } else {
-                    ++i;
-                }
-            }
-            // Clear out deltas on mon stats
-            currentMonState.attackDelta = 0;
-            currentMonState.specialAttackDelta = 0;
-            currentMonState.defenceDelta = 0;
-            currentMonState.specialDefenceDelta = 0;
-            currentMonState.speedDelta = 0;
-            currentMonState.isKnockedOut = false;
+            _runEffects(battleKey, rng, playerIndex, playerIndex, EffectStep.OnMonSwitchOut);
         }
 
         // Update to new active mon (we assume validate already resolved and gives us a valid target)
         state.activeMonIndex[playerIndex] = monToSwitchIndex;
 
         // Run onMonSwitchIn hook for global effects
-        _runEffects(battleKey, state.pRNGStream[state.pRNGStream.length - 1], 2, playerIndex, EffectStep.OnMonSwitchIn);
+        _runEffects(battleKey, rng, 2, playerIndex, EffectStep.OnMonSwitchIn);
 
         // Run ability for the newly switched in mon
         Mon memory mon = battles[battleKey].teams[playerIndex][monToSwitchIndex];
@@ -751,6 +731,9 @@ contract Engine is IEngine {
                     // NOTE: We pass in the playerIndex here, not the effectIndex so that we know which active mon to apply effects to
                     (updatedExtraData, removeAfterRun) =
                         effects[i].onMonSwitchIn(battleKey, rng, extraData[i], playerIndex);
+                } else if (round == EffectStep.OnMonSwitchOut) {
+                    (updatedExtraData, removeAfterRun) =
+                        effects[i].onMonSwitchOut(battleKey, rng, extraData[i], effectIndex);
                 }
 
                 // If we remove the effect after doing it, then we clear and update the array/extra data

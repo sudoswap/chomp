@@ -84,7 +84,6 @@ contract Engine is IEngine {
         return commitments[battleKey][player];
     }
 
-
     /**
      * - Write functions for MonState, Effects, and GlobalKV
      */
@@ -123,7 +122,7 @@ contract Engine is IEngine {
         if (battleKey == bytes32(0)) {
             revert NoWriteAllowed();
         }
-        if (effect.shouldApply(targetIndex, monIndex, extraData)) {
+        if (effect.shouldApply(extraData, targetIndex, monIndex)) {
             BattleState storage state = battleStates[battleKey];
             if (targetIndex == 2) {
                 state.globalEffects.push(effect);
@@ -134,8 +133,9 @@ contract Engine is IEngine {
             }
             // Check if we have to run an onApply state update
             if (effect.shouldRunAtStep(EffectStep.OnApply)) {
+                uint256 rng = state.pRNGStream[state.pRNGStream.length - 1];
                 // If so, we run the effect first, and get updated extraData if necessary
-                extraData = effect.onApply(targetIndex, monIndex, extraData);
+                extraData = effect.onApply(rng, extraData, targetIndex, monIndex);
             }
         }
     }
@@ -161,7 +161,7 @@ contract Engine is IEngine {
         // One last check to see if we should run the final lifecycle hook
         IEffect effect = effects[indexToRemove];
         if (effect.shouldRunAtStep(EffectStep.OnRemove)) {
-            effect.onRemove(extraData[indexToRemove]);
+            effect.onRemove(extraData[indexToRemove], targetIndex, monIndex);
         }
 
         // Remove effects and extra data
@@ -191,14 +191,12 @@ contract Engine is IEngine {
         uint32 baseHp = battles[battleKey].teams[playerIndex][monIndex].stats.hp;
         if (monState.hpDelta + int32(baseHp) <= 0) {
             monState.isKnockedOut = true;
-        }
-        else {
+        } else {
             uint256[] storage rngValues = battleStates[battleKey].pRNGStream;
             uint256 rngValue = rngValues[rngValues.length - 1];
             _runEffects(battleKey, rngValue, playerIndex, playerIndex, EffectStep.AfterDamage);
         }
     }
-
 
     /**
      * - Core game functions
@@ -543,11 +541,9 @@ contract Engine is IEngine {
         }
     }
 
-
     /**
      * - Internal helper functions
      */
-
     function _computeBattleKey(StartBattleArgs memory args)
         internal
         view
@@ -624,6 +620,9 @@ contract Engine is IEngine {
         }
 
         // NOTE: We will check for game over after the switch in the engine for two player turns, so we don't do it here
+        // But this also means that the current flow of OnMonSwitchOut effects -> OnMonSwitchIn effects -> ability activateOnSwitch
+        // will all resolve before checking for KOs or winners
+        // (could break this up even more, but that's for a later version / PR)
     }
 
     function _handlePlayerMove(bytes32 battleKey, uint256 rng, uint256 playerIndex) internal {
@@ -698,19 +697,26 @@ contract Engine is IEngine {
         }
     }
 
+    // effect index: the index to grab the relevant effect array
+    // player index: the player to pass into the effects args
     function _runEffects(bytes32 battleKey, uint256 rng, uint256 effectIndex, uint256 playerIndex, EffectStep round)
         internal
     {
         BattleState storage state = battleStates[battleKey];
         IEffect[] storage effects;
         bytes[] storage extraData;
-        // Switch between global or targeted effects array
+        uint256 monIndex;
+        // Switch between global or targeted effects array depending on the args
         if (effectIndex == 2) {
             effects = state.globalEffects;
             extraData = state.extraDataForGlobalEffects;
         } else {
-            effects = state.monStates[effectIndex][state.activeMonIndex[effectIndex]].targetedEffects;
-            extraData = state.monStates[effectIndex][state.activeMonIndex[effectIndex]].extraDataForTargetedEffects;
+            effects = state.monStates[effectIndex][monIndex].targetedEffects;
+            extraData = state.monStates[effectIndex][monIndex].extraDataForTargetedEffects;
+        }
+        // Grab the active mon (global effect won't know which player index to get, so we set it here)
+        if (playerIndex != 2) {
+            monIndex = state.activeMonIndex[playerIndex];
         }
         uint256 i;
         while (i < effects.length) {
@@ -723,25 +729,19 @@ contract Engine is IEngine {
                 bool removeAfterRun;
                 if (round == EffectStep.RoundStart) {
                     (updatedExtraData, removeAfterRun) =
-                        effects[i].onRoundStart(battleKey, rng, extraData[i], effectIndex);
+                        effects[i].onRoundStart(rng, extraData[i], playerIndex, monIndex);
                 } else if (round == EffectStep.RoundEnd) {
-                    (updatedExtraData, removeAfterRun) =
-                        effects[i].onRoundEnd(battleKey, rng, extraData[i], effectIndex);
+                    (updatedExtraData, removeAfterRun) = effects[i].onRoundEnd(rng, extraData[i], playerIndex, monIndex);
                 } else if (round == EffectStep.OnMonSwitchIn) {
-                    // NOTE: We pass in the playerIndex here, not the effectIndex so that we know which active mon to apply effects to
                     (updatedExtraData, removeAfterRun) =
-                        effects[i].onMonSwitchIn(battleKey, rng, extraData[i], playerIndex);
+                        effects[i].onMonSwitchIn(rng, extraData[i], playerIndex, monIndex);
                 } else if (round == EffectStep.OnMonSwitchOut) {
                     (updatedExtraData, removeAfterRun) =
-                        effects[i].onMonSwitchOut(battleKey, rng, extraData[i], effectIndex);
+                        effects[i].onMonSwitchOut(rng, extraData[i], playerIndex, monIndex);
                 }
 
                 // If we remove the effect after doing it, then we clear and update the array/extra data
                 if (removeAfterRun) {
-                    uint256 monIndex = 0;
-                    if (effectIndex != 2) {
-                        monIndex = state.activeMonIndex[effectIndex];
-                    }
                     removeEffect(effectIndex, monIndex, i);
                 }
                 // Otherwise, we update the extra data if e.g. the effect needs to modify its own storage

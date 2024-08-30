@@ -11,7 +11,6 @@ import {IEffect} from "../../src/effects/IEffect.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 
 contract InvalidMove is IMoveSet {
-
     IEngine immutable ENGINE;
 
     constructor(IEngine _ENGINE) {
@@ -22,10 +21,7 @@ contract InvalidMove is IMoveSet {
         return "Effect Attack";
     }
 
-    function move(bytes32, uint256, bytes memory, uint256)
-        external pure
-        returns (bool)
-    {
+    function move(bytes32, uint256, bytes memory, uint256) external pure returns (bool) {
         return false;
     }
 

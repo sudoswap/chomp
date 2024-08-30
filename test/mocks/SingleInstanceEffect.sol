@@ -23,39 +23,47 @@ contract SingleInstanceEffect is IEffect {
         return r == EffectStep.OnApply;
     }
 
-    function onApply(uint256 targetIndex, uint256 monIndex, bytes memory) external returns (bytes memory) {
+    function onApply(uint256, bytes memory, uint256 targetIndex, uint256 monIndex) external returns (bytes memory) {
         bytes32 indexHash = keccak256(abi.encode(targetIndex, monIndex));
         ENGINE.setGlobalKV(indexHash, bytes32("true"));
         return "";
     }
 
-    function shouldApply(uint256 targetIndex, uint256 monIndex, bytes memory) external view returns (bool) {
+    function shouldApply(bytes memory, uint256 targetIndex, uint256 monIndex) external view returns (bool) {
         bytes32 indexHash = keccak256(abi.encode(targetIndex, monIndex));
         bytes32 value = ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), indexHash);
         return value == bytes32(0);
     }
 
     // Everything below is an NoOp
-    function onRemove(bytes memory) external {}
-    function onRoundStart(bytes32, uint256, bytes memory, uint256)
-        external
-        pure
-        returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {}
-    function onRoundEnd(bytes32 battleKey, uint256, bytes memory, uint256 targetIndex)
+    // Lifecycle hooks during normal battle flow
+    function onRoundStart(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {}
-    function onMonSwitchIn(bytes32, uint256, bytes memory, uint256)
+
+    function onRoundEnd(uint256, bytes memory, uint256 targetIndex, uint256 monIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {}
-    function onMonSwitchOut(bytes32, uint256, bytes memory, uint256)
-        external
-        returns (bytes memory updatedExtraData, bool removeAfterRun) 
-    {}
-    function onAfterDamage(bytes32 battleKey, uint256 rng, bytes memory extraData, uint256 targetIndex)
+
+    // NOTE: ONLY RUN ON GLOBAL EFFECTS (mons have their Ability as their own hook to apply an effect on switch in)
+    function onMonSwitchIn(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {}
+
+    // NOTE: CURRENTLY ONLY RUN LOCALLY ON MONS (global effects do not have this hook)
+    function onMonSwitchOut(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+        external
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {}
+
+    // NOTE: CURRENTLY ONLY RUN LOCALLY ON MONS (global effects do not have this hook)
+    function onAfterDamage(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+        external
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {}
+
+    function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) external {}
 }

@@ -8,7 +8,7 @@ import "../../src/Structs.sol";
 import {IEngine} from "../../src/IEngine.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
 
-contract InstantDeathEffect is IEffect {
+contract TempStatBoostEffect is IEffect {
     IEngine immutable ENGINE;
 
     constructor(IEngine _ENGINE) {
@@ -16,29 +16,39 @@ contract InstantDeathEffect is IEffect {
     }
 
     function name() external pure returns (string memory) {
-        return "Instant Death";
+        return "";
     }
 
-    // Should run at end of round
+    // Should run at end of round and on apply
     function shouldRunAtStep(EffectStep r) external pure returns (bool) {
-        return r == EffectStep.RoundEnd;
-    }
-
-    function onRoundEnd(uint256, bytes memory, uint256 targetIndex, uint256 monIndex)
-        external
-        returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {
-        ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.IsKnockedOut, 1);
-        return ("", true);
+        return (r == EffectStep.OnMonSwitchOut || r == EffectStep.OnApply);
     }
 
     function shouldApply(bytes memory, uint256, uint256) external pure returns (bool) {
         return true;
     }
 
+    function onApply(uint256, bytes memory, uint256 targetIndex, uint256 monIndex) external returns (bytes memory updatedExtraData){
+        ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Attack, 1);
+        return "";
+    }
+
+    function onMonSwitchOut(bytes32, uint256, bytes memory, uint256 targetIndex, uint256 monIndex)
+        external
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {
+        ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Attack, 1);
+        return ("", true);
+    }
+
     // Everything below is an NoOp
     // Lifecycle hooks during normal battle flow
     function onRoundStart(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+        external
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {}
+
+    function onRoundEnd(uint256, bytes memory, uint256 targetIndex, uint256 monIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {}
@@ -61,10 +71,5 @@ contract InstantDeathEffect is IEffect {
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {}
 
-    // Lifecycle hooks when being applied or removed
-    function onApply(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external
-        returns (bytes memory updatedExtraData)
-    {}
     function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) external {}
 }

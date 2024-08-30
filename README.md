@@ -1,4 +1,4 @@
-# untitled battle game
+# C.H.O.M.P. (credibly hackable on-chain monster pvp)
 
 on-chain turn-based pvp battling game, (heavily) inspired by pokemon showdown x mugen
 

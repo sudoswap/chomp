@@ -8,37 +8,28 @@ import "../src/Enums.sol";
 import "../src/Structs.sol";
 
 import {DefaultValidator} from "../src/DefaultValidator.sol";
-
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
-
 import {IAbility} from "../src/abilities/IAbility.sol";
 import {IEffect} from "../src/effects/IEffect.sol";
-
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
-
 import {EffectAbility} from "./mocks/EffectAbility.sol";
 import {EffectAttack} from "./mocks/EffectAttack.sol";
 import {GlobalEffectAttack} from "./mocks/GlobalEffectAttack.sol";
 import {SingleInstanceEffect} from "./mocks/SingleInstanceEffect.sol";
-
 import {ForceSwitchMove} from "./mocks/ForceSwitchMove.sol";
 import {InstantDeathEffect} from "./mocks/InstantDeathEffect.sol";
 import {InstantDeathOnSwitchInEffect} from "./mocks/InstantDeathOnSwitchInEffect.sol";
 import {TestTeamRegistry} from "./mocks/TestTeamRegistry.sol";
-
+import {TempStatBoostEffect} from "./mocks/TempStatBoostEffect.sol";
 import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
 import {SkipTurnMove} from "./mocks/SkipTurnMove.sol";
-
 import {ITypeCalculator} from "../src/types/ITypeCalculator.sol";
 import {TestTypeCalculator} from "./mocks/TestTypeCalculator.sol";
-
 import {CustomAttack} from "../src/moves/CustomAttack.sol";
 import {IMoveSet} from "../src/moves/IMoveSet.sol";
-
 import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
-
 import {InvalidMove} from "./mocks/InvalidMove.sol";
 
 /**
@@ -2928,5 +2919,79 @@ contract EngineTest is Test {
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
         engine.revealMove(battleKey, 0, bytes32(""), "");
+    }
+
+    function test_onMonSwitchOutHookWorksWithTempStatBoost() public {
+        // Mon that has a temporary stat boost effect
+        IEffect temporaryStatBoostEffect = new TempStatBoostEffect(engine);
+        IMoveSet[] memory moves = new IMoveSet[](1);
+
+        // Create new effect attack that applies the temporary stat boost effect
+        IMoveSet effectAttack = new EffectAttack(
+            engine, temporaryStatBoostEffect, EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        moves[0] = effectAttack;
+        Mon memory mon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon[] memory team = new Mon[](2);
+        team[0] = mon;
+        team[1] = mon;
+
+        DefaultValidator oneMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        // Register teams
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: oneMonValidator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice and Bob both select attacks (they should apply the temporary stat boost effect)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Assert that the temporary stat boost effect was applied to both mons
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][0].attackDelta, 1);
+        assertEq(state.monStates[1][0].attackDelta, 1);
+
+        // Alice and Bob both switch to mon index 1
+        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(1), abi.encode(1));
+
+        // Assert that the temporary stat boost effect was removed from both mons
+        state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][1].attackDelta, 0);
+        assertEq(state.monStates[1][1].attackDelta, 0);
     }
 }

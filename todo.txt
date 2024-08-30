@@ -1,7 +1,5 @@
 TODO
 
-- write tests for onMonSwitchOut hook
-    - temporary stat boost effect
 - write tests for afterDamage hook
     - effect that resets damage after taking damage
 

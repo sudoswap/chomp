@@ -674,17 +674,6 @@ contract Engine is IEngine {
             // Run the move and see if we need to handle a switch
             bool doSwitch = moveSet.move(battleKey, playerIndex, move.extraData, rng);
 
-            /*
-            // Do damage calculation and check for KO on the defending mon
-            state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta -= damage;
-
-            // Set the KO flag if needed
-            int32 newTotalHealth = int32(battle.teams[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].stats.hp) + state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].hpDelta;
-            if (newTotalHealth <= 0) {
-                state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]].isKnockedOut = true;
-            }
-            */
-
             // If we need to a switch, check to see what we switch
             if (doSwitch) {
                 (uint256 switchFlag, uint256 monToSwitchIndex) =
@@ -738,6 +727,9 @@ contract Engine is IEngine {
                 } else if (round == EffectStep.OnMonSwitchOut) {
                     (updatedExtraData, removeAfterRun) =
                         effects[i].onMonSwitchOut(rng, extraData[i], playerIndex, monIndex);
+                } else if (round == EffectStep.AfterDamage) {
+                    (updatedExtraData, removeAfterRun) =
+                        effects[i].onAfterDamage(rng, extraData[i], playerIndex, monIndex);
                 }
 
                 // If we remove the effect after doing it, then we clear and update the array/extra data

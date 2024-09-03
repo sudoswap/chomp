@@ -1,7 +1,16 @@
 TODO
 
-- write tests for afterDamage hook
+- write tests for afterDamage hook [x]
     - effect that resets damage after taking damage
+
+- start implementing all the mons / moves
+    - check text
+    - need to do status first (probably)
+    - and then one folder per mon / tests for each
+
+- only need 4 moves per mon
+- then set up on testnet
+- then work on the client
 
 ---------------------------------------------------------------------------------------------
 
@@ -46,9 +55,19 @@ Negative Status Effects:
 
 ---------------------------------------------------------------------------------------------
 
-NOTE: KNOWN BUGGY INTERACTION
-- If a move forces a switch and triggers before the other player can make its move, it might be an invalid move
+KNOWN BUGGY INTERACTIONS
+
+1) If a move forces a switch and triggers before the other player can make its move
 - The Engine handles the case where the stamina is insufficient (it just skips the move)
-- But other weird cases might happen!
+
+Ways to mitigate:
+- avoid forcing opponent swap outs unless
+
+2) If an effect calls dealDamage() and triggers AfterDamage, it can potentially cause an infinite loop!
+(either if it calls dealDamage() on the opposing mon who also has a damaging attack with an AfterDamage trigger)
+
+Ways to mitigate:
+- deal damage directly (but skip calling dealDamage) on the Engine
+- avoid dealing damage in the afterDamage hook itself, or in ways that are long-lasting
 
 ---------------------------------------------------------------------------------------------

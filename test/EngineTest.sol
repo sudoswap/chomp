@@ -31,6 +31,7 @@ import {CustomAttack} from "../src/moves/CustomAttack.sol";
 import {IMoveSet} from "../src/moves/IMoveSet.sol";
 import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
 import {InvalidMove} from "./mocks/InvalidMove.sol";
+import {AfterDamageReboundEffect} from "./mocks/AfterDamageReboundEffect.sol";
 
 /**
  * Tests (inexhaustive):
@@ -2993,5 +2994,83 @@ contract EngineTest is Test {
         state = engine.getBattleState(battleKey);
         assertEq(state.monStates[0][1].attackDelta, 0);
         assertEq(state.monStates[1][1].attackDelta, 0);
+    }
+
+    function test_afterDamageHookRuns() public {
+        // Create an attack that adds the rebound effect to the caller
+        IEffect reboundEffect = new AfterDamageReboundEffect(engine);
+        IMoveSet[] memory moves = new IMoveSet[](2);
+        IMoveSet reboundAttack = new EffectAttack(
+            engine, reboundEffect, EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        moves[0] = reboundAttack;
+        IMoveSet normalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 5, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 0})
+        );
+        moves[1] = normalAttack;
+
+        Mon memory mon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        // Create both teams (teams of length 1)
+        Mon[] memory team = new Mon[](1);
+        team[0] = mon;
+
+        // Register teams
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        // Create 2 move, 1 mon validator
+        DefaultValidator twoMoveValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 2, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMoveValidator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
+        });
+
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice and Bob both select attacks, both of them are move index 0 (do damage rebound)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Alice and Bob both select attacks, both of them are move index 1 (normal attack)
+        _commitRevealExecuteForAliceAndBob(battleKey, 1, 1, "", "");
+        BattleState memory state = engine.getBattleState(battleKey);
+
+        // Assert that the rebound effect was applied to both mons
+        // (both have done no damage now)
+        assertEq(state.monStates[0][0].hpDelta, 0);
+        assertEq(state.monStates[1][0].hpDelta, 0);
     }
 }

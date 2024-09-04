@@ -1,25 +1,24 @@
 TODO
 
-- start implementing all the mons / moves
-    - check text
-    - need to do status first (probably)
-    - and then one folder per mon / tests for each
-
-- only need 4 moves per mon
-- then set up on testnet
-- then work on the client
+1) finish implementing all of the effects
+2) write tests for the effects
+3) deploy the engine/registry
+    - create factory for custom attack
+    - create factory for custom effect attack
+4) Add events to the engine
+5) that's enough for now, start working on the client
 
 > write tests for all of these status effects
 
 (Auto cure)
 - Sleep, cannot take action, 33% chance of cure every turn, max 3 turns [x]
-- Fright, takes 1 stamina damage every turn, 33% chance of cure every turn, max 3 turns
+- Fright, takes 1 stamina damage every turn, 33% chance of cure every turn, max 3 turns [x]
 
 (No cure)
-- Frostbite, takes 1/16 damage every turn, reduces special attack by 50%
-- Burn, takes 1/16 damage every turn, reduces attack by 50%
-- Poison, takes 1/8 damage every turn
-- Shock, reduces speed by 50%, 25% chance cannot move
+- Frostbite, takes 1/16 damage every turn, reduces special attack by 50% [x]
+- Burn, takes 1/16 damage every turn, reduces attack by 50% []
+- Poison, takes 1/8 damage every turn []
+- Shock, reduces speed by 50%, 25% chance cannot move []
 
 ---------------------------------------------------------------------------------------------
 

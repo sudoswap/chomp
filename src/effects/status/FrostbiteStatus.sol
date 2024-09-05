@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import {IEffect} from "../IEffect.sol";
-import {IEngine} from "../../IEngine.sol";
 import {EffectStep, MonStateIndexName} from "../../Enums.sol";
+import {IEngine} from "../../IEngine.sol";
+import {IEffect} from "../IEffect.sol";
+
 import {IStatusEffect} from "./IStatusEffect.sol";
 
 contract FrostbiteStatus is IStatusEffect {
-
     uint32 constant DAMAGE_DENOMINATOR = 16;
     uint32 constant SP_ATTACK_DENOMINATOR = 2;
 
@@ -22,11 +22,13 @@ contract FrostbiteStatus is IStatusEffect {
     }
 
     function onApply(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external override
-        returns (bytes memory updatedExtraData) {
-        
+        external
+        override
+        returns (bytes memory updatedExtraData)
+    {
         // Get the special attack of the affected mon
-        uint32 baseSpecialAttack = ENGINE.getTeamsForBattle(ENGINE.battleKeyForWrite())[targetIndex][monIndex].stats.specialAttack;
+        uint32 baseSpecialAttack =
+            ENGINE.getTeamsForBattle(ENGINE.battleKeyForWrite())[targetIndex][monIndex].stats.specialAttack;
 
         // Reduce special attack by half
         int32 specialAttackAmountToReduce = int32(baseSpecialAttack / SP_ATTACK_DENOMINATOR) * -1;
@@ -42,7 +44,8 @@ contract FrostbiteStatus is IStatusEffect {
         // Reset the special attack reduction
 
         // Get the special attack of the affected mon
-        uint32 baseSpecialAttack = ENGINE.getTeamsForBattle(ENGINE.battleKeyForWrite())[targetIndex][monIndex].stats.specialAttack;
+        uint32 baseSpecialAttack =
+            ENGINE.getTeamsForBattle(ENGINE.battleKeyForWrite())[targetIndex][monIndex].stats.specialAttack;
 
         // Reduce special attack by half
         int32 specialAttackAmountToIncrease = int32(baseSpecialAttack / SP_ATTACK_DENOMINATOR);
@@ -52,9 +55,10 @@ contract FrostbiteStatus is IStatusEffect {
     }
 
     function onRoundEnd(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external override
-        returns (bytes memory, bool) {
-        
+        external
+        override
+        returns (bytes memory, bool)
+    {
         // Get the max health of the affected mon
         uint32 maxHealth = ENGINE.getTeamsForBattle(ENGINE.battleKeyForWrite())[targetIndex][monIndex].stats.hp;
 

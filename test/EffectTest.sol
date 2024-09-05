@@ -48,6 +48,16 @@ contract EngineTest is Test {
     Mon dummyMon;
     IMoveSet dummyAttack;
 
+     /**
+     - ensure only 1 effect can be applied at a time
+     - ensure that the effects actually do what they should do:
+      - frostbite does damage at eot
+      - frostbit reduces sp atk
+      - sleep prevents moves
+      - fright reduces stamina
+      - sleep and fright end after 3 turns
+     */
+
     function setUp() public {
         mockOracle = new MockRandomnessOracle();
         engine = new Engine();
@@ -88,17 +98,7 @@ contract EngineTest is Test {
         engine.execute(battleKey);
     }
 
-    /**
-     - ensure only 1 effect can be applied at a time
-     - ensure that the effects actually do what they should do:
-      - frostbite does damage at eot
-      - frostbit reduces sp atk
-      - sleep prevents moves
-      - fright reduces stamina
-      - sleep and fright end after 3 turns
-     */
-
-     function test_frostbite() public {
+    function test_frostbite() public {
         // Deploy an attack with frostbite
         IMoveSet frostbiteAttack = customEffectAttackFactory.createAttack(
             0, 
@@ -180,9 +180,9 @@ contract EngineTest is Test {
 
         assertEq(state.monStates[0][0].hpDelta, -2);
         assertEq(state.monStates[1][0].hpDelta, -2);
-     }
+    }
 
-     function test_sleep() public {
+    function test_sleep() public {
         // Deploy an attack with sleep
         IMoveSet sleepAttack = customEffectAttackFactory.createAttack(
             1, // Does 1 damage
@@ -307,5 +307,124 @@ contract EngineTest is Test {
         assertEq(state.monStates[0][0].targetedEffects.length, 0);
         assertEq(state.monStates[1][0].targetedEffects.length, 1);
         assertEq(state.monStates[1][0].hpDelta, -1);
+    }
+
+    /**
+     - Alice and Bob both have mons that induce fright
+     - Alice outspeeds Bob, and Bob should not have enough stamina after the effect's onApply trigger
+     - So Bob's effect should fizzle 
+     - Wait 3 turns, Bob just does nothing, Alice does nothing
+     - Wait for effect to end by itself
+     - Check that Bob's mon has no more targeted effects
+     */
+    function test_fright() public {
+        // Deploy an attack with fright
+        IMoveSet frightAttack = customEffectAttackFactory.createAttack(
+            1, // Does 1 damage
+            1, // Costs 1 stamina
+            100, 
+            1, 
+            Type.Cosmic, 
+            frightStatus,
+            100, 
+            MoveClass.Physical
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = frightAttack;
+
+
+        Mon memory fastMon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 5,
+                speed: 2,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        Mon memory slowMon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 1, // Only 1 stamina
+                speed: 1,
+                attack: 1,
+                defence: 1,
+                specialAttack: 1,
+                specialDefence: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon[] memory fastTeam = new Mon[](1);
+        fastTeam[0] = fastMon;
+        Mon[] memory slowTeam = new Mon[](1);
+        slowTeam[0] = slowMon;
+
+        // Register both teams 
+        defaultRegistry.setTeam(ALICE, fastTeam);
+        defaultRegistry.setTeam(BOB, slowTeam);
+
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: oneMonOneMoveValidator,
+            rngOracle: mockOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamIndex: 0,
+            p1TeamIndex: 0
+        });
+
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice and Bob both select attacks, both of them are move index 0 (inflict fright)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, 0, 0, "", ""
+        );
+
+        // Get newest state
+        BattleState memory state = engine.getBattleState(battleKey);
+
+        // Check that both Bob's mon has an effect length of 1 and Alice's mon has no targeted effects
+        assertEq(state.monStates[0][0].targetedEffects.length, 0);
+        assertEq(state.monStates[1][0].targetedEffects.length, 1);
+
+        // Assert that Alice's mon dealt damage, and that Bob's mon did not (Alice outspeeds and inflicts fright so Bob's turn is skipped)
+        assertEq(state.monStates[1][0].hpDelta, -1);
+        assertEq(state.monStates[0][0].hpDelta, 0);
+
+        // Set the oracle to report back 1 for the next turn (we do not exit fright early)
+        mockOracle.setRNG(1);
+
+        // Alice and Bob both select attacks, both of them are no ops (we wait a turn)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, "", ""
+        );
+
+        // Alice and Bob both select attacks, both of them are no ops (we wait another turn)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, "", ""
+        );
+
+        // The stamina effect should be over now
+        state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[1][0].targetedEffects.length, 0);
     }
 }

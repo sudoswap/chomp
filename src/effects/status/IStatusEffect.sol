@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import {IEffect} from "../IEffect.sol";
-import {IEngine} from "../../IEngine.sol";
 import {EffectStep} from "../../Enums.sol";
+import {IEngine} from "../../IEngine.sol";
+import {IEffect} from "../IEffect.sol";
 
 abstract contract IStatusEffect is IEffect {
     IEngine immutable ENGINE;
@@ -35,51 +35,63 @@ abstract contract IStatusEffect is IEffect {
         if (monStatusFlag == bytes32(0)) {
             ENGINE.setGlobalKV(keyForMon, bytes32("1"));
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
 
     // Lifecycle hooks during normal battle flow
     function onRoundStart(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external virtual
-        returns (bytes memory updatedExtraData, bool removeAfterRun) {
-            updatedExtraData = extraData;
-        }
+        external
+        virtual
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {
+        updatedExtraData = extraData;
+    }
+
     function onRoundEnd(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external virtual
-        returns (bytes memory updatedExtraData, bool removeAfterRun) {
-            updatedExtraData = extraData;
-        }
+        external
+        virtual
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {
+        updatedExtraData = extraData;
+    }
 
     // NOTE: ONLY RUN ON GLOBAL EFFECTS (mons have their Ability as their own hook to apply an effect on switch in)
     function onMonSwitchIn(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external virtual
-        returns (bytes memory updatedExtraData, bool removeAfterRun) {
-            updatedExtraData = extraData;
-        }
+        external
+        virtual
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {
+        updatedExtraData = extraData;
+    }
 
     // NOTE: CURRENTLY ONLY RUN LOCALLY ON MONS (global effects do not have this hook)
     function onMonSwitchOut(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external virtual
-        returns (bytes memory updatedExtraData, bool removeAfterRun) {
-            updatedExtraData = extraData;
-        }
+        external
+        virtual
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {
+        updatedExtraData = extraData;
+    }
 
     // NOTE: CURRENTLY ONLY RUN LOCALLY ON MONS (global effects do not have this hook)
     function onAfterDamage(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external virtual
-        returns (bytes memory updatedExtraData, bool removeAfterRun) {
-            updatedExtraData = extraData;
-        }
+        external
+        virtual
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
+    {
+        updatedExtraData = extraData;
+    }
 
     // Lifecycle hooks when being applied or removed
     function onApply(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external virtual
-        returns (bytes memory updatedExtraData) {
-            updatedExtraData = extraData;
-        }
-    function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) external virtual {
+        external
+        virtual
+        returns (bytes memory updatedExtraData)
+    {
+        updatedExtraData = extraData;
     }
+
+    function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) external virtual {}
 }

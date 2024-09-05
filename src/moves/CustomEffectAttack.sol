@@ -26,7 +26,25 @@ contract CustomEffectAttack is AttackCalculator, IMoveSet, Clone {
      *  160: EFFECT
      *  180: EFFECT_ACCURACY
      *  212: MOVE_CLASS
+     *  244: NAME
      */
+     
+    function name() external pure returns (string memory) {
+        return _bytes32ToString(bytes32(_getArgUint256(244)));
+    }
+
+    function _bytes32ToString(bytes32 _bytes32) internal pure returns (string memory) {
+        uint8 i = 0;
+        while (i < 32 && _bytes32[i] != 0) {
+            i++;
+        }
+        bytes memory bytesArray = new bytes(i);
+        for (i = 0; i < 32 && _bytes32[i] != 0; i++) {
+            bytesArray[i] = _bytes32[i];
+        }
+        return string(bytesArray);
+    }
+
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng)
         external
         returns (bool)

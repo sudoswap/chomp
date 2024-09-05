@@ -36,6 +36,10 @@ contract CustomAttack is AttackCalculator, IMoveSet {
         PRIORITY = args.PRIORITY;
     }
 
+    function name() external pure returns (string memory) {
+        return "CustomAttack";
+    }
+
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng)
         external
         returns (bool)

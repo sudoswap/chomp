@@ -108,8 +108,13 @@ contract EngineTest is Test {
             Type.Ice, 
             frostbiteStatus, 
             100, 
-            MoveClass.Physical
+            MoveClass.Physical,
+            bytes32("FrostbiteHit")
         );
+
+        // Verify the name matches
+        assertEq(frostbiteAttack.name(), "FrostbiteHit");
+
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = frostbiteAttack;
         Mon memory mon = Mon({
@@ -192,7 +197,8 @@ contract EngineTest is Test {
             Type.Ice, 
             sleepStatus,
             100, 
-            MoveClass.Physical
+            MoveClass.Physical,
+            bytes32("SleepHit")
         );
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = sleepAttack;
@@ -327,7 +333,8 @@ contract EngineTest is Test {
             Type.Cosmic, 
             frightStatus,
             100, 
-            MoveClass.Physical
+            MoveClass.Physical,
+            bytes32("FrightHit")
         );
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = frightAttack;

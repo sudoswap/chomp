@@ -38,7 +38,8 @@ contract CustomEffectAttackFactory {
         Type moveType,
         IEffect effect,
         uint256 effectAccuracy,
-        MoveClass moveClass
+        MoveClass moveClass,
+        bytes32 name
     ) external returns (CustomEffectAttack clone) {
         bytes memory data = abi.encodePacked(
             basePower,
@@ -48,7 +49,8 @@ contract CustomEffectAttackFactory {
             uint256(moveType),
             address(effect),
             effectAccuracy,
-            uint256(moveClass)
+            uint256(moveClass),
+            name
         );
         clone = CustomEffectAttack(address(TEMPLATE).clone(data));
         emit CustomEffectAttackCreated(address(clone));

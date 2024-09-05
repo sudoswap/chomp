@@ -24,15 +24,14 @@ contract FrightStatus is IStatusEffect {
     function onRoundStart(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external override
         returns (bytes memory, bool) {
-        uint256 turnsLeft = abi.decode(extraData, (uint256));
         bool wakeEarly = rng % 3 == 0;
-        if (turnsLeft == 0 || wakeEarly) {
+        if (wakeEarly) {
             return (extraData, true);
         }
         else {
             _applyFright(rng, targetIndex, monIndex);
         }
-        return (abi.encode(turnsLeft - 1), false);
+        return (extraData, false);
     }
 
     // On apply, checks to apply the sleep flag, and then sets the extraData to be the duration
@@ -53,6 +52,18 @@ contract FrightStatus is IStatusEffect {
         uint32 maxStamina = ENGINE.getTeamsForBattle(ENGINE.battleKeyForWrite())[targetIndex][monIndex].stats.stamina;
         if (staminaDelta + int32(maxStamina) > 0) {
             ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Stamina, -1);
+        }
+    }
+
+    function onRoundEnd(uint256, bytes memory extraData, uint256, uint256)
+        external override pure
+    returns (bytes memory, bool removeAfterRun) {
+        uint256 turnsLeft = abi.decode(extraData, (uint256));
+        if (turnsLeft == 1) {
+            return (extraData, true);
+        }
+        else {
+            return (abi.encode(turnsLeft - 1), false);
         }
     }
 }

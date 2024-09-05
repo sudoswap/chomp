@@ -24,15 +24,14 @@ contract SleepStatus is IStatusEffect {
     function onRoundStart(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external override
         returns (bytes memory, bool) {
-        uint256 turnsLeft = abi.decode(extraData, (uint256));
         bool wakeEarly = rng % 3 == 0;
-        if (turnsLeft == 0 || wakeEarly) {
+        if (wakeEarly) {
             return (extraData, true);
         }
         else {
             _applySleep(rng, targetIndex, monIndex);
         }
-        return (abi.encode(turnsLeft - 1), false);
+        return (extraData, false);
     }
 
     // On apply, checks to apply the sleep flag, and then sets the extraData to be the duration
@@ -46,5 +45,17 @@ contract SleepStatus is IStatusEffect {
     // Sleep just skips the turn
     function _applySleep(uint256, uint256 targetIndex, uint256 monIndex) internal {
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.ShouldSkipTurn, 1);
+    }
+
+    function onRoundEnd(uint256, bytes memory extraData, uint256, uint256)
+        external override pure
+    returns (bytes memory, bool removeAfterRun) {
+        uint256 turnsLeft = abi.decode(extraData, (uint256));
+        if (turnsLeft == 1) {
+            return (extraData, true);
+        }
+        else {
+            return (abi.encode(turnsLeft - 1), false);
+        }
     }
 }

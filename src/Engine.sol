@@ -124,18 +124,24 @@ contract Engine is IEngine {
         }
         if (effect.shouldApply(extraData, targetIndex, monIndex)) {
             BattleState storage state = battleStates[battleKey];
+            bytes[] storage effectsExtraData;
             if (targetIndex == 2) {
                 state.globalEffects.push(effect);
                 state.extraDataForGlobalEffects.push(extraData);
+                effectsExtraData = state.extraDataForGlobalEffects;
             } else {
                 state.monStates[targetIndex][monIndex].targetedEffects.push(effect);
                 state.monStates[targetIndex][monIndex].extraDataForTargetedEffects.push(extraData);
+                effectsExtraData = state.monStates[targetIndex][monIndex].extraDataForTargetedEffects;
             }
             // Check if we have to run an onApply state update
             if (effect.shouldRunAtStep(EffectStep.OnApply)) {
                 uint256 rng = state.pRNGStream[state.pRNGStream.length - 1];
                 // If so, we run the effect first, and get updated extraData if necessary
                 extraData = effect.onApply(rng, extraData, targetIndex, monIndex);
+
+                // Set the extraData so be the returned value from onApply
+                effectsExtraData[effectsExtraData.length - 1] = extraData;
             }
         }
     }

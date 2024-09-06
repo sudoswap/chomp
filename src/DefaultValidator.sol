@@ -8,6 +8,9 @@ import "./moves/IMoveSet.sol";
 import {IEngine} from "./IEngine.sol";
 import {IValidator} from "./IValidator.sol";
 
+import {IMonRegistry} from "./teams/IMonRegistry.sol";
+import {ITeamRegistry} from "./teams/ITeamRegistry.sol";
+
 contract DefaultValidator is IValidator {
     struct Args {
         uint256 MONS_PER_TEAM;
@@ -30,15 +33,35 @@ contract DefaultValidator is IValidator {
     }
 
     // Validates that there are MONS_PER_TEAM mons per team w/ MOVES_PER_MON moves each
-    function validateGameStart(Battle calldata b, bytes32 battleKey, address gameStartCaller) external returns (bool) {
+    function validateGameStart(
+        Battle calldata b,
+        ITeamRegistry teamRegistry,
+        uint256 p0TeamIndex,
+        bytes32 battleKey,
+        address gameStartCaller
+    ) external returns (bool) {
+        IMonRegistry monRegistry = teamRegistry.getMonRegistry();
+
         // p0 and p1 each have 6 mons, each mon has 4 moves
         uint256[2] memory playerIndices = [uint256(0), uint256(1)];
+        address[2] memory players = [b.p0, b.p1];
+        uint256[2] memory teamIndex = [p0TeamIndex, b.p1TeamIndex];
+
         for (uint256 i; i < playerIndices.length; ++i) {
             if (b.teams[i].length != MONS_PER_TEAM) {
                 return false;
             }
+
+            // Should be the same length as teams[i].length
+            uint256[] memory teamIndices = teamRegistry.getMonRegistryIndicesForTeam(players[i], teamIndex[i]);
+
+            // Check that each mon is still up to date with the current mon registry values
             for (uint256 j; j < MONS_PER_TEAM; ++j) {
                 if (b.teams[i][j].moves.length != MOVES_PER_MON) {
+                    return false;
+                }
+                // Call the IMonRegistry to see if the stats, moves, and ability are still valid
+                if (address(monRegistry) != address(0) && !monRegistry.validateMon(b.teams[i][j], teamIndices[j])) {
                     return false;
                 }
             }

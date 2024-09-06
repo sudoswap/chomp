@@ -23,6 +23,7 @@ contract DefaultTeamRegistry is ITeamRegistry {
     uint256 immutable MOVES_PER_MON;
 
     mapping(address => mapping(uint256 => Mon[])) public teams;
+    mapping(address => mapping(uint256 => uint256[])) public monRegistryIndicesForTeam;
     mapping(address => uint256) public numTeams;
 
     constructor(Args memory args) {
@@ -50,12 +51,13 @@ contract DefaultTeamRegistry is ITeamRegistry {
             }
         }
 
-        // Initialize team
+        // Initialize team and set indices
         uint256 teamId = numTeams[msg.sender];
         for (uint256 i; i < MONS_PER_TEAM; i++) {
             teams[msg.sender][teamId].push(
                 Mon({stats: REGISTRY.getMonStats(monIndices[i]), moves: moves[i], ability: abilities[i]})
             );
+            monRegistryIndicesForTeam[msg.sender][teamId].push(monIndices[i]);
         }
 
         // Update the team index
@@ -93,7 +95,12 @@ contract DefaultTeamRegistry is ITeamRegistry {
             uint256 monIndexToOverride = teamMonIndicesToOverride[i];
             teams[msg.sender][teamIndex][monIndexToOverride] =
                 Mon({stats: REGISTRY.getMonStats(newMonIndices[i]), moves: newMoves[i], ability: newAbilities[i]});
+            monRegistryIndicesForTeam[msg.sender][teamIndex][monIndexToOverride] = newMonIndices[i];
         }
+    }
+
+    function getMonRegistryIndicesForTeam(address player, uint256 teamIndex) external view returns (uint256[] memory) {
+        return monRegistryIndicesForTeam[player][teamIndex];
     }
 
     function getTeam(address player, uint256 teamIndex) external view returns (Mon[] memory) {
@@ -102,5 +109,9 @@ contract DefaultTeamRegistry is ITeamRegistry {
 
     function getTeamCount(address player) external view returns (uint256) {
         return numTeams[player];
+    }
+
+    function getMonRegistry() external view returns (IMonRegistry) {
+        return REGISTRY;
     }
 }

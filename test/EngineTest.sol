@@ -7,31 +7,34 @@ import "../src/Constants.sol";
 import "../src/Enums.sol";
 import "../src/Structs.sol";
 
+import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultValidator} from "../src/DefaultValidator.sol";
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
 import {IAbility} from "../src/abilities/IAbility.sol";
+
+import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
 import {IEffect} from "../src/effects/IEffect.sol";
-import {DefaultRuleset} from "../src/DefaultRuleset.sol";
-import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
-import {EffectAbility} from "./mocks/EffectAbility.sol";
-import {EffectAttack} from "./mocks/EffectAttack.sol";
-import {GlobalEffectAttack} from "./mocks/GlobalEffectAttack.sol";
-import {SingleInstanceEffect} from "./mocks/SingleInstanceEffect.sol";
-import {ForceSwitchMove} from "./mocks/ForceSwitchMove.sol";
-import {InstantDeathEffect} from "./mocks/InstantDeathEffect.sol";
-import {InstantDeathOnSwitchInEffect} from "./mocks/InstantDeathOnSwitchInEffect.sol";
-import {TestTeamRegistry} from "./mocks/TestTeamRegistry.sol";
-import {TempStatBoostEffect} from "./mocks/TempStatBoostEffect.sol";
-import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
-import {SkipTurnMove} from "./mocks/SkipTurnMove.sol";
-import {ITypeCalculator} from "../src/types/ITypeCalculator.sol";
-import {TestTypeCalculator} from "./mocks/TestTypeCalculator.sol";
 import {CustomAttack} from "../src/moves/CustomAttack.sol";
 import {IMoveSet} from "../src/moves/IMoveSet.sol";
-import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
-import {InvalidMove} from "./mocks/InvalidMove.sol";
+import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
+import {ITypeCalculator} from "../src/types/ITypeCalculator.sol";
+
 import {AfterDamageReboundEffect} from "./mocks/AfterDamageReboundEffect.sol";
+import {EffectAbility} from "./mocks/EffectAbility.sol";
+import {EffectAttack} from "./mocks/EffectAttack.sol";
+import {ForceSwitchMove} from "./mocks/ForceSwitchMove.sol";
+import {GlobalEffectAttack} from "./mocks/GlobalEffectAttack.sol";
+import {InstantDeathEffect} from "./mocks/InstantDeathEffect.sol";
+import {InstantDeathOnSwitchInEffect} from "./mocks/InstantDeathOnSwitchInEffect.sol";
+import {InvalidMove} from "./mocks/InvalidMove.sol";
+import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
+import {SingleInstanceEffect} from "./mocks/SingleInstanceEffect.sol";
+import {SkipTurnMove} from "./mocks/SkipTurnMove.sol";
+import {TempStatBoostEffect} from "./mocks/TempStatBoostEffect.sol";
+import {TestTeamRegistry} from "./mocks/TestTeamRegistry.sol";
+
+import {TestTypeCalculator} from "./mocks/TestTypeCalculator.sol";
 
 /**
  * Tests (inexhaustive):
@@ -87,9 +90,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 1,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -118,15 +121,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
-
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         return battleKey;
     }
@@ -173,13 +178,13 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
-
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
 
+        // Have Bob propose a battle
+        vm.prank(BOB);
         StartBattleArgs memory bobArgs = StartBattleArgs({
             p0: BOB,
             p1: ALICE,
@@ -187,28 +192,33 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
-        vm.prank(BOB);
         bytes32 updatedBattleKey = engine.proposeBattle(bobArgs);
 
         // Battle key should be the same when no one accepts
         assertEq(battleKey, updatedBattleKey);
 
-        // Assert it reverts for Alice
-        vm.expectRevert(Engine.BattleNotAccepted.selector);
+        // Assert it reverts for Alice upon commit
+        vm.expectRevert(Engine.BattleNotStarted.selector);
         vm.startPrank(ALICE);
         engine.commitMove(battleKey, "");
 
-        // Assert it reverts for Bob
-        vm.expectRevert(Engine.BattleNotAccepted.selector);
+        // Assert it reverts for Bob upon commit
+        vm.expectRevert(Engine.BattleNotStarted.selector);
         vm.startPrank(BOB);
         engine.commitMove(battleKey, "");
 
         // Have Alice accept the battle
         vm.startPrank(ALICE);
-        engine.acceptBattle(battleKey);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+
+        // Have Bob start the Battle (givne that Alice accepted)
+        vm.startPrank(BOB);
+        engine.startBattle(battleKey, "", 0);
 
         // Have Bob start a new battle
         vm.warp(validator.TIMEOUT_DURATION() + 1);
@@ -361,9 +371,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -376,9 +386,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 1,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -403,13 +413,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -450,9 +464,9 @@ contract EngineTest is Test {
                 stamina: 2,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -465,9 +479,9 @@ contract EngineTest is Test {
                 stamina: 2,
                 speed: 1,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -492,13 +506,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -538,9 +556,9 @@ contract EngineTest is Test {
                 stamina: 2,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -553,9 +571,9 @@ contract EngineTest is Test {
                 stamina: 2,
                 speed: 1,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -587,13 +605,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -708,9 +730,9 @@ contract EngineTest is Test {
                 stamina: 2, // need to have enough stamina for 2 moves
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -733,13 +755,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -776,9 +802,9 @@ contract EngineTest is Test {
                 hp: 10,
                 stamina: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None,
                 speed: 2
@@ -807,13 +833,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -844,9 +874,9 @@ contract EngineTest is Test {
                 hp: 10,
                 stamina: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None,
                 speed: 2
@@ -875,13 +905,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -912,9 +946,9 @@ contract EngineTest is Test {
                 hp: 10,
                 stamina: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None,
                 speed: 2
@@ -943,13 +977,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -979,9 +1017,9 @@ contract EngineTest is Test {
                 hp: 10,
                 stamina: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None,
                 speed: 2
@@ -1012,13 +1050,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: rules,
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1060,9 +1102,9 @@ contract EngineTest is Test {
                 hp: 10,
                 stamina: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None,
                 speed: 2
@@ -1076,9 +1118,9 @@ contract EngineTest is Test {
                 hp: 10,
                 stamina: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None,
                 speed: 2
@@ -1107,13 +1149,17 @@ contract EngineTest is Test {
             rngOracle: mockOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1153,9 +1199,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1168,9 +1214,9 @@ contract EngineTest is Test {
                 stamina: 2,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1195,13 +1241,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         _commitRevealExecuteForAliceAndBob(
             battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
@@ -1263,9 +1313,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1284,9 +1334,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1311,13 +1361,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1350,9 +1404,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1371,9 +1425,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1405,13 +1459,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1452,9 +1510,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1473,9 +1531,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1500,13 +1558,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1540,9 +1602,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1561,9 +1623,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1595,13 +1657,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1653,9 +1719,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1674,9 +1740,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1708,13 +1774,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1749,9 +1819,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1769,9 +1839,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1796,13 +1866,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1836,9 +1910,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1863,9 +1937,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1893,13 +1967,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -1930,9 +2008,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1952,9 +2030,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -1987,13 +2065,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2024,9 +2106,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2046,9 +2128,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2081,13 +2163,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2127,9 +2213,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2149,9 +2235,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2184,13 +2270,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2231,9 +2321,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2256,9 +2346,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2292,13 +2382,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2338,9 +2432,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2375,13 +2469,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2420,9 +2518,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2457,13 +2555,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2494,9 +2596,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 1,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2509,9 +2611,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 1,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2542,13 +2644,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2573,9 +2679,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2590,9 +2696,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 1,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2614,9 +2720,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2651,13 +2757,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2687,9 +2797,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2704,9 +2814,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 1,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2728,9 +2838,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2765,13 +2875,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2804,9 +2918,9 @@ contract EngineTest is Test {
                 stamina: 2,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2834,13 +2948,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2869,9 +2987,9 @@ contract EngineTest is Test {
                 stamina: 1,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2892,14 +3010,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
-
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2938,9 +3059,9 @@ contract EngineTest is Test {
                 stamina: 2,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -2966,13 +3087,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -2988,7 +3113,9 @@ contract EngineTest is Test {
         assertEq(state.monStates[1][0].attackDelta, 1);
 
         // Alice and Bob both switch to mon index 1
-        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(1), abi.encode(1));
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(1), abi.encode(1)
+        );
 
         // Assert that the temporary stat boost effect was removed from both mons
         state = engine.getBattleState(battleKey);
@@ -3000,9 +3127,8 @@ contract EngineTest is Test {
         // Create an attack that adds the rebound effect to the caller
         IEffect reboundEffect = new AfterDamageReboundEffect(engine);
         IMoveSet[] memory moves = new IMoveSet[](2);
-        IMoveSet reboundAttack = new EffectAttack(
-            engine, reboundEffect, EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1})
-        );
+        IMoveSet reboundAttack =
+            new EffectAttack(engine, reboundEffect, EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1}));
         moves[0] = reboundAttack;
         IMoveSet normalAttack = new CustomAttack(
             engine,
@@ -3017,9 +3143,9 @@ contract EngineTest is Test {
                 stamina: 2,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -3047,14 +3173,17 @@ contract EngineTest is Test {
             rngOracle: defaultOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
-
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(

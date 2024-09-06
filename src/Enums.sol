@@ -22,7 +22,8 @@ enum Type {
 
 enum BattleProposalStatus {
     Proposed,
-    Accepted
+    Accepted,
+    Started
 }
 
 enum EffectStep {
@@ -47,9 +48,9 @@ enum MonStateIndexName {
     Stamina,
     Speed,
     Attack,
-    Defence,
+    defense,
     SpecialAttack,
-    SpecialDefence,
+    specialDefense,
     IsKnockedOut,
     ShouldSkipTurn
 }

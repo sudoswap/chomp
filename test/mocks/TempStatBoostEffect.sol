@@ -28,7 +28,10 @@ contract TempStatBoostEffect is IEffect {
         return true;
     }
 
-    function onApply(uint256, bytes memory, uint256 targetIndex, uint256 monIndex) external returns (bytes memory updatedExtraData){
+    function onApply(uint256, bytes memory, uint256 targetIndex, uint256 monIndex)
+        external
+        returns (bytes memory updatedExtraData)
+    {
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Attack, 1);
         return "";
     }

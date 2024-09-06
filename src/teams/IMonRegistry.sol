@@ -14,4 +14,5 @@ interface IMonRegistry {
     function getMonCount() external view returns (uint256);
     function isValidMove(uint256 monId, IMoveSet move) external view returns (bool);
     function isValidAbility(uint256 monId, IAbility ability) external view returns (bool);
+    function validateMon(Mon memory m, uint256 monId) external view returns (bool);
 }

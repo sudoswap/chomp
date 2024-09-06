@@ -9,7 +9,6 @@ import {IEngine} from "../../src/IEngine.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
 
 contract AfterDamageReboundEffect is IEffect {
-
     IEngine immutable ENGINE;
 
     constructor(IEngine _ENGINE) {
@@ -35,7 +34,8 @@ contract AfterDamageReboundEffect is IEffect {
         returns (bytes memory, bool)
     {
         // Heals for all damage done
-        int32 currentMonHp = ENGINE.getMonStatesForBattleState(ENGINE.battleKeyForWrite())[targetIndex][monIndex].hpDelta;
+        int32 currentMonHp =
+            ENGINE.getMonStatesForBattleState(ENGINE.battleKeyForWrite())[targetIndex][monIndex].hpDelta;
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Hp, currentMonHp * -1);
         return (extraData, false);
     }

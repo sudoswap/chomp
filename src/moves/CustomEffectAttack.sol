@@ -28,7 +28,6 @@ contract CustomEffectAttack is AttackCalculator, IMoveSet, Clone {
      *  212: MOVE_CLASS
      *  244: NAME
      */
-     
     function name() external pure returns (string memory) {
         return _bytes32ToString(bytes32(_getArgUint256(244)));
     }

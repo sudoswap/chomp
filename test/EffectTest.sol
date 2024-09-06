@@ -7,29 +7,31 @@ import "../src/Constants.sol";
 import "../src/Enums.sol";
 import "../src/Structs.sol";
 
+import {DefaultRuleset} from "../src/DefaultRuleset.sol";
+import {DefaultValidator} from "../src/DefaultValidator.sol";
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
 import {IAbility} from "../src/abilities/IAbility.sol";
 import {IEffect} from "../src/effects/IEffect.sol";
-import {DefaultRuleset} from "../src/DefaultRuleset.sol";
-import {DefaultValidator} from "../src/DefaultValidator.sol";
-import {TestTeamRegistry} from "./mocks/TestTeamRegistry.sol";
-import {TestTypeCalculator} from "./mocks/TestTypeCalculator.sol";
+
+import {IMoveSet} from "../src/moves/IMoveSet.sol";
 import {ITypeCalculator} from "../src/types/ITypeCalculator.sol";
 import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
-import {IMoveSet} from "../src/moves/IMoveSet.sol";
+import {TestTeamRegistry} from "./mocks/TestTeamRegistry.sol";
+import {TestTypeCalculator} from "./mocks/TestTypeCalculator.sol";
 
 // Import effects
+
+import {FrightStatus} from "../src/effects/status/FrightStatus.sol";
 import {FrostbiteStatus} from "../src/effects/status/FrostbiteStatus.sol";
 import {SleepStatus} from "../src/effects/status/SleepStatus.sol";
-import {FrightStatus} from "../src/effects/status/FrightStatus.sol";
 
 // Import custom effect attack factory and template
-import {CustomEffectAttackFactory} from "../src/moves/CustomEffectAttackFactory.sol";
+
 import {CustomEffectAttack} from "../src/moves/CustomEffectAttack.sol";
+import {CustomEffectAttackFactory} from "../src/moves/CustomEffectAttackFactory.sol";
 
 contract EngineTest is Test {
-
     Engine engine;
     DefaultValidator oneMonOneMoveValidator;
     ITypeCalculator typeCalc;
@@ -48,16 +50,15 @@ contract EngineTest is Test {
     Mon dummyMon;
     IMoveSet dummyAttack;
 
-     /**
-     - ensure only 1 effect can be applied at a time
-     - ensure that the effects actually do what they should do:
-      - frostbite does damage at eot
-      - frostbit reduces sp atk
-      - sleep prevents moves
-      - fright reduces stamina
-      - sleep and fright end after 3 turns
+    /**
+     * - ensure only 1 effect can be applied at a time
+     *  - ensure that the effects actually do what they should do:
+     *   - frostbite does damage at eot
+     *   - frostbit reduces sp atk
+     *   - sleep prevents moves
+     *   - fright reduces stamina
+     *   - sleep and fright end after 3 turns
      */
-
     function setUp() public {
         mockOracle = new MockRandomnessOracle();
         engine = new Engine();
@@ -101,15 +102,7 @@ contract EngineTest is Test {
     function test_frostbite() public {
         // Deploy an attack with frostbite
         IMoveSet frostbiteAttack = customEffectAttackFactory.createAttack(
-            0, 
-            0, 
-            100, 
-            1, 
-            Type.Ice, 
-            frostbiteStatus, 
-            100, 
-            MoveClass.Physical,
-            bytes32("FrostbiteHit")
+            0, 0, 100, 1, Type.Ice, frostbiteStatus, 100, MoveClass.Physical, bytes32("FrostbiteHit")
         );
 
         // Verify the name matches
@@ -123,9 +116,9 @@ contract EngineTest is Test {
                 stamina: 2,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 20,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -135,7 +128,7 @@ contract EngineTest is Test {
         Mon[] memory team = new Mon[](1);
         team[0] = mon;
 
-        // Register both teams 
+        // Register both teams
         defaultRegistry.setTeam(ALICE, team);
         defaultRegistry.setTeam(BOB, team);
 
@@ -146,13 +139,17 @@ contract EngineTest is Test {
             rngOracle: mockOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -191,12 +188,12 @@ contract EngineTest is Test {
         // Deploy an attack with sleep
         IMoveSet sleepAttack = customEffectAttackFactory.createAttack(
             1, // Does 1 damage
-            0, 
-            100, 
-            1, 
-            Type.Ice, 
+            0,
+            100,
+            1,
+            Type.Ice,
             sleepStatus,
-            100, 
+            100,
             MoveClass.Physical,
             bytes32("SleepHit")
         );
@@ -208,9 +205,9 @@ contract EngineTest is Test {
                 stamina: 2,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -225,9 +222,9 @@ contract EngineTest is Test {
                 stamina: 2,
                 speed: 10,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -237,7 +234,7 @@ contract EngineTest is Test {
         Mon[] memory fastTeam = new Mon[](1);
         fastTeam[0] = fastMon;
 
-        // Register both teams 
+        // Register both teams
         defaultRegistry.setTeam(ALICE, slowTeam);
         defaultRegistry.setTeam(BOB, fastTeam);
 
@@ -248,14 +245,18 @@ contract EngineTest is Test {
             rngOracle: mockOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
-
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -263,9 +264,7 @@ contract EngineTest is Test {
         );
 
         // Alice and Bob both select attacks, both of them are move index 0 (do sleep damage)
-        _commitRevealExecuteForAliceAndBob(
-            battleKey, 0, 0, "", ""
-        );
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
 
         // Check that both Alice's mon has an effect length of 1 and Bob's mon has no targeted effects
         BattleState memory state = engine.getBattleState(battleKey);
@@ -280,9 +279,7 @@ contract EngineTest is Test {
         mockOracle.setRNG(1);
 
         // Alice and Bob both select attacks, both of them are move index 0 (do sleep damage)
-        _commitRevealExecuteForAliceAndBob(
-            battleKey, 0, 0, "", ""
-        );
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
 
         // Get newest state
         state = engine.getBattleState(battleKey);
@@ -302,9 +299,7 @@ contract EngineTest is Test {
         mockOracle.setRNG(0);
 
         // Alice and Bob both select attacks, Bob does a no-op
-        _commitRevealExecuteForAliceAndBob(
-            battleKey, 0, NO_OP_MOVE_INDEX, "", ""
-        );
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, NO_OP_MOVE_INDEX, "", "");
 
         // Alice should wake up early and inflict sleep on Bob
         state = engine.getBattleState(battleKey);
@@ -316,29 +311,28 @@ contract EngineTest is Test {
     }
 
     /**
-     - Alice and Bob both have mons that induce fright
-     - Alice outspeeds Bob, and Bob should not have enough stamina after the effect's onApply trigger
-     - So Bob's effect should fizzle 
-     - Wait 3 turns, Bob just does nothing, Alice does nothing
-     - Wait for effect to end by itself
-     - Check that Bob's mon has no more targeted effects
+     * - Alice and Bob both have mons that induce fright
+     *  - Alice outspeeds Bob, and Bob should not have enough stamina after the effect's onApply trigger
+     *  - So Bob's effect should fizzle
+     *  - Wait 3 turns, Bob just does nothing, Alice does nothing
+     *  - Wait for effect to end by itself
+     *  - Check that Bob's mon has no more targeted effects
      */
     function test_fright() public {
         // Deploy an attack with fright
         IMoveSet frightAttack = customEffectAttackFactory.createAttack(
             1, // Does 1 damage
             1, // Costs 1 stamina
-            100, 
-            1, 
-            Type.Cosmic, 
+            100,
+            1,
+            Type.Cosmic,
             frightStatus,
-            100, 
+            100,
             MoveClass.Physical,
             bytes32("FrightHit")
         );
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = frightAttack;
-
 
         Mon memory fastMon = Mon({
             stats: MonStats({
@@ -346,9 +340,9 @@ contract EngineTest is Test {
                 stamina: 5,
                 speed: 2,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -362,9 +356,9 @@ contract EngineTest is Test {
                 stamina: 1, // Only 1 stamina
                 speed: 1,
                 attack: 1,
-                defence: 1,
+                defense: 1,
                 specialAttack: 1,
-                specialDefence: 1,
+                specialDefense: 1,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -376,7 +370,7 @@ contract EngineTest is Test {
         Mon[] memory slowTeam = new Mon[](1);
         slowTeam[0] = slowMon;
 
-        // Register both teams 
+        // Register both teams
         defaultRegistry.setTeam(ALICE, fastTeam);
         defaultRegistry.setTeam(BOB, slowTeam);
 
@@ -387,14 +381,17 @@ contract EngineTest is Test {
             rngOracle: mockOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamIndex: 0,
-            p1TeamIndex: 0
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         });
-
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        );
         vm.prank(BOB);
-        engine.acceptBattle(battleKey);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -402,9 +399,7 @@ contract EngineTest is Test {
         );
 
         // Alice and Bob both select attacks, both of them are move index 0 (inflict fright)
-        _commitRevealExecuteForAliceAndBob(
-            battleKey, 0, 0, "", ""
-        );
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
 
         // Get newest state
         BattleState memory state = engine.getBattleState(battleKey);
@@ -421,14 +416,10 @@ contract EngineTest is Test {
         mockOracle.setRNG(1);
 
         // Alice and Bob both select attacks, both of them are no ops (we wait a turn)
-        _commitRevealExecuteForAliceAndBob(
-            battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, "", ""
-        );
+        _commitRevealExecuteForAliceAndBob(battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, "", "");
 
         // Alice and Bob both select attacks, both of them are no ops (we wait another turn)
-        _commitRevealExecuteForAliceAndBob(
-            battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, "", ""
-        );
+        _commitRevealExecuteForAliceAndBob(battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, "", "");
 
         // The stamina effect should be over now
         state = engine.getBattleState(battleKey);

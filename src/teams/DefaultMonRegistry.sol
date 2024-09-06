@@ -94,6 +94,29 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
         }
     }
 
+    function validateMon(Mon memory m, uint256 monId) external view returns (bool) {
+        // Check that the mon's stats match the current mon ID's stats
+        if (
+            m.stats.attack != monStats[monId].attack || m.stats.defense != monStats[monId].defense
+                || m.stats.specialAttack != monStats[monId].specialAttack
+                || m.stats.specialDefense != monStats[monId].specialDefense || m.stats.speed != monStats[monId].speed
+                || m.stats.hp != monStats[monId].hp || m.stats.stamina != monStats[monId].stamina
+        ) {
+            return false;
+        }
+        // Check that the mon's moves are valid for the current mon ID
+        for (uint256 i; i < m.moves.length; ++i) {
+            if (!monMoves[monId].contains(address(m.moves[i]))) {
+                return false;
+            }
+        }
+        // Check that the mon's ability is valid for the current mon ID
+        if (!monAbilities[monId].contains(address(m.ability))) {
+            return false;
+        }
+        return true;
+    }
+
     function getMonData(uint256 monId)
         external
         view

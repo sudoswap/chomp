@@ -55,10 +55,10 @@ abstract contract AttackCalculator {
             // Grab the right atk/defense stats, and apply the delta if needed
             if (attackSupertype == MoveClass.Physical) {
                 attackStat = uint32(int32(attackerMon.stats.attack) + attackerMonState.attackDelta);
-                defenceStat = uint32(int32(defenderMon.stats.defence) + defenderMonState.defenceDelta);
+                defenceStat = uint32(int32(defenderMon.stats.defense) + defenderMonState.defenceDelta);
             } else {
                 attackStat = uint32(int32(attackerMon.stats.specialAttack) + attackerMonState.specialAttackDelta);
-                defenceStat = uint32(int32(defenderMon.stats.specialDefence) + defenderMonState.specialDefenceDelta);
+                defenceStat = uint32(int32(defenderMon.stats.specialDefense) + defenderMonState.specialDefenceDelta);
             }
 
             uint32 typeMultiplier = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.stats.type1);

@@ -52,9 +52,9 @@ contract TeamsTest is Test {
             stamina: 1,
             speed: 1,
             attack: 1,
-            defence: 1,
+            defense: 1,
             specialAttack: 1,
-            specialDefence: 1,
+            specialDefense: 1,
             type1: Type.Fire,
             type2: Type.None
         });
@@ -73,9 +73,9 @@ contract TeamsTest is Test {
             stamina: 2,
             speed: 2,
             attack: 2,
-            defence: 2,
+            defense: 2,
             specialAttack: 2,
-            specialDefence: 2,
+            specialDefense: 2,
             type1: Type.Fire,
             type2: Type.None
         });
@@ -145,9 +145,9 @@ contract TeamsTest is Test {
             stamina: 1,
             speed: 1,
             attack: 1,
-            defence: 1,
+            defense: 1,
             specialAttack: 1,
-            specialDefence: 1,
+            specialDefense: 1,
             type1: Type.Fire,
             type2: Type.None
         });

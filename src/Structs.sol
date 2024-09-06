@@ -19,8 +19,7 @@ struct StartBattleArgs {
     IRandomnessOracle rngOracle;
     IRuleset ruleset;
     ITeamRegistry teamRegistry;
-    uint96 p0TeamIndex;
-    uint96 p1TeamIndex;
+    bytes32 p0TeamHash;
 }
 
 struct Battle {
@@ -31,6 +30,9 @@ struct Battle {
     IRuleset ruleset;
     Mon[][] teams;
     BattleProposalStatus status;
+    ITeamRegistry teamRegistry;
+    bytes32 p0TeamHash;
+    uint96 p1TeamIndex;
 }
 
 struct BattleState {
@@ -50,9 +52,9 @@ struct MonStats {
     uint32 stamina;
     uint32 speed;
     uint32 attack;
-    uint32 defence;
+    uint32 defense;
     uint32 specialAttack;
-    uint32 specialDefence;
+    uint32 specialDefense;
     Type type1;
     Type type2;
 }

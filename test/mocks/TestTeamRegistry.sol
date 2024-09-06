@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../../src/Structs.sol";
 
+import {IMonRegistry} from "../../src/teams/IMonRegistry.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 
 contract TestTeamRegistry is ITeamRegistry {
@@ -19,5 +20,13 @@ contract TestTeamRegistry is ITeamRegistry {
 
     function getTeamCount(address player) external view returns (uint256) {
         return teams[player].length;
+    }
+
+    function getMonRegistry() external pure returns (IMonRegistry) {
+        return IMonRegistry(address(0));
+    }
+
+    function getMonRegistryIndicesForTeam(address, uint256) external pure returns (uint256[] memory) {
+        return new uint256[](0);
     }
 }

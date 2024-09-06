@@ -10,7 +10,6 @@ import "./moves/IMoveSet.sol";
 import {IEngine} from "./IEngine.sol";
 
 contract Engine is IEngine {
-    uint256 constant SWITCH_PRIORITY = 6;
 
     // State variables
     bytes32 public battleKeyForWrite;
@@ -22,8 +21,7 @@ contract Engine is IEngine {
 
     // Errors
     error NoWriteAllowed();
-    error NotProposer();
-    error NotAccepter();
+    error WrongCaller();
     error BattleChangedBeforeAcceptance();
     error InvalidP0TeamHash();
     error BattleNotStarted();
@@ -230,7 +228,7 @@ contract Engine is IEngine {
     function proposeBattle(StartBattleArgs memory args) external returns (bytes32) {
         // Caller must be p0
         if (msg.sender != args.p0) {
-            revert NotProposer();
+            revert WrongCaller();
         }
 
         // Compute the battle key and pair hash
@@ -268,7 +266,7 @@ contract Engine is IEngine {
     function acceptBattle(bytes32 battleKey, uint256 p1TeamIndex, bytes32 battleIntegrityHash) external {
         Battle storage battle = battles[battleKey];
         if (msg.sender != battle.p1) {
-            revert NotAccepter();
+            revert WrongCaller();
         }
 
         // Set the battle status to be accepted
@@ -296,7 +294,7 @@ contract Engine is IEngine {
     function startBattle(bytes32 battleKey, bytes32 salt, uint256 p0TeamIndex) external {
         Battle storage battle = battles[battleKey];
         if (msg.sender != battle.p0) {
-            revert NotProposer();
+            revert WrongCaller();
         }
 
         // Set the status to be started
@@ -537,7 +535,7 @@ contract Engine is IEngine {
             state.pRNGStream.push(rng);
 
             // Calculate the priority and non-priority player indices
-            uint256 priorityPlayerIndex = _computePriorityPlayerIndex(battleKey, rng);
+            uint256 priorityPlayerIndex = battle.validator.computePriorityPlayerIndex(battleKey, rng);
             uint256 otherPlayerIndex;
             if (priorityPlayerIndex == 0) {
                 otherPlayerIndex = 1;
@@ -831,59 +829,6 @@ contract Engine is IEngine {
                 battleKeyForWrite = bytes32(0);
             } else {
                 ++i;
-            }
-        }
-    }
-
-    function _computePriorityPlayerIndex(bytes32 battleKey, uint256 rng) internal view returns (uint256) {
-        Battle storage battle = battles[battleKey];
-        BattleState storage state = battleStates[battleKey];
-        RevealedMove storage p0Move = state.moveHistory[0][state.turnId];
-        RevealedMove storage p1Move = state.moveHistory[1][state.turnId];
-
-        uint256 p0Priority;
-        uint256 p1Priority;
-
-        // Call the move for its priority, unless it's the switch or no op move index
-        {
-            if (p0Move.moveIndex == SWITCH_MOVE_INDEX || p0Move.moveIndex == NO_OP_MOVE_INDEX) {
-                p0Priority = SWITCH_PRIORITY;
-            } else {
-                IMoveSet p0MoveSet = battle.teams[0][state.activeMonIndex[0]].moves[p0Move.moveIndex];
-                p0Priority = p0MoveSet.priority(battleKey);
-            }
-
-            if (p1Move.moveIndex == SWITCH_MOVE_INDEX || p1Move.moveIndex == NO_OP_MOVE_INDEX) {
-                p1Priority = SWITCH_PRIORITY;
-            } else {
-                IMoveSet p1MoveSet = battle.teams[1][state.activeMonIndex[1]].moves[p1Move.moveIndex];
-                p1Priority = p1MoveSet.priority(battleKey);
-            }
-        }
-
-        // Determine priority based on (in descending order of importance):
-        // - the higher priority tier
-        // - within same priority, the higher speed
-        // - if both are tied, use the rng value
-        if (p0Priority > p1Priority) {
-            return 0;
-        } else if (p0Priority < p1Priority) {
-            return 1;
-        } else {
-            uint32 p0MonSpeed = uint32(
-                int32(battle.teams[0][state.activeMonIndex[0]].stats.speed)
-                    + state.monStates[0][state.activeMonIndex[0]].speedDelta
-            );
-            uint32 p1MonSpeed = uint32(
-                int32(battle.teams[1][state.activeMonIndex[1]].stats.speed)
-                    + state.monStates[1][state.activeMonIndex[1]].speedDelta
-            );
-            if (p0MonSpeed > p1MonSpeed) {
-                return 0;
-            } else if (p0MonSpeed < p1MonSpeed) {
-                return 1;
-            } else {
-                return rng % 2;
             }
         }
     }

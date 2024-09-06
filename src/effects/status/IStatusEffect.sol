@@ -33,59 +33,68 @@ abstract contract IStatusEffect is IEffect {
 
         // Check if a status already exists for the mon
         if (monStatusFlag == bytes32(0)) {
+
+            // If not, set the flag and return true
             ENGINE.setGlobalKV(keyForMon, bytes32("1"));
             return true;
         } else {
+
+            // Otherwise return false
             return false;
         }
     }
 
     // Lifecycle hooks during normal battle flow
-    function onRoundStart(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+    function onRoundStart(uint256, bytes memory extraData, uint256, uint256)
         external
         virtual
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         updatedExtraData = extraData;
+        removeAfterRun = false;
     }
 
-    function onRoundEnd(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+    function onRoundEnd(uint256, bytes memory extraData, uint256, uint256)
         external
         virtual
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         updatedExtraData = extraData;
+        removeAfterRun = false;
     }
 
     // NOTE: ONLY RUN ON GLOBAL EFFECTS (mons have their Ability as their own hook to apply an effect on switch in)
-    function onMonSwitchIn(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+    function onMonSwitchIn(uint256, bytes memory extraData, uint256, uint256)
         external
         virtual
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         updatedExtraData = extraData;
+        removeAfterRun = false;
     }
 
     // NOTE: CURRENTLY ONLY RUN LOCALLY ON MONS (global effects do not have this hook)
-    function onMonSwitchOut(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+    function onMonSwitchOut(uint256, bytes memory extraData, uint256, uint256)
         external
         virtual
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         updatedExtraData = extraData;
+        removeAfterRun = false;
     }
 
     // NOTE: CURRENTLY ONLY RUN LOCALLY ON MONS (global effects do not have this hook)
-    function onAfterDamage(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+    function onAfterDamage(uint256, bytes memory extraData, uint256, uint256)
         external
         virtual
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         updatedExtraData = extraData;
+        removeAfterRun = false;
     }
 
     // Lifecycle hooks when being applied or removed
-    function onApply(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+    function onApply(uint256, bytes memory extraData, uint256, uint256)
         external
         virtual
         returns (bytes memory updatedExtraData)
@@ -93,5 +102,5 @@ abstract contract IStatusEffect is IEffect {
         updatedExtraData = extraData;
     }
 
-    function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) external virtual {}
+    function onRemove(bytes memory extraData, uint256, uint256) external virtual {}
 }

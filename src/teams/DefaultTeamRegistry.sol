@@ -114,4 +114,19 @@ contract DefaultTeamRegistry is ITeamRegistry {
     function getMonRegistry() external view returns (IMonRegistry) {
         return REGISTRY;
     }
+
+    function getTeamData(address player, uint256 teamIndex) external view returns (string[] memory) {
+        Mon[] storage team = teams[player][teamIndex];
+        // Add offset by 0 to account for mon name and ability name
+        string[] memory teamDataNames = new string[](team.length * (MOVES_PER_MON + 2));
+        for (uint256 i; i < team.length; i++) {
+            uint256 monId = monRegistryIndicesForTeam[player][teamIndex][i];
+            teamDataNames[i * MOVES_PER_MON] = REGISTRY.getMonMetadata(monId, bytes32("name"));
+            teamDataNames[i * MOVES_PER_MON + 1] = (team[i].ability).name();
+            for (uint256 j; j < MOVES_PER_MON; j++) {
+                teamDataNames[i * MOVES_PER_MON + j + 2] = (team[i].moves[j]).name();
+            }
+        }
+        return teamDataNames;
+    }
 }

@@ -94,6 +94,10 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
         }
     }
 
+    function getMonMetadata(uint256 monId, bytes32 key) external view returns (string memory) {
+        return monMetadata[monId][key];
+    }
+
     function validateMon(Mon memory m, uint256 monId) external view returns (bool) {
         // Check that the mon's stats match the current mon ID's stats
         if (

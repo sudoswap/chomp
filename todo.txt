@@ -2,10 +2,12 @@ TODO
 
 1) finish implementing all of the effects
 2) write tests for the effects
+
 3) deploy the engine/registry
     - create factory for custom attack
     - create factory for custom effect attack
 4) Add events to the engine
+
 5) that's enough for now, start working on the client
 
 ---------------------------------------------------------------------------------------------

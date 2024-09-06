@@ -40,8 +40,8 @@ contract Engine is IEngine {
 
     // Events
     event BattleProposal(bytes32 indexed battleKey);
-    event BattleAcceptance(bytes32 indexed battleKey);
-    event BattleStart(bytes32 indexed battleKey);
+    event BattleAcceptance(bytes32 indexed battleKey, uint256 p1TeamIndex);
+    event BattleStart(bytes32 indexed battleKey, uint256 p0TeamIndex);
     event MoveCommit(bytes32 indexed battleKey, address player);
     event MoveReveal(bytes32 indexed battleKey, address player);
     event MonSwitch(bytes32 indexed battleKey, uint256 playerIndex, uint256 newMonIndex);
@@ -301,7 +301,7 @@ contract Engine is IEngine {
             revert BattleChangedBeforeAcceptance();
         }
 
-        emit BattleAcceptance(battleKey);
+        emit BattleAcceptance(battleKey, p1TeamIndex);
     }
 
     function startBattle(bytes32 battleKey, bytes32 salt, uint256 p0TeamIndex) external {
@@ -357,7 +357,7 @@ contract Engine is IEngine {
         // Set flag to be 2 which means both players act
         battleStates[battleKey].playerSwitchForTurnFlag = 2;
 
-        emit BattleStart(battleKey);
+        emit BattleStart(battleKey, p0TeamIndex);
     }
 
     function commitMove(bytes32 battleKey, bytes32 moveHash) external {

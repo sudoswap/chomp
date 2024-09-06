@@ -15,6 +15,10 @@ contract EffectAbility is IAbility {
         EFFECT = _EFFECT;
     }
 
+    function name() external pure returns (string memory) {
+        return "";
+    }
+
     function activateOnSwitch(bytes32, uint256 playerIndex, uint256 monIndex) external {
         ENGINE.addEffect(playerIndex, monIndex, EFFECT, "");
     }

@@ -14,6 +14,7 @@ import {AttackCalculator} from "./AttackCalculator.sol";
 import {IMoveSet} from "./IMoveSet.sol";
 
 contract CustomEffectAttack is AttackCalculator, IMoveSet, Clone {
+    
     constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR) AttackCalculator(_ENGINE, _TYPE_CALCULATOR) {}
 
     /**

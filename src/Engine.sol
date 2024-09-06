@@ -45,7 +45,9 @@ contract Engine is IEngine {
     event MoveCommit(bytes32 indexed battleKey, address player);
     event MoveReveal(bytes32 indexed battleKey, address player);
     event MonSwitch(bytes32 indexed battleKey, uint256 playerIndex, uint256 newMonIndex);
-    event MonStateUpdate(bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 stateVarIndex, int32 valueDelta);
+    event MonStateUpdate(
+        bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 stateVarIndex, int32 valueDelta
+    );
     event DamageDeal(bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 damageDealt);
     event EffectAdd(bytes32 indexed battleKey, uint256 effectIndex, uint256 monIndex, address effectAddress);
     event BattleComplete(bytes32 indexed battleKey, address winner);
@@ -226,7 +228,6 @@ contract Engine is IEngine {
     /**
      * - Core game functions
      */
-     
     function proposeBattle(StartBattleArgs memory args) external returns (bytes32) {
         // Caller must be p0
         if (msg.sender != args.p0) {
@@ -291,13 +292,12 @@ contract Engine is IEngine {
         battle.p1TeamIndex = uint96(p1TeamIndex);
 
         // Validate the integrity hash of the battle parameters
-        if (battleIntegrityHash != computeBattleIntegrityHash(
-            battle.validator,
-            battle.rngOracle,
-            battle.ruleset,
-            battle.teamRegistry,
-            battle.p0TeamHash
-        )) {
+        if (
+            battleIntegrityHash
+                != computeBattleIntegrityHash(
+                    battle.validator, battle.rngOracle, battle.ruleset, battle.teamRegistry, battle.p0TeamHash
+                )
+        ) {
             revert BattleChangedBeforeAcceptance();
         }
 

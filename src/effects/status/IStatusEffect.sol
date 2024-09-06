@@ -33,12 +33,10 @@ abstract contract IStatusEffect is IEffect {
 
         // Check if a status already exists for the mon
         if (monStatusFlag == bytes32(0)) {
-
             // If not, set the flag and return true
             ENGINE.setGlobalKV(keyForMon, bytes32("1"));
             return true;
         } else {
-
             // Otherwise return false
             return false;
         }

@@ -144,7 +144,11 @@ contract EngineTest is Test {
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
         bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
-            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            args.validator,
+            args.rngOracle,
+            args.ruleset,
+            args.teamRegistry,
+            keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         );
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
@@ -250,7 +254,11 @@ contract EngineTest is Test {
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
         bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
-            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            args.validator,
+            args.rngOracle,
+            args.ruleset,
+            args.teamRegistry,
+            keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         );
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
@@ -386,7 +394,11 @@ contract EngineTest is Test {
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
         bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
-            args.validator, args.rngOracle, args.ruleset, args.teamRegistry, keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            args.validator,
+            args.rngOracle,
+            args.ruleset,
+            args.teamRegistry,
+            keccak256(abi.encodePacked(bytes32(""), uint256(0)))
         );
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);

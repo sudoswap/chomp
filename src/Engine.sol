@@ -39,15 +39,16 @@ contract Engine is IEngine {
     error GameAlreadyOver();
 
     // Events
-
-    /**
-        - Battle Proposed
-        - Battle Accepted
-        - MonState Updated
-        - Damage Dealt
-        - Effect Added
-        - Battle Over
-     */
+    event BattleProposal(bytes32 indexed battleKey);
+    event BattleAcceptance(bytes32 indexed battleKey);
+    event BattleStart(bytes32 indexed battleKey);
+    event MoveCommit(bytes32 indexed battleKey, address player);
+    event MoveReveal(bytes32 indexed battleKey, address player);
+    event MonSwitch(bytes32 indexed battleKey, uint256 playerIndex, uint256 newMonIndex);
+    event MonStateUpdate(bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 stateVarIndex, int32 valueDelta);
+    event DamageDeal(bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 damageDealt);
+    event EffectAdd(bytes32 indexed battleKey, uint256 effectIndex, uint256 monIndex, address effectAddress);
+    event BattleComplete(bytes32 indexed battleKey, address winner);
 
     /**
      * - Getters to simplify read access for other components
@@ -130,6 +131,7 @@ contract Engine is IEngine {
         } else if (stateVarIndex == MonStateIndexName.ShouldSkipTurn) {
             monState.shouldSkipTurn = (valueToAdd % 2) == 1;
         }
+        emit MonStateUpdate(battleKey, playerIndex, monIndex, uint256(stateVarIndex), valueToAdd);
     }
 
     function addEffect(uint256 targetIndex, uint256 monIndex, IEffect effect, bytes memory extraData) external {
@@ -158,6 +160,7 @@ contract Engine is IEngine {
                 // Set the extraData so be the returned value from onApply
                 effectsExtraData[effectsExtraData.length - 1] = extraData;
             }
+            emit EffectAdd(battleKey, targetIndex, monIndex, address(effect));
         }
     }
 
@@ -217,6 +220,7 @@ contract Engine is IEngine {
             uint256 rngValue = rngValues[rngValues.length - 1];
             _runEffects(battleKey, rngValue, playerIndex, playerIndex, EffectStep.AfterDamage);
         }
+        emit DamageDeal(battleKey, playerIndex, monIndex, damage);
     }
 
     /**
@@ -256,6 +260,8 @@ contract Engine is IEngine {
             p1TeamIndex: 0 // placeholder value until p1 responds
         });
 
+        emit BattleProposal(battleKey);
+
         return battleKey;
     }
 
@@ -275,7 +281,7 @@ contract Engine is IEngine {
             revert NotAccepter();
         }
 
-        // Set the status to be accepted
+        // Set the battle status to be accepted
         battle.status = BattleProposalStatus.Accepted;
 
         // Set the team for p1
@@ -294,6 +300,8 @@ contract Engine is IEngine {
         )) {
             revert BattleChangedBeforeAcceptance();
         }
+
+        emit BattleAcceptance(battleKey);
     }
 
     function startBattle(bytes32 battleKey, bytes32 salt, uint256 p0TeamIndex) external {
@@ -348,6 +356,8 @@ contract Engine is IEngine {
 
         // Set flag to be 2 which means both players act
         battleStates[battleKey].playerSwitchForTurnFlag = 2;
+
+        emit BattleStart(battleKey);
     }
 
     function commitMove(bytes32 battleKey, bytes32 moveHash) external {
@@ -391,6 +401,8 @@ contract Engine is IEngine {
         // store commitment
         commitments[battleKey][msg.sender] =
             Commitment({moveHash: moveHash, turnId: turnId, timestamp: block.timestamp});
+
+        emit MoveCommit(battleKey, msg.sender);
     }
 
     function revealMove(bytes32 battleKey, uint256 moveIndex, bytes32 salt, bytes calldata extraData) external {
@@ -459,6 +471,8 @@ contract Engine is IEngine {
                 RevealedMove({moveIndex: NO_OP_MOVE_INDEX, salt: "", extraData: ""})
             );
         }
+
+        emit MoveReveal(battleKey, msg.sender);
     }
 
     function execute(bytes32 battleKey) external {
@@ -614,6 +628,7 @@ contract Engine is IEngine {
         for (uint256 i; i < 2; ++i) {
             address afkResult = battle.validator.validateTimeout(battleKey, i);
             if (afkResult != address(0)) {
+                emit BattleComplete(battleKey, afkResult);
                 state.winner = afkResult;
                 return;
             }
@@ -651,6 +666,7 @@ contract Engine is IEngine {
         address gameResult = battle.validator.validateGameOver(battleKey, priorityPlayerIndex);
         if (gameResult != address(0)) {
             state.winner = gameResult;
+            emit BattleComplete(battleKey, gameResult);
             isGameOver = true;
         } else {
             // Always set default switch to be 2 (allow both players to make a move)
@@ -697,6 +713,8 @@ contract Engine is IEngine {
         if (address(mon.ability) != address(0)) {
             mon.ability.activateOnSwitch(battleKey, playerIndex, monToSwitchIndex);
         }
+
+        emit MonSwitch(battleKey, playerIndex, monToSwitchIndex);
 
         // NOTE: We will check for game over after the switch in the engine for two player turns, so we don't do it here
         // But this also means that the current flow of OnMonSwitchOut effects -> OnMonSwitchIn effects -> ability activateOnSwitch

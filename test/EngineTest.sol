@@ -125,13 +125,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -215,13 +215,13 @@ contract EngineTest is Test {
 
         // Have Alice accept the battle
         vm.startPrank(ALICE);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
 
         // Have Bob start the Battle (givne that Alice accepted)
@@ -425,13 +425,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -522,13 +522,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -625,13 +625,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -779,13 +779,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -861,13 +861,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -937,13 +937,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -1013,13 +1013,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -1090,13 +1090,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -1193,13 +1193,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -1289,13 +1289,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -1413,13 +1413,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -1515,13 +1515,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -1618,13 +1618,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -1721,13 +1721,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -1842,13 +1842,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -1938,13 +1938,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -2043,13 +2043,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -2145,13 +2145,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -2247,13 +2247,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -2358,13 +2358,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -2474,13 +2474,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -2565,13 +2565,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -2655,13 +2655,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -2748,13 +2748,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -2865,13 +2865,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -2987,13 +2987,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -3064,13 +3064,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -3130,13 +3130,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -3211,13 +3211,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -3301,13 +3301,13 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = engine.computeBattleIntegrityHash(
+        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
             args.validator,
             args.rngOracle,
             args.ruleset,
             args.teamRegistry,
             keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        );
+        ));
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);

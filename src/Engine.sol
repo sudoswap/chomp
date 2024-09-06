@@ -266,16 +266,6 @@ contract Engine is IEngine {
         return battleKey;
     }
 
-    function computeBattleIntegrityHash(
-        IValidator validator,
-        IRandomnessOracle rngOracle,
-        IRuleset ruleset,
-        ITeamRegistry teamRegistry,
-        bytes32 p0TeamHash
-    ) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(validator, rngOracle, ruleset, teamRegistry, p0TeamHash));
-    }
-
     function acceptBattle(bytes32 battleKey, uint256 p1TeamIndex, bytes32 battleIntegrityHash) external {
         Battle storage battle = battles[battleKey];
         if (msg.sender != battle.p1) {
@@ -294,9 +284,9 @@ contract Engine is IEngine {
         // Validate the integrity hash of the battle parameters
         if (
             battleIntegrityHash
-                != computeBattleIntegrityHash(
+                != keccak256(abi.encodePacked(
                     battle.validator, battle.rngOracle, battle.ruleset, battle.teamRegistry, battle.p0TeamHash
-                )
+                ))
         ) {
             revert BattleChangedBeforeAcceptance();
         }

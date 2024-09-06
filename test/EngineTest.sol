@@ -663,7 +663,7 @@ contract EngineTest is Test {
         // Assert that Bob cannot commit anything because of the turn flag
         // (we just reuse Alice's move hash bc it doesn't matter)
         vm.startPrank(BOB);
-        vm.expectRevert(Engine.OnlyP0Allowed.selector);
+        vm.expectRevert(Engine.PlayerNotAllowed.selector);
         engine.commitMove(battleKey, aliceMoveHash);
 
         // Reveal Alice's move, and advance game state

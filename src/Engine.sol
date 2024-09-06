@@ -33,8 +33,7 @@ contract Engine is IEngine {
     error WrongTurnId();
     error WrongPreimage();
     error InvalidMove(address player);
-    error OnlyP0Allowed();
-    error OnlyP1Allowed();
+    error PlayerNotAllowed();
     error InvalidBattleConfig();
     error GameAlreadyOver();
 
@@ -382,10 +381,9 @@ contract Engine is IEngine {
         }
 
         // cannot commit if the battle state says it's only for one player
-        if (state.playerSwitchForTurnFlag == 0 && msg.sender != battle.p0) {
-            revert OnlyP0Allowed();
-        } else if (state.playerSwitchForTurnFlag == 1 && msg.sender != battle.p1) {
-            revert OnlyP1Allowed();
+        if ((state.playerSwitchForTurnFlag == 0 && msg.sender != battle.p0) || 
+           (state.playerSwitchForTurnFlag == 1 && msg.sender != battle.p1)) {
+            revert PlayerNotAllowed();
         }
 
         // store commitment

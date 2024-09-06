@@ -840,9 +840,8 @@ contract Engine is IEngine {
     function _computePriorityPlayerIndex(bytes32 battleKey, uint256 rng) internal view returns (uint256) {
         Battle storage battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
-
-        RevealedMove memory p0Move = state.moveHistory[0][state.turnId];
-        RevealedMove memory p1Move = state.moveHistory[1][state.turnId];
+        RevealedMove storage p0Move = state.moveHistory[0][state.turnId];
+        RevealedMove storage p1Move = state.moveHistory[1][state.turnId];
 
         uint256 p0Priority;
         uint256 p1Priority;

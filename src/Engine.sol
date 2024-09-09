@@ -14,10 +14,10 @@ contract Engine is IEngine {
     // State variables
     bytes32 public battleKeyForWrite;
     mapping(bytes32 => uint256) public pairHashNonces;
-    mapping(bytes32 battleKey => Battle) public battles;
-    mapping(bytes32 battleKey => BattleState) public battleStates;
-    mapping(bytes32 battleKey => mapping(address player => Commitment)) public commitments;
-    mapping(bytes32 battleKey => mapping(bytes32 => bytes32)) public globalKV;
+    mapping(bytes32 battleKey => Battle) private battles;
+    mapping(bytes32 battleKey => BattleState) private battleStates;
+    mapping(bytes32 battleKey => mapping(address player => Commitment)) private commitments;
+    mapping(bytes32 battleKey => mapping(bytes32 => bytes32)) private globalKV;
 
     // Errors
     error NoWriteAllowed();

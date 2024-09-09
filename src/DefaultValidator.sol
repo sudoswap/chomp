@@ -12,7 +12,6 @@ import {IMonRegistry} from "./teams/IMonRegistry.sol";
 import {ITeamRegistry} from "./teams/ITeamRegistry.sol";
 
 contract DefaultValidator is IValidator {
-
     struct Args {
         uint256 MONS_PER_TEAM;
         uint256 MOVES_PER_MON;
@@ -281,7 +280,6 @@ contract DefaultValidator is IValidator {
     }
 
     function computePriorityPlayerIndex(bytes32 battleKey, uint256 rng) external view returns (uint256) {
-        
         Mon[][] memory teams = ENGINE.getTeamsForBattle(battleKey);
         RevealedMove[][] memory moveHistory = ENGINE.getMoveHistoryForBattleState(battleKey);
 
@@ -321,14 +319,10 @@ contract DefaultValidator is IValidator {
         } else if (p0Priority < p1Priority) {
             return 1;
         } else {
-            uint32 p0MonSpeed = uint32(
-                int32(teams[0][activeMonIndex[0]].stats.speed)
-                    + monStates[0][activeMonIndex[0]].speedDelta
-            );
-            uint32 p1MonSpeed = uint32(
-                int32(teams[1][activeMonIndex[1]].stats.speed)
-                    + monStates[1][activeMonIndex[1]].speedDelta
-            );
+            uint32 p0MonSpeed =
+                uint32(int32(teams[0][activeMonIndex[0]].stats.speed) + monStates[0][activeMonIndex[0]].speedDelta);
+            uint32 p1MonSpeed =
+                uint32(int32(teams[1][activeMonIndex[1]].stats.speed) + monStates[1][activeMonIndex[1]].speedDelta);
             if (p0MonSpeed > p1MonSpeed) {
                 return 0;
             } else if (p0MonSpeed < p1MonSpeed) {

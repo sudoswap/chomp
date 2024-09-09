@@ -10,7 +10,6 @@ import "./moves/IMoveSet.sol";
 import {IEngine} from "./IEngine.sol";
 
 contract Engine is IEngine {
-
     // State variables
     bytes32 public battleKeyForWrite;
     mapping(bytes32 => uint256) public pairHashNonces;
@@ -281,9 +280,11 @@ contract Engine is IEngine {
         // Validate the integrity hash of the battle parameters
         if (
             battleIntegrityHash
-                != keccak256(abi.encodePacked(
-                    battle.validator, battle.rngOracle, battle.ruleset, battle.teamRegistry, battle.p0TeamHash
-                ))
+                != keccak256(
+                    abi.encodePacked(
+                        battle.validator, battle.rngOracle, battle.ruleset, battle.teamRegistry, battle.p0TeamHash
+                    )
+                )
         ) {
             revert BattleChangedBeforeAcceptance();
         }
@@ -379,8 +380,10 @@ contract Engine is IEngine {
         }
 
         // cannot commit if the battle state says it's only for one player
-        if ((state.playerSwitchForTurnFlag == 0 && msg.sender != battle.p0) || 
-           (state.playerSwitchForTurnFlag == 1 && msg.sender != battle.p1)) {
+        if (
+            (state.playerSwitchForTurnFlag == 0 && msg.sender != battle.p0)
+                || (state.playerSwitchForTurnFlag == 1 && msg.sender != battle.p1)
+        ) {
             revert PlayerNotAllowed();
         }
 

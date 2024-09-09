@@ -7,6 +7,9 @@ import "./IMonRegistry.sol";
 import "./ITeamRegistry.sol";
 
 contract DefaultTeamRegistry is ITeamRegistry {
+    uint32 constant BITS_PER_MON_INDEX = 32;
+    uint256 constant ONES_MASK = (2 ** BITS_PER_MON_INDEX) - 1;
+
     struct Args {
         IMonRegistry REGISTRY;
         uint256 MONS_PER_TEAM;
@@ -23,7 +26,7 @@ contract DefaultTeamRegistry is ITeamRegistry {
     uint256 immutable MOVES_PER_MON;
 
     mapping(address => mapping(uint256 => Mon[])) public teams;
-    mapping(address => mapping(uint256 => uint256[])) public monRegistryIndicesForTeam;
+    mapping(address => mapping(uint256 => uint256)) public monRegistryIndicesForTeamPacked;
     mapping(address => uint256) public numTeams;
 
     constructor(Args memory args) {
@@ -57,7 +60,7 @@ contract DefaultTeamRegistry is ITeamRegistry {
             teams[msg.sender][teamId].push(
                 Mon({stats: REGISTRY.getMonStats(monIndices[i]), moves: moves[i], ability: abilities[i]})
             );
-            monRegistryIndicesForTeam[msg.sender][teamId].push(monIndices[i]);
+            _setMonRegistryIndices(teamId, uint32(monIndices[i]), i);
         }
 
         // Update the team index
@@ -95,12 +98,37 @@ contract DefaultTeamRegistry is ITeamRegistry {
             uint256 monIndexToOverride = teamMonIndicesToOverride[i];
             teams[msg.sender][teamIndex][monIndexToOverride] =
                 Mon({stats: REGISTRY.getMonStats(newMonIndices[i]), moves: newMoves[i], ability: newAbilities[i]});
-            monRegistryIndicesForTeam[msg.sender][teamIndex][monIndexToOverride] = newMonIndices[i];
+            _setMonRegistryIndices(teamIndex, uint32(newMonIndices[i]), monIndexToOverride);
         }
     }
 
+    // Layout: | Nothing | Nothing | Mon5 | Mon4 | Mon3 | Mon2 | Mon1 | Mon 0 <-- rightmost bits
+    function _setMonRegistryIndices(uint256 teamIndex, uint32 monId, uint256 position) internal {
+        uint256 clearBitmask = ONES_MASK << (position * BITS_PER_MON_INDEX);
+
+        // Set all values to be 1 by OR'ing it with the bitmask
+        uint256 existingPackedValue = monRegistryIndicesForTeamPacked[msg.sender][teamIndex];
+
+        // AND the value with the new bitmask to set the values
+        uint256 valueBitmask = uint256(monId) << (position * BITS_PER_MON_INDEX);
+
+        monRegistryIndicesForTeamPacked[msg.sender][teamIndex] = (existingPackedValue | clearBitmask) & valueBitmask;
+    }
+
+    function _getMonRegistryIndex(address player, uint256 teamIndex, uint256 position)
+        internal
+        view
+        returns (uint256)
+    {
+        return uint32(monRegistryIndicesForTeamPacked[player][teamIndex] >> (position * BITS_PER_MON_INDEX));
+    }
+
     function getMonRegistryIndicesForTeam(address player, uint256 teamIndex) external view returns (uint256[] memory) {
-        return monRegistryIndicesForTeam[player][teamIndex];
+        uint256[] memory ids = new uint256[](MONS_PER_TEAM);
+        for (uint256 i; i < MONS_PER_TEAM; ++i) {
+            ids[i] = _getMonRegistryIndex(player, teamIndex, i);
+        }
+        return ids;
     }
 
     function getTeam(address player, uint256 teamIndex) external view returns (Mon[] memory) {
@@ -115,12 +143,13 @@ contract DefaultTeamRegistry is ITeamRegistry {
         return REGISTRY;
     }
 
+    // TODO: fix this to get type and stamina for each move as well
     function getTeamData(address player, uint256 teamIndex) external view returns (string[] memory) {
         Mon[] storage team = teams[player][teamIndex];
         // Add offset by 0 to account for mon name and ability name
         string[] memory teamDataNames = new string[](team.length * (MOVES_PER_MON + 2));
         for (uint256 i; i < team.length; i++) {
-            uint256 monId = monRegistryIndicesForTeam[player][teamIndex][i];
+            uint256 monId = _getMonRegistryIndex(player, teamIndex, i);
             teamDataNames[i * MOVES_PER_MON] = REGISTRY.getMonMetadata(monId, bytes32("name"));
             teamDataNames[i * MOVES_PER_MON + 1] = (team[i].ability).name();
             for (uint256 j; j < MOVES_PER_MON; j++) {

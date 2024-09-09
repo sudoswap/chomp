@@ -59,14 +59,23 @@ contract TeamsTest is Test {
             type2: Type.None
         });
 
+        bytes32[] memory nameKey = new bytes32[](1);
+        nameKey[0] = bytes32("name");
+        string[] memory nameValue = new string[](1);
+        nameValue[0] = "sus";
+
         // Create a mon in the mon registry
         vm.startPrank(ALICE);
-        monRegistry.createMon(stats, moves, abilities);
+        monRegistry.createMon(stats, moves, abilities, nameKey, nameValue);
+
+        // Assert that the metadata exists
+        string memory monName = monRegistry.getMonMetadata(0, bytes32("name"));
+        assertEq(monName, "sus");
 
         // Assert that Bob cannot create a mon
         vm.startPrank(BOB);
         vm.expectRevert();
-        monRegistry.createMon(stats, moves, abilities);
+        monRegistry.createMon(stats, moves, abilities, nameKey, nameValue);
 
         MonStats memory newStats = MonStats({
             hp: 2,
@@ -152,8 +161,11 @@ contract TeamsTest is Test {
             type2: Type.None
         });
 
+        bytes32[] memory keys = new bytes32[](0);
+        string[] memory values = new string[](0);
+
         vm.startPrank(ALICE);
-        monRegistry.createMon(stats, moves, abilities);
+        monRegistry.createMon(stats, moves, abilities, keys, values);
 
         uint256[] memory monIndices = new uint256[](1);
         monIndices[0] = 0;
@@ -169,5 +181,47 @@ contract TeamsTest is Test {
         Mon[] memory aliceTeam0 = teamRegistry.getTeam(ALICE, 0);
         assertEq(aliceTeam0.length, 1);
         assertEq(uint256(aliceTeam0[0].stats.type1), uint256(Type.Fire));
+        uint256[] memory teamIndices = teamRegistry.getMonRegistryIndicesForTeam(ALICE, 0);
+        assertEq(teamIndices.length, 1);
+        assertEq(teamIndices[0], 0);
+    }
+
+    function test_realTeamFlow() pubic {
+
+        // Make the same mon 6 times
+        IAbility ability = new EffectAbility(IEngine(address(0)), IEffect(address(0)));
+        IAbility[] memory abilities = new IAbility[](1);
+        abilities[0] = ability;
+        IMoveSet move1 = new EffectAttack(
+            IEngine(address(0)), IEffect(address(0)), EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        IMoveSet move2 = new EffectAttack(
+            IEngine(address(0)), IEffect(address(0)), EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](2);
+        moves[0] = move1;
+        moves[1] = move2;
+        MonStats memory stats = MonStats({
+            hp: 1,
+            stamina: 1,
+            speed: 1,
+            attack: 1,
+            defense: 1,
+            specialAttack: 1,
+            specialDefense: 1,
+            type1: Type.Fire,
+            type2: Type.None
+        });
+        bytes32[] memory keys = new bytes32[](0);
+        string[] memory values = new string[](0);
+
+        // Ids 0 to 5 are all the mon
+        vm.startPrank(ALICE);
+        monRegistry.createMon(stats, moves, abilities, keys, values);
+        monRegistry.createMon(stats, moves, abilities, keys, values);
+        monRegistry.createMon(stats, moves, abilities, keys, values);
+        monRegistry.createMon(stats, moves, abilities, keys, values);
+        monRegistry.createMon(stats, moves, abilities, keys, values);
+        monRegistry.createMon(stats, moves, abilities, keys, values);
     }
 }

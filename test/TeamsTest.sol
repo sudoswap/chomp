@@ -186,7 +186,7 @@ contract TeamsTest is Test {
         assertEq(teamIndices[0], 0);
     }
 
-    function test_realTeamFlow() pubic {
+    function test_realTeamFlow() public {
 
         // Make the same mon 6 times
         IAbility ability = new EffectAbility(IEngine(address(0)), IEffect(address(0)));
@@ -223,5 +223,43 @@ contract TeamsTest is Test {
         monRegistry.createMon(stats, moves, abilities, keys, values);
         monRegistry.createMon(stats, moves, abilities, keys, values);
         monRegistry.createMon(stats, moves, abilities, keys, values);
+
+        // Create new team registry with team size of 6 and move size of 0
+        DefaultTeamRegistry teamRegistry2 = new DefaultTeamRegistry(
+            DefaultTeamRegistry.Args({REGISTRY: monRegistry, MONS_PER_TEAM: 6, MOVES_PER_MON: 0})
+        );
+
+        // Register the team for Alice
+        vm.startPrank(ALICE);
+        uint256[] memory monIndices = new uint256[](6);
+        monIndices[0] = 0;
+        monIndices[1] = 1;
+        monIndices[2] = 2;  
+        monIndices[3] = 3;
+        monIndices[4] = 4;
+        monIndices[5] = 5;
+        IAbility[] memory abilitiesToUse = new IAbility[](6);
+        abilitiesToUse[0] = ability;
+        abilitiesToUse[1] = ability;
+        abilitiesToUse[2] = ability;
+        abilitiesToUse[3] = ability;
+        abilitiesToUse[4] = ability;
+        abilitiesToUse[5] = ability;
+        teamRegistry2.createTeam(monIndices, new IMoveSet[][](6), abilitiesToUse);
+
+        // Assert the team for Alice exists
+        assertEq(teamRegistry2.getTeamCount(ALICE), 1);
+        Mon[] memory aliceTeam0 = teamRegistry2.getTeam(ALICE, 0);
+        assertEq(aliceTeam0.length, 6);
+
+        // Check the team indices are as expected
+        uint256[] memory teamIndices = teamRegistry2.getMonRegistryIndicesForTeam(ALICE, 0);
+        assertEq(teamIndices.length, 6);
+        assertEq(teamIndices[0], 0);
+        assertEq(teamIndices[1], 1);
+        assertEq(teamIndices[2], 2);
+        assertEq(teamIndices[3], 3);
+        assertEq(teamIndices[4], 4);
+        assertEq(teamIndices[5], 5);
     }
 }

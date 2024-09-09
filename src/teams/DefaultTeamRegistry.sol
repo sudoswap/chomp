@@ -104,15 +104,20 @@ contract DefaultTeamRegistry is ITeamRegistry {
 
     // Layout: | Nothing | Nothing | Mon5 | Mon4 | Mon3 | Mon2 | Mon1 | Mon 0 <-- rightmost bits
     function _setMonRegistryIndices(uint256 teamIndex, uint32 monId, uint256 position) internal {
-        uint256 clearBitmask = ONES_MASK << (position * BITS_PER_MON_INDEX);
-
-        // Set all values to be 1 by OR'ing it with the bitmask
+        // Create a bitmask to clear the bits we want to modify
+        uint256 clearBitmask = ~(ONES_MASK << (position * BITS_PER_MON_INDEX));
+        
+        // Get the existing packed value
         uint256 existingPackedValue = monRegistryIndicesForTeamPacked[msg.sender][teamIndex];
-
-        // AND the value with the new bitmask to set the values
+        
+        // Clear the bits we want to modify
+        uint256 clearedValue = existingPackedValue & clearBitmask;
+        
+        // Create the value bitmask with the new monId
         uint256 valueBitmask = uint256(monId) << (position * BITS_PER_MON_INDEX);
-
-        monRegistryIndicesForTeamPacked[msg.sender][teamIndex] = (existingPackedValue | clearBitmask) & valueBitmask;
+        
+        // Combine the cleared value with the new value
+        monRegistryIndicesForTeamPacked[msg.sender][teamIndex] = clearedValue | valueBitmask;
     }
 
     function _getMonRegistryIndex(address player, uint256 teamIndex, uint256 position)

@@ -262,4 +262,52 @@ contract TeamsTest is Test {
         assertEq(teamIndices[4], 4);
         assertEq(teamIndices[5], 5);
     }
+
+    function test_duplicateTeamFails() public {
+
+        // Make the same mon 6 times
+        IAbility ability = new EffectAbility(IEngine(address(0)), IEffect(address(0)));
+        IAbility[] memory abilities = new IAbility[](1);
+        abilities[0] = ability;
+        IMoveSet move1 = new EffectAttack(
+            IEngine(address(0)), IEffect(address(0)), EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        IMoveSet move2 = new EffectAttack(
+            IEngine(address(0)), IEffect(address(0)), EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](2);
+        moves[0] = move1;
+        moves[1] = move2;
+        MonStats memory stats = MonStats({
+            hp: 1,
+            stamina: 1,
+            speed: 1,
+            attack: 1,
+            defense: 1,
+            specialAttack: 1,
+            specialDefense: 1,
+            type1: Type.Fire,
+            type2: Type.None
+        });
+        bytes32[] memory keys = new bytes32[](0);
+        string[] memory values = new string[](0);
+
+        // Ids 0 to 5 are all the mon
+        vm.startPrank(ALICE);
+        monRegistry.createMon(stats, moves, abilities, keys, values);
+
+        uint256[] memory monIndices = new uint256[](2);
+        monIndices[0] = 0;
+        monIndices[1] = 0;
+        IAbility[] memory abilitiesToUse = new IAbility[](2);
+        abilitiesToUse[0] = ability;
+        abilitiesToUse[1] = ability;
+
+        DefaultTeamRegistry teamRegistry2 = new DefaultTeamRegistry(
+            DefaultTeamRegistry.Args({REGISTRY: monRegistry, MONS_PER_TEAM: 2, MOVES_PER_MON: 0})
+        );
+
+        vm.expectRevert(DefaultTeamRegistry.DuplicateMonId.selector);
+        teamRegistry2.createTeam(monIndices, new IMoveSet[][](2), abilitiesToUse);
+    }
 }

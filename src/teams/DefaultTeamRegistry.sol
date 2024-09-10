@@ -20,6 +20,7 @@ contract DefaultTeamRegistry is ITeamRegistry {
     error InvalidNumMovesPerMon();
     error InvalidMove();
     error InvalidAbility();
+    error DuplicateMonId();
 
     IMonRegistry immutable REGISTRY;
     uint256 immutable MONS_PER_TEAM;
@@ -53,6 +54,9 @@ contract DefaultTeamRegistry is ITeamRegistry {
                 revert InvalidAbility();
             }
         }
+
+        // Check for duplicate mon indices
+        _checkForDuplicates(monIndices);
 
         // Initialize team and set indices
         uint256 teamId = numTeams[msg.sender];
@@ -93,6 +97,9 @@ contract DefaultTeamRegistry is ITeamRegistry {
             }
         }
 
+        // Check for duplicate mon indices
+        _checkForDuplicates(newMonIndices);
+
         // Update the team
         for (uint256 i; i < numMonsToOverride; i++) {
             uint256 monIndexToOverride = teamMonIndicesToOverride[i];
@@ -100,6 +107,20 @@ contract DefaultTeamRegistry is ITeamRegistry {
                 Mon({stats: REGISTRY.getMonStats(newMonIndices[i]), moves: newMoves[i], ability: newAbilities[i]});
             _setMonRegistryIndices(teamIndex, uint32(newMonIndices[i]), monIndexToOverride);
         }
+    }
+
+    function _checkForDuplicates(uint256[] memory monIndices) internal {
+        for (uint256 i; i < MONS_PER_TEAM - 1; i++) {
+            for (uint256 j = i + 1; j < MONS_PER_TEAM; j++) {
+                if (monIndices[i] == monIndices[j]) {
+                    revert DuplicateMonId();
+                }
+            }
+        }
+    }
+
+    function copyTeam(address playerToCopy, uint256 teamIndex) external {
+        // TODO:
     }
 
     // Layout: | Nothing | Nothing | Mon5 | Mon4 | Mon3 | Mon2 | Mon1 | Mon 0 <-- rightmost bits

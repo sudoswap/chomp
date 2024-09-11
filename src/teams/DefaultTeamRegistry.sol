@@ -109,7 +109,7 @@ contract DefaultTeamRegistry is ITeamRegistry {
         }
     }
 
-    function _checkForDuplicates(uint256[] memory monIndices) internal {
+    function _checkForDuplicates(uint256[] memory monIndices) internal view {
         for (uint256 i; i < MONS_PER_TEAM - 1; i++) {
             for (uint256 j = i + 1; j < MONS_PER_TEAM; j++) {
                 if (monIndices[i] == monIndices[j]) {
@@ -120,7 +120,15 @@ contract DefaultTeamRegistry is ITeamRegistry {
     }
 
     function copyTeam(address playerToCopy, uint256 teamIndex) external {
-        // TODO:
+        // Initialize team and set indices
+        uint256 teamId = numTeams[msg.sender];
+        for (uint256 i; i < MONS_PER_TEAM; i++) {
+            teams[msg.sender][teamId].push(teams[playerToCopy][teamIndex][i]);
+        }
+        monRegistryIndicesForTeamPacked[msg.sender][teamIndex] = monRegistryIndicesForTeamPacked[playerToCopy][teamIndex];
+
+        // Update the team index
+        numTeams[msg.sender] += 1;
     }
 
     // Layout: | Nothing | Nothing | Mon5 | Mon4 | Mon3 | Mon2 | Mon1 | Mon 0 <-- rightmost bits

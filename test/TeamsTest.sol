@@ -261,6 +261,24 @@ contract TeamsTest is Test {
         assertEq(teamIndices[3], 3);
         assertEq(teamIndices[4], 4);
         assertEq(teamIndices[5], 5);
+
+        // Prank as Bob and copy the team
+        vm.startPrank(BOB);
+        teamRegistry2.copyTeam(ALICE, 0);
+
+        // Assert the team for Bob exists and is the same
+        assertEq(teamRegistry2.getTeamCount(BOB), 1);
+        Mon[] memory bobTeam0 = teamRegistry2.getTeam(BOB, 0);
+        assertEq(bobTeam0.length, 6);
+        assertEq(uint256(bobTeam0[0].stats.type1), uint256(Type.Fire));
+        teamIndices = teamRegistry2.getMonRegistryIndicesForTeam(BOB, 0);
+        assertEq(teamIndices.length, 6);
+        assertEq(teamIndices[0], 0);
+        assertEq(teamIndices[1], 1);
+        assertEq(teamIndices[2], 2);
+        assertEq(teamIndices[3], 3);
+        assertEq(teamIndices[4], 4);
+        assertEq(teamIndices[5], 5);
     }
 
     function test_duplicateTeamFails() public {

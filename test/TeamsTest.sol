@@ -12,6 +12,9 @@ import {DefaultTeamRegistry} from "../src/teams/DefaultTeamRegistry.sol";
 
 import {EffectAbility} from "./mocks/EffectAbility.sol";
 import {EffectAttack} from "./mocks/EffectAttack.sol";
+import {CustomEffectAttackFactory} from "../src/moves/CustomEffectAttackFactory.sol";
+import {CustomEffectAttack} from "../src/moves/CustomEffectAttack.sol";
+import {ITypeCalculator} from "../src/types/ITypeCalculator.sol";
 
 import {IAbility} from "../src/abilities/IAbility.sol";
 import {IEffect} from "../src/effects/IEffect.sol";
@@ -327,5 +330,170 @@ contract TeamsTest is Test {
 
         vm.expectRevert(DefaultTeamRegistry.DuplicateMonId.selector);
         teamRegistry2.createTeam(monIndices, new IMoveSet[][](2), abilitiesToUse);
+    }
+
+    function test_createUniqueTeam() public {
+        IAbility ability = new EffectAbility(IEngine(address(0)), IEffect(address(0)));
+        IAbility[] memory abilities = new IAbility[](1);
+        abilities[0] = ability;
+
+        CustomEffectAttack attackTemplate = new CustomEffectAttack(IEngine(address(0)), ITypeCalculator(address(0)));
+        CustomEffectAttackFactory attackFactory = new CustomEffectAttackFactory(attackTemplate);
+
+        IMoveSet[] memory moves0 = new IMoveSet[](4);
+
+        moves0[0] = attackFactory.createAttack(0, 0, 0, 0, Type.Air, IEffect(address(0)), 0, MoveClass.Physical, bytes32("m00"));
+        moves0[1] = attackFactory.createAttack(1, 1, 1, 1, Type.Air, IEffect(address(0)), 0, MoveClass.Other, bytes32("m01"));
+        moves0[2] = attackFactory.createAttack(2, 2, 2, 2, Type.Air, IEffect(address(0)), 0, MoveClass.Special, bytes32("m02"));
+        moves0[3] = attackFactory.createAttack(3, 3, 3, 3, Type.Air, IEffect(address(0)), 0, MoveClass.Self, bytes32("m03"));
+        MonStats memory stats = MonStats({
+            hp: 0,
+            stamina: 0,
+            speed: 0,
+            attack: 0,
+            defense: 0,
+            specialAttack: 0,
+            specialDefense: 0,
+            type1: Type.Air,
+            type2: Type.None
+        });
+        bytes32[] memory keys = new bytes32[](1);
+        string[] memory values = new string[](1);
+        keys[0] = bytes32("name");
+        values[0] = "m0";
+
+        vm.startPrank(ALICE);
+        monRegistry.createMon(stats, moves0, abilities, keys, values);
+
+        IMoveSet[] memory moves1 = new IMoveSet[](4);
+        moves1[0] = attackFactory.createAttack(0, 0, 0, 0, Type.Cosmic, IEffect(address(0)), 0, MoveClass.Physical, bytes32("m10"));
+        moves1[1] = attackFactory.createAttack(1, 1, 1, 1, Type.Cosmic, IEffect(address(0)), 0, MoveClass.Other, bytes32("m11"));
+        moves1[2] = attackFactory.createAttack(2, 2, 2, 2, Type.Cosmic, IEffect(address(0)), 0, MoveClass.Special, bytes32("m12"));
+        moves1[3] = attackFactory.createAttack(3, 3, 3, 3, Type.Cosmic, IEffect(address(0)), 0, MoveClass.Self, bytes32("m13"));
+        stats = MonStats({
+            hp: 0,
+            stamina: 0,
+            speed: 0,
+            attack: 0,
+            defense: 0,
+            specialAttack: 0,
+            specialDefense: 0,
+            type1: Type.Cosmic,
+            type2: Type.None
+        });
+        values[0] = "m1";
+        monRegistry.createMon(stats, moves1, abilities, keys, values);
+
+        IMoveSet[] memory moves2 = new IMoveSet[](4);
+        moves2[0] = attackFactory.createAttack(0, 0, 0, 0, Type.Cyber, IEffect(address(0)), 0, MoveClass.Physical, bytes32("m20"));
+        moves2[1] = attackFactory.createAttack(1, 1, 1, 1, Type.Cyber, IEffect(address(0)), 0, MoveClass.Other, bytes32("m21"));
+        moves2[2] = attackFactory.createAttack(2, 2, 2, 2, Type.Cyber, IEffect(address(0)), 0, MoveClass.Special, bytes32("m22"));
+        moves2[3] = attackFactory.createAttack(3, 3, 3, 3, Type.Cyber, IEffect(address(0)), 0, MoveClass.Self, bytes32("m23"));
+        stats = MonStats({
+            hp: 0,
+            stamina: 0,
+            speed: 0,
+            attack: 0,
+            defense: 0,
+            specialAttack: 0,
+            specialDefense: 0,
+            type1: Type.Cyber,
+            type2: Type.None
+        });
+        values[0] = "m2";
+        monRegistry.createMon(stats, moves2, abilities, keys, values);
+
+        IMoveSet[] memory moves3 = new IMoveSet[](4);
+        moves3[0] = attackFactory.createAttack(0, 0, 0, 0, Type.Earth, IEffect(address(0)), 0, MoveClass.Physical, bytes32("m30"));
+        moves3[1] = attackFactory.createAttack(1, 1, 1, 1, Type.Earth, IEffect(address(0)), 0, MoveClass.Other, bytes32("m31"));
+        moves3[2] = attackFactory.createAttack(2, 2, 2, 2, Type.Earth, IEffect(address(0)), 0, MoveClass.Special, bytes32("m32"));
+        moves3[3] = attackFactory.createAttack(3, 3, 3, 3, Type.Earth, IEffect(address(0)), 0, MoveClass.Self, bytes32("m33"));
+        stats = MonStats({
+            hp: 0,
+            stamina: 0,
+            speed: 0,
+            attack: 0,
+            defense: 0,
+            specialAttack: 0,
+            specialDefense: 0,
+            type1: Type.Earth,
+            type2: Type.None
+        });
+        values[0] = "m3";
+        monRegistry.createMon(stats, moves3, abilities, keys, values);
+
+        IMoveSet[] memory moves4 = new IMoveSet[](4);
+        moves4[0] = attackFactory.createAttack(0, 0, 0, 0, Type.Fire, IEffect(address(0)), 0, MoveClass.Physical, bytes32("m40"));
+        moves4[1] = attackFactory.createAttack(1, 1, 1, 1, Type.Fire, IEffect(address(0)), 0, MoveClass.Other, bytes32("m41"));
+        moves4[2] = attackFactory.createAttack(2, 2, 2, 2, Type.Fire, IEffect(address(0)), 0, MoveClass.Special, bytes32("m42"));
+        moves4[3] = attackFactory.createAttack(3, 3, 3, 3, Type.Fire, IEffect(address(0)), 0, MoveClass.Self, bytes32("m43"));
+        stats = MonStats({
+            hp: 0,
+            stamina: 0,
+            speed: 0,
+            attack: 0,
+            defense: 0,
+            specialAttack: 0,
+            specialDefense: 0,
+            type1: Type.Fire,
+            type2: Type.None
+        });
+        values[0] = "m4";
+        monRegistry.createMon(stats, moves4, abilities, keys, values);
+
+        IMoveSet[] memory moves5 = new IMoveSet[](4);
+        moves5[0] = attackFactory.createAttack(0, 0, 0, 0, Type.Ice, IEffect(address(0)), 0, MoveClass.Physical, bytes32("m50"));
+        moves5[1] = attackFactory.createAttack(1, 1, 1, 1, Type.Ice, IEffect(address(0)), 0, MoveClass.Other, bytes32("m51"));
+        moves5[2] = attackFactory.createAttack(2, 2, 2, 2, Type.Ice, IEffect(address(0)), 0, MoveClass.Special, bytes32("m52"));
+        moves5[3] = attackFactory.createAttack(3, 3, 3, 3, Type.Ice, IEffect(address(0)), 0, MoveClass.Self, bytes32("m53"));
+        stats = MonStats({
+            hp: 0,
+            stamina: 0,
+            speed: 0,
+            attack: 0,
+            defense: 0,
+            specialAttack: 0,
+            specialDefense: 0,
+            type1: Type.Ice,
+            type2: Type.None
+        });
+        values[0] = "m5";
+        monRegistry.createMon(stats, moves5, abilities, keys, values);
+
+        DefaultTeamRegistry teamRegistry2 = new DefaultTeamRegistry(DefaultTeamRegistry.Args({
+            REGISTRY: monRegistry,
+            MONS_PER_TEAM: 6,
+            MOVES_PER_MON: 4
+        }));
+        IMoveSet[][] memory moveMetaArray = new IMoveSet[][](6);
+        moveMetaArray[0] = moves0;
+        moveMetaArray[1] = moves1;
+        moveMetaArray[2] = moves2;
+        moveMetaArray[3] = moves3;
+        moveMetaArray[4] = moves4;
+        moveMetaArray[5] = moves5;
+        uint256[] memory monIndices = new uint256[](6);
+        monIndices[0] = 0;
+        monIndices[1] = 1;
+        monIndices[2] = 2;  
+        monIndices[3] = 3;
+        monIndices[4] = 4;
+        monIndices[5] = 5;
+        IMoveSet[][] memory moves = new IMoveSet[][](6);
+        for (uint256 i = 0; i < 6; i++) {
+            moves[i] = new IMoveSet[](4);
+            for (uint256 j = 0; j < 4; j++) {
+                moves[i][j] = moveMetaArray[i][j];
+            }
+        }
+        IAbility[] memory allAbilities = new IAbility[](6);
+        allAbilities[0] = ability;
+        allAbilities[1] = ability;
+        allAbilities[2] = ability;
+        allAbilities[3] = ability;
+        allAbilities[4] = ability;
+        allAbilities[5] = ability;
+        teamRegistry2.createTeam(monIndices, moves, allAbilities);
+        teamRegistry2.getTeamData(ALICE, 0);
     }
 }

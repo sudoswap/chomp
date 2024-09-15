@@ -61,18 +61,16 @@ abstract contract AttackCalculator {
                 defenceStat = uint32(int32(defenderMon.stats.specialDefense) + defenderMonState.specialDefenceDelta);
             }
 
-            uint32 typeMultiplier = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.stats.type1);
+            uint32 scaledBasePower = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.stats.type1, basePower);
             if (defenderMon.stats.type2 != Type.None) {
-                uint32 secondaryTypeMultiplier =
-                    TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.stats.type2);
-                typeMultiplier = typeMultiplier * secondaryTypeMultiplier;
+                scaledBasePower = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.stats.type2, scaledBasePower);
             }
 
             uint32 rngScaling = 0;
             if (MOVE_VARIANCE > 0) {
                 rngScaling = uint32(rng % (MOVE_VARIANCE + 1));
             }
-            damage = (basePower * attackStat * (100 - rngScaling) * typeMultiplier) / (defenceStat * 100);
+            damage = (scaledBasePower * attackStat * (100 - rngScaling)) / (defenceStat * 100);
         }
         ENGINE.dealDamage(defenderPlayerIndex, state.activeMonIndex[defenderPlayerIndex], damage);
     }

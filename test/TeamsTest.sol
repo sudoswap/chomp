@@ -10,11 +10,11 @@ import "../src/Structs.sol";
 import {DefaultMonRegistry} from "../src/teams/DefaultMonRegistry.sol";
 import {DefaultTeamRegistry} from "../src/teams/DefaultTeamRegistry.sol";
 
+import {CustomEffectAttack} from "../src/moves/CustomEffectAttack.sol";
+import {CustomEffectAttackFactory} from "../src/moves/CustomEffectAttackFactory.sol";
+import {ITypeCalculator} from "../src/types/ITypeCalculator.sol";
 import {EffectAbility} from "./mocks/EffectAbility.sol";
 import {EffectAttack} from "./mocks/EffectAttack.sol";
-import {CustomEffectAttackFactory} from "../src/moves/CustomEffectAttackFactory.sol";
-import {CustomEffectAttack} from "../src/moves/CustomEffectAttack.sol";
-import {ITypeCalculator} from "../src/types/ITypeCalculator.sol";
 
 import {IAbility} from "../src/abilities/IAbility.sol";
 import {IEffect} from "../src/effects/IEffect.sol";
@@ -190,7 +190,6 @@ contract TeamsTest is Test {
     }
 
     function test_realTeamFlow() public {
-
         // Make the same mon 6 times
         IAbility ability = new EffectAbility(IEngine(address(0)), IEffect(address(0)));
         IAbility[] memory abilities = new IAbility[](1);
@@ -237,7 +236,7 @@ contract TeamsTest is Test {
         uint256[] memory monIndices = new uint256[](6);
         monIndices[0] = 0;
         monIndices[1] = 1;
-        monIndices[2] = 2;  
+        monIndices[2] = 2;
         monIndices[3] = 3;
         monIndices[4] = 4;
         monIndices[5] = 5;
@@ -285,7 +284,6 @@ contract TeamsTest is Test {
     }
 
     function test_duplicateTeamFails() public {
-
         // Make the same mon 6 times
         IAbility ability = new EffectAbility(IEngine(address(0)), IEffect(address(0)));
         IAbility[] memory abilities = new IAbility[](1);
@@ -342,10 +340,58 @@ contract TeamsTest is Test {
 
         IMoveSet[] memory moves0 = new IMoveSet[](4);
 
-        moves0[0] = attackFactory.createAttack(0, 0, 0, 0, Type.Air, IEffect(address(0)), 0, MoveClass.Physical, bytes32("m00"));
-        moves0[1] = attackFactory.createAttack(1, 1, 1, 1, Type.Air, IEffect(address(0)), 0, MoveClass.Other, bytes32("m01"));
-        moves0[2] = attackFactory.createAttack(2, 2, 2, 2, Type.Air, IEffect(address(0)), 0, MoveClass.Special, bytes32("m02"));
-        moves0[3] = attackFactory.createAttack(3, 3, 3, 3, Type.Air, IEffect(address(0)), 0, MoveClass.Self, bytes32("m03"));
+        moves0[0] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 0,
+                STAMINA_COST: 0,
+                ACCURACY: 0,
+                PRIORITY: 0,
+                MOVE_TYPE: Type.Air,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Physical,
+                NAME: bytes32("m00")
+            })
+        );
+        moves0[1] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 1,
+                STAMINA_COST: 1,
+                ACCURACY: 1,
+                PRIORITY: 1,
+                MOVE_TYPE: Type.Air,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Other,
+                NAME: bytes32("m01")
+            })
+        );
+        moves0[2] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 2,
+                STAMINA_COST: 2,
+                ACCURACY: 2,
+                PRIORITY: 2,
+                MOVE_TYPE: Type.Air,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Special,
+                NAME: bytes32("m02")
+            })
+        );
+        moves0[3] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 3,
+                STAMINA_COST: 3,
+                ACCURACY: 3,
+                PRIORITY: 3,
+                MOVE_TYPE: Type.Air,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Self,
+                NAME: bytes32("m03")
+            })
+        );
         MonStats memory stats = MonStats({
             hp: 0,
             stamina: 0,
@@ -366,10 +412,58 @@ contract TeamsTest is Test {
         monRegistry.createMon(stats, moves0, abilities, keys, values);
 
         IMoveSet[] memory moves1 = new IMoveSet[](4);
-        moves1[0] = attackFactory.createAttack(0, 0, 0, 0, Type.Cosmic, IEffect(address(0)), 0, MoveClass.Physical, bytes32("m10"));
-        moves1[1] = attackFactory.createAttack(1, 1, 1, 1, Type.Cosmic, IEffect(address(0)), 0, MoveClass.Other, bytes32("m11"));
-        moves1[2] = attackFactory.createAttack(2, 2, 2, 2, Type.Cosmic, IEffect(address(0)), 0, MoveClass.Special, bytes32("m12"));
-        moves1[3] = attackFactory.createAttack(3, 3, 3, 3, Type.Cosmic, IEffect(address(0)), 0, MoveClass.Self, bytes32("m13"));
+        moves1[0] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 0,
+                STAMINA_COST: 0,
+                ACCURACY: 0,
+                PRIORITY: 0,
+                MOVE_TYPE: Type.Cosmic,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Physical,
+                NAME: bytes32("m10")
+            })
+        );
+        moves1[1] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 1,
+                STAMINA_COST: 1,
+                ACCURACY: 1,
+                PRIORITY: 1,
+                MOVE_TYPE: Type.Cosmic,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Other,
+                NAME: bytes32("m11")
+            })
+        );
+        moves1[2] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 2,
+                STAMINA_COST: 2,
+                ACCURACY: 2,
+                PRIORITY: 2,
+                MOVE_TYPE: Type.Cosmic,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Special,
+                NAME: bytes32("m12")
+            })
+        );
+        moves1[3] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 3,
+                STAMINA_COST: 3,
+                ACCURACY: 3,
+                PRIORITY: 3,
+                MOVE_TYPE: Type.Cosmic,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Self,
+                NAME: bytes32("m13")
+            })
+        );
         stats = MonStats({
             hp: 0,
             stamina: 0,
@@ -385,10 +479,58 @@ contract TeamsTest is Test {
         monRegistry.createMon(stats, moves1, abilities, keys, values);
 
         IMoveSet[] memory moves2 = new IMoveSet[](4);
-        moves2[0] = attackFactory.createAttack(0, 0, 0, 0, Type.Cyber, IEffect(address(0)), 0, MoveClass.Physical, bytes32("m20"));
-        moves2[1] = attackFactory.createAttack(1, 1, 1, 1, Type.Cyber, IEffect(address(0)), 0, MoveClass.Other, bytes32("m21"));
-        moves2[2] = attackFactory.createAttack(2, 2, 2, 2, Type.Cyber, IEffect(address(0)), 0, MoveClass.Special, bytes32("m22"));
-        moves2[3] = attackFactory.createAttack(3, 3, 3, 3, Type.Cyber, IEffect(address(0)), 0, MoveClass.Self, bytes32("m23"));
+        moves2[0] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 0,
+                STAMINA_COST: 0,
+                ACCURACY: 0,
+                PRIORITY: 0,
+                MOVE_TYPE: Type.Cyber,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Physical,
+                NAME: bytes32("m20")
+            })
+        );
+        moves2[1] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 1,
+                STAMINA_COST: 1,
+                ACCURACY: 1,
+                PRIORITY: 1,
+                MOVE_TYPE: Type.Cyber,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Other,
+                NAME: bytes32("m21")
+            })
+        );
+        moves2[2] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 2,
+                STAMINA_COST: 2,
+                ACCURACY: 2,
+                PRIORITY: 2,
+                MOVE_TYPE: Type.Cyber,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Special,
+                NAME: bytes32("m22")
+            })
+        );
+        moves2[3] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 3,
+                STAMINA_COST: 3,
+                ACCURACY: 3,
+                PRIORITY: 3,
+                MOVE_TYPE: Type.Cyber,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Self,
+                NAME: bytes32("m23")
+            })
+        );
         stats = MonStats({
             hp: 0,
             stamina: 0,
@@ -404,10 +546,58 @@ contract TeamsTest is Test {
         monRegistry.createMon(stats, moves2, abilities, keys, values);
 
         IMoveSet[] memory moves3 = new IMoveSet[](4);
-        moves3[0] = attackFactory.createAttack(0, 0, 0, 0, Type.Earth, IEffect(address(0)), 0, MoveClass.Physical, bytes32("m30"));
-        moves3[1] = attackFactory.createAttack(1, 1, 1, 1, Type.Earth, IEffect(address(0)), 0, MoveClass.Other, bytes32("m31"));
-        moves3[2] = attackFactory.createAttack(2, 2, 2, 2, Type.Earth, IEffect(address(0)), 0, MoveClass.Special, bytes32("m32"));
-        moves3[3] = attackFactory.createAttack(3, 3, 3, 3, Type.Earth, IEffect(address(0)), 0, MoveClass.Self, bytes32("m33"));
+        moves3[0] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 0,
+                STAMINA_COST: 0,
+                ACCURACY: 0,
+                PRIORITY: 0,
+                MOVE_TYPE: Type.Earth,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Physical,
+                NAME: bytes32("m30")
+            })
+        );
+        moves3[1] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 1,
+                STAMINA_COST: 1,
+                ACCURACY: 1,
+                PRIORITY: 1,
+                MOVE_TYPE: Type.Earth,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Other,
+                NAME: bytes32("m31")
+            })
+        );
+        moves3[2] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 2,
+                STAMINA_COST: 2,
+                ACCURACY: 2,
+                PRIORITY: 2,
+                MOVE_TYPE: Type.Earth,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Special,
+                NAME: bytes32("m32")
+            })
+        );
+        moves3[3] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 3,
+                STAMINA_COST: 3,
+                ACCURACY: 3,
+                PRIORITY: 3,
+                MOVE_TYPE: Type.Earth,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Self,
+                NAME: bytes32("m33")
+            })
+        );
         stats = MonStats({
             hp: 0,
             stamina: 0,
@@ -423,10 +613,58 @@ contract TeamsTest is Test {
         monRegistry.createMon(stats, moves3, abilities, keys, values);
 
         IMoveSet[] memory moves4 = new IMoveSet[](4);
-        moves4[0] = attackFactory.createAttack(0, 0, 0, 0, Type.Fire, IEffect(address(0)), 0, MoveClass.Physical, bytes32("m40"));
-        moves4[1] = attackFactory.createAttack(1, 1, 1, 1, Type.Fire, IEffect(address(0)), 0, MoveClass.Other, bytes32("m41"));
-        moves4[2] = attackFactory.createAttack(2, 2, 2, 2, Type.Fire, IEffect(address(0)), 0, MoveClass.Special, bytes32("m42"));
-        moves4[3] = attackFactory.createAttack(3, 3, 3, 3, Type.Fire, IEffect(address(0)), 0, MoveClass.Self, bytes32("m43"));
+        moves4[0] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 0,
+                STAMINA_COST: 0,
+                ACCURACY: 0,
+                PRIORITY: 0,
+                MOVE_TYPE: Type.Fire,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Physical,
+                NAME: bytes32("m40")
+            })
+        );
+        moves4[1] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 1,
+                STAMINA_COST: 1,
+                ACCURACY: 1,
+                PRIORITY: 1,
+                MOVE_TYPE: Type.Fire,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Other,
+                NAME: bytes32("m41")
+            })
+        );
+        moves4[2] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 2,
+                STAMINA_COST: 2,
+                ACCURACY: 2,
+                PRIORITY: 2,
+                MOVE_TYPE: Type.Fire,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Special,
+                NAME: bytes32("m42")
+            })
+        );
+        moves4[3] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 3,
+                STAMINA_COST: 3,
+                ACCURACY: 3,
+                PRIORITY: 3,
+                MOVE_TYPE: Type.Fire,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Self,
+                NAME: bytes32("m43")
+            })
+        );
         stats = MonStats({
             hp: 0,
             stamina: 0,
@@ -442,10 +680,58 @@ contract TeamsTest is Test {
         monRegistry.createMon(stats, moves4, abilities, keys, values);
 
         IMoveSet[] memory moves5 = new IMoveSet[](4);
-        moves5[0] = attackFactory.createAttack(0, 0, 0, 0, Type.Ice, IEffect(address(0)), 0, MoveClass.Physical, bytes32("m50"));
-        moves5[1] = attackFactory.createAttack(1, 1, 1, 1, Type.Ice, IEffect(address(0)), 0, MoveClass.Other, bytes32("m51"));
-        moves5[2] = attackFactory.createAttack(2, 2, 2, 2, Type.Ice, IEffect(address(0)), 0, MoveClass.Special, bytes32("m52"));
-        moves5[3] = attackFactory.createAttack(3, 3, 3, 3, Type.Ice, IEffect(address(0)), 0, MoveClass.Self, bytes32("m53"));
+        moves5[0] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 0,
+                STAMINA_COST: 0,
+                ACCURACY: 0,
+                PRIORITY: 0,
+                MOVE_TYPE: Type.Ice,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Physical,
+                NAME: bytes32("m50")
+            })
+        );
+        moves5[1] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 1,
+                STAMINA_COST: 1,
+                ACCURACY: 1,
+                PRIORITY: 1,
+                MOVE_TYPE: Type.Ice,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Other,
+                NAME: bytes32("m51")
+            })
+        );
+        moves5[2] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 2,
+                STAMINA_COST: 2,
+                ACCURACY: 2,
+                PRIORITY: 2,
+                MOVE_TYPE: Type.Ice,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Special,
+                NAME: bytes32("m52")
+            })
+        );
+        moves5[3] = attackFactory.createAttack(
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 3,
+                STAMINA_COST: 3,
+                ACCURACY: 3,
+                PRIORITY: 3,
+                MOVE_TYPE: Type.Ice,
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Self,
+                NAME: bytes32("m53")
+            })
+        );
         stats = MonStats({
             hp: 0,
             stamina: 0,
@@ -460,11 +746,9 @@ contract TeamsTest is Test {
         values[0] = "m5";
         monRegistry.createMon(stats, moves5, abilities, keys, values);
 
-        DefaultTeamRegistry teamRegistry2 = new DefaultTeamRegistry(DefaultTeamRegistry.Args({
-            REGISTRY: monRegistry,
-            MONS_PER_TEAM: 6,
-            MOVES_PER_MON: 4
-        }));
+        DefaultTeamRegistry teamRegistry2 = new DefaultTeamRegistry(
+            DefaultTeamRegistry.Args({REGISTRY: monRegistry, MONS_PER_TEAM: 6, MOVES_PER_MON: 4})
+        );
         IMoveSet[][] memory moveMetaArray = new IMoveSet[][](6);
         moveMetaArray[0] = moves0;
         moveMetaArray[1] = moves1;
@@ -475,7 +759,7 @@ contract TeamsTest is Test {
         uint256[] memory monIndices = new uint256[](6);
         monIndices[0] = 0;
         monIndices[1] = 1;
-        monIndices[2] = 2;  
+        monIndices[2] = 2;
         monIndices[3] = 3;
         monIndices[4] = 4;
         monIndices[5] = 5;

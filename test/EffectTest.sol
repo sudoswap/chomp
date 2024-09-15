@@ -102,7 +102,17 @@ contract EngineTest is Test {
     function test_frostbite() public {
         // Deploy an attack with frostbite
         IMoveSet frostbiteAttack = customEffectAttackFactory.createAttack(
-            0, 0, 100, 1, Type.Ice, frostbiteStatus, 100, MoveClass.Physical, bytes32("FrostbiteHit")
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 0,
+                STAMINA_COST: 0,
+                ACCURACY: 100,
+                PRIORITY: 1,
+                MOVE_TYPE: Type.Ice,
+                EFFECT: frostbiteStatus,
+                EFFECT_ACCURACY: 100,
+                MOVE_CLASS: MoveClass.Physical,
+                NAME: bytes32("FrostbiteHit")
+            })
         );
 
         // Verify the name matches
@@ -143,13 +153,15 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
-            args.validator,
-            args.rngOracle,
-            args.ruleset,
-            args.teamRegistry,
-            keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        ));
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            )
+        );
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -191,15 +203,18 @@ contract EngineTest is Test {
     function test_sleep() public {
         // Deploy an attack with sleep
         IMoveSet sleepAttack = customEffectAttackFactory.createAttack(
-            1, // Does 1 damage
-            0,
-            100,
-            1,
-            Type.Ice,
-            sleepStatus,
-            100,
-            MoveClass.Physical,
-            bytes32("SleepHit")
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 1,
+                STAMINA_COST: // Does 1 damage
+                    0,
+                ACCURACY: 100,
+                PRIORITY: 1,
+                MOVE_TYPE: Type.Ice,
+                EFFECT: sleepStatus,
+                EFFECT_ACCURACY: 100,
+                MOVE_CLASS: MoveClass.Physical,
+                NAME: bytes32("SleepHit")
+            })
         );
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = sleepAttack;
@@ -253,13 +268,15 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
-            args.validator,
-            args.rngOracle,
-            args.ruleset,
-            args.teamRegistry,
-            keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        ));
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            )
+        );
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);
@@ -329,15 +346,19 @@ contract EngineTest is Test {
     function test_fright() public {
         // Deploy an attack with fright
         IMoveSet frightAttack = customEffectAttackFactory.createAttack(
-            1, // Does 1 damage
-            1, // Costs 1 stamina
-            100,
-            1,
-            Type.Cosmic,
-            frightStatus,
-            100,
-            MoveClass.Physical,
-            bytes32("FrightHit")
+            CustomEffectAttackFactory.ATTACK_PARAMS({
+                BASE_POWER: 1,
+                STAMINA_COST: // Does 1 damage
+                    1,
+                ACCURACY: // Costs 1 stamina
+                    100,
+                PRIORITY: 1,
+                MOVE_TYPE: Type.Cosmic,
+                EFFECT: frightStatus,
+                EFFECT_ACCURACY: 100,
+                MOVE_CLASS: MoveClass.Physical,
+                NAME: bytes32("FrightHit")
+            })
         );
         IMoveSet[] memory moves = new IMoveSet[](1);
         moves[0] = frightAttack;
@@ -393,13 +414,15 @@ contract EngineTest is Test {
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = keccak256(abi.encodePacked(
-            args.validator,
-            args.rngOracle,
-            args.ruleset,
-            args.teamRegistry,
-            keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-        ));
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            )
+        );
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
         vm.prank(ALICE);

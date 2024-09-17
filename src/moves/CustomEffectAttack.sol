@@ -49,15 +49,15 @@ contract CustomEffectAttack is AttackCalculator, IMoveSet, Clone {
         returns (bool)
     {
         // Deal the damage
-        uint32 basePower = uint32(_getArgUint256(0));
+        uint32 basePowerValue = uint32(_getArgUint256(0));
         uint32 accuracy = uint32(_getArgUint256(64));
         uint256 staminaCost = _getArgUint256(32);
         Type typeForMove = Type(_getArgUint256(128));
         MoveClass classForMove = MoveClass(_getArgUint256(212));
 
-        if (basePower > 0) {
+        if (basePowerValue > 0) {
             calculateDamage(
-                battleKey, attackerPlayerIndex, basePower, accuracy, staminaCost, typeForMove, classForMove, rng
+                battleKey, attackerPlayerIndex, basePowerValue, accuracy, staminaCost, typeForMove, classForMove, rng
             );
         }
 
@@ -96,5 +96,9 @@ contract CustomEffectAttack is AttackCalculator, IMoveSet, Clone {
 
     function moveClass(bytes32) external pure returns (MoveClass) {
         return MoveClass(_getArgUint256(212));
+    }
+
+    function basePower(bytes32) external pure returns (uint32) {
+        return uint32(_getArgUint256(0));
     }
 }

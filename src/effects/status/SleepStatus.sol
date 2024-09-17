@@ -5,12 +5,14 @@ import {EffectStep, MonStateIndexName} from "../../Enums.sol";
 import {IEngine} from "../../IEngine.sol";
 import {IEffect} from "../IEffect.sol";
 
-import {IStatusEffect} from "./IStatusEffect.sol";
+import {StatusEffect} from "./StatusEffect.sol";
 
-contract SleepStatus is IStatusEffect {
+contract SleepStatus is StatusEffect {
+
     uint256 constant DURATION = 3;
+    bytes32 constant SLEEP_STATUS = "SLEEP_STATUS";
 
-    constructor(IEngine engine) IStatusEffect(engine) {}
+    constructor(IEngine engine) StatusEffect(engine) {}
 
     function name() public pure override returns (string memory) {
         return "Sleep";
@@ -62,5 +64,37 @@ contract SleepStatus is IStatusEffect {
         } else {
             return (abi.encode(turnsLeft - 1), false);
         }
+    }
+
+    function _globalSleepKey(uint256 targetIndex) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(SLEEP_STATUS, targetIndex));
+    }
+
+    // Whether or not to add the effect if the step condition is met
+    function shouldApply(bytes memory data, uint256 targetIndex, uint256 monIndex) public override returns (bool) {
+        bool shouldApplyStatusInGeneral = super.shouldApply(data, targetIndex, monIndex);
+        if (! shouldApplyStatusInGeneral) {
+            return false;
+        }
+        else {
+            // Get value from ENGINE KV
+            bytes32 globalSleepValueForPlayer = ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), _globalSleepKey(targetIndex));
+
+            // Check if sleep already exists for the team
+            if (globalSleepValueForPlayer == bytes32(0)) {
+                // If not, set the flag and return true
+                ENGINE.setGlobalKV(_globalSleepKey(targetIndex), bytes32("1"));
+                return true;
+            } else {
+                // Otherwise return false (we can only have one instance of sleep)
+                return false;
+            }
+        }
+    }
+
+    function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) public override {
+        // Call the super onRemove and then remove the extra flag we set as well
+        super.onRemove(extraData, targetIndex, monIndex);
+        ENGINE.setGlobalKV(_globalSleepKey(targetIndex), bytes32(0));
     }
 }

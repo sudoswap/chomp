@@ -5,12 +5,12 @@ import {EffectStep, MonStateIndexName} from "../../Enums.sol";
 import {IEngine} from "../../IEngine.sol";
 import {IEffect} from "../IEffect.sol";
 
-import {IStatusEffect} from "./IStatusEffect.sol";
+import {StatusEffect} from "./StatusEffect.sol";
 
-contract FrightStatus is IStatusEffect {
+contract FrightStatus is StatusEffect {
     uint256 constant DURATION = 3;
 
-    constructor(IEngine engine) IStatusEffect(engine) {}
+    constructor(IEngine engine) StatusEffect(engine) {}
 
     function name() public pure override returns (string memory) {
         return "Fright";

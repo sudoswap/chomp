@@ -63,4 +63,8 @@ contract SkipTurnMove is IMoveSet {
     function moveClass(bytes32) external pure returns (MoveClass) {
         return MoveClass.Physical;
     }
+
+    function basePower(bytes32) external pure returns (uint32) {
+        return 0;
+    }
 }

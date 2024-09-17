@@ -5,13 +5,13 @@ import {EffectStep, MonStateIndexName} from "../../Enums.sol";
 import {IEngine} from "../../IEngine.sol";
 import {IEffect} from "../IEffect.sol";
 
-import {IStatusEffect} from "./IStatusEffect.sol";
+import {StatusEffect} from "./StatusEffect.sol";
 
-contract FrostbiteStatus is IStatusEffect {
+contract FrostbiteStatus is StatusEffect {
     uint32 constant DAMAGE_DENOMINATOR = 16;
     uint32 constant SP_ATTACK_DENOMINATOR = 2;
 
-    constructor(IEngine engine) IStatusEffect(engine) {}
+    constructor(IEngine engine) StatusEffect(engine) {}
 
     function name() public pure override returns (string memory) {
         return "Frostbite";
@@ -40,7 +40,9 @@ contract FrostbiteStatus is IStatusEffect {
         return (extraData);
     }
 
-    function onRemove(bytes memory, uint256 targetIndex, uint256 monIndex) external override {
+    function onRemove(bytes memory data, uint256 targetIndex, uint256 monIndex) public override {
+        super.onRemove(data, targetIndex, monIndex);
+
         // Reset the special attack reduction
 
         // Get the special attack of the affected mon
@@ -55,7 +57,7 @@ contract FrostbiteStatus is IStatusEffect {
     }
 
     function onRoundEnd(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external
+        public
         override
         returns (bytes memory, bool)
     {

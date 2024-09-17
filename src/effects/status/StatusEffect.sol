@@ -5,7 +5,8 @@ import {EffectStep} from "../../Enums.sol";
 import {IEngine} from "../../IEngine.sol";
 import {IEffect} from "../IEffect.sol";
 
-abstract contract IStatusEffect is IEffect {
+abstract contract StatusEffect is IEffect {
+    
     IEngine immutable ENGINE;
 
     constructor(IEngine _ENGINE) {
@@ -24,7 +25,7 @@ abstract contract IStatusEffect is IEffect {
     function shouldRunAtStep(EffectStep r) external virtual returns (bool) {}
 
     // Whether or not to add the effect if the step condition is met
-    function shouldApply(bytes memory, uint256 targetIndex, uint256 monIndex) external virtual returns (bool) {
+    function shouldApply(bytes memory, uint256 targetIndex, uint256 monIndex) public virtual returns (bool) {
         bytes32 battleKey = ENGINE.battleKeyForWrite();
         bytes32 keyForMon = _getKeyForMonIndex(targetIndex, monIndex);
 
@@ -100,5 +101,9 @@ abstract contract IStatusEffect is IEffect {
         updatedExtraData = extraData;
     }
 
-    function onRemove(bytes memory extraData, uint256, uint256) external virtual {}
+    function onRemove(bytes memory , uint256 targetIndex, uint256 monIndex) public virtual {
+        // On remove, reset the status flag
+        bytes32 keyForMon = _getKeyForMonIndex(targetIndex, monIndex);
+        ENGINE.setGlobalKV(keyForMon, bytes32(0));
+    }
 }

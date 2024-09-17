@@ -1,33 +1,17 @@
-TODO
+# TODO
 
-1) finish implementing all of the effects
-2) write tests for the effects
+1) add team to local wallet [x]
+2) make 2nd wallet for local wallet (or just have it on second browser) (easier) [x]
+3) add team to second wallet [x]
 
-3) deploy the engine/registry
-    - create factory for custom attack
-    - create factory for custom effect attack
-4) Add events to the engine
-
-5) that's enough for now, start working on the client
-
----------------------------------------------------------------------------------------------
-
-- to think about move implementations:
-    - tricky moves to use as examples for edge cases:
-        - parting shot
-        - destiny bond
-        - substitute
-        - volt switch
-        - barrier/frost veil
-
-    - categorizing move types
-        - normal damaging moves (trade-off between accuracy and damage)
-        - normal damaging move + % to inflict additional effect (status, stat boost, stamina, etc.)
-        - stat boost (2 stages to any one stat) / (1 stage to two stats)
-        - healing (reduced healing over time)
-        - environmental (hazards/weather/etc.)
-
-To implement: 
+4) create battle (use etherscan)
+5) start battle, load values
+6) (render active mon / moves)
+    - moves
+    - stats
+    - swap to other on
+7) listen to events emitted
+8) avoid writing the engine in ts for now (can do later)
 
 ---------------------------------------------------------------------------------------------
 
@@ -49,11 +33,6 @@ Ways to mitigate:
 ---------------------------------------------------------------------------------------------
 
 Later features:
-- name() for mons (use the mon registry)
-- store mon registry / index (need to get from team registry)
-- team registry should actually just index into the mon registry vs copying the entire struct over
-- default validator still needs to check team eligibility in case e.g. move eligibility has changed
-    - add validateTeam() helper?
 - disabled / anti switch status effect
 
 Status effects:
@@ -67,5 +46,29 @@ Status effects:
 - Burn, takes 1/16 damage every turn, reduces attack by 50% []
 - Poison, takes 1/8 damage every turn []
 - Shock, reduces speed by 50%, 25% chance cannot move []
+
+Missing from attack calculator:
+- critical hits
+- variance
+- STAB
+
+---------------------------------------------------------------------------------------------
+
+### random thoughts
+
+- to think about move implementations:
+    - tricky moves to use as examples for edge cases:
+        - parting shot
+        - destiny bond
+        - substitute
+        - volt switch
+        - barrier/frost veil
+
+    - categorizing move types
+        - normal damaging moves (trade-off between accuracy and damage)
+        - normal damaging move + % to inflict additional effect (status, stat boost, stamina, etc.)
+        - stat boost (2 stages to any one stat) / (1 stage to two stats)
+        - healing (reduced healing over time)
+        - environmental (hazards/weather/etc.)
 
 ---------------------------------------------------------------------------------------------

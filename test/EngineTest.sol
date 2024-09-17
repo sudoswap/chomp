@@ -15,7 +15,7 @@ import {IAbility} from "../src/abilities/IAbility.sol";
 
 import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
 import {IEffect} from "../src/effects/IEffect.sol";
-import {CustomAttack} from "../src/moves/CustomAttack.sol";
+import {CustomAttack} from "./mocks/CustomAttack.sol";
 import {IMoveSet} from "../src/moves/IMoveSet.sol";
 import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
 import {ITypeCalculator} from "../src/types/ITypeCalculator.sol";
@@ -746,7 +746,6 @@ contract EngineTest is Test {
     }
 
     function test_nonKOSubsequentMoves() public {
-        // Initialize fast and slow mons
         IMoveSet normalAttack = new CustomAttack(
             engine,
             typeCalc,
@@ -813,15 +812,20 @@ contract EngineTest is Test {
         _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
 
         // Let Alice and Bob commit and reveal to both choosing attack again
-        // (Now Alice should win because her mon is faster)
         _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
 
-        // Assert Alice wins
+        // Both Alice and Bob's mons have the same speed, so the final priority player is rng % 2
         BattleState memory state = engine.getBattleState(battleKey);
-        assertEq(state.winner, ALICE);
+        uint256 finalRNG = state.pRNGStream[state.pRNGStream.length - 1];
+        uint256 winnerIndex = finalRNG % 2;
+        if (winnerIndex == 0) {
+            assertEq(state.winner, ALICE);
+        } else {
+            assertEq(state.winner, BOB);
+        }
 
-        // Assert that the staminaDelta was set correctly (2 moves spent)
-        assertEq(state.monStates[0][0].staminaDelta, -2);
+        // Assert that the staminaDelta was set correctly (2 moves spent) for the winning mon
+        assertEq(state.monStates[winnerIndex][0].staminaDelta, -2);
     }
 
     function test_switchPriorityIsFasterThanMove() public {

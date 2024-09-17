@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import "../Constants.sol";
-import "../Enums.sol";
-import "../Structs.sol";
+import "../../src/Constants.sol";
+import "../../src/Enums.sol";
+import "../../src/Structs.sol";
 
-import {IEngine} from "../IEngine.sol";
-import {ITypeCalculator} from "../types/ITypeCalculator.sol";
+import {IEngine} from "../../src/IEngine.sol";
+import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
 
-import {AttackCalculator} from "./AttackCalculator.sol";
-import {IMoveSet} from "./IMoveSet.sol";
+import {AttackCalculator} from "../../src/moves/AttackCalculator.sol";
+import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 
 contract CustomAttack is AttackCalculator, IMoveSet {
     struct Args {
@@ -73,5 +73,9 @@ contract CustomAttack is AttackCalculator, IMoveSet {
 
     function moveClass(bytes32) external pure returns (MoveClass) {
         return MoveClass.Physical;
+    }
+
+    function basePower(bytes32) external view returns (uint32) {
+        return BASE_POWER;
     }
 }

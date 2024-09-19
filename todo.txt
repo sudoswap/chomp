@@ -1,5 +1,18 @@
 # TODO
 
+architecture changes after working on client:
+
+Propose/Accept (for later)
+- need a way to let the client know that there is a pending battle (e.g. a queue or way to show pending battles)
+- need a way for the original caller to auto-start after it's been accepted
+(so need to keep track of both in-flight matches for both the proposer and the accepter)
+
+Events (for later)
+- return some info when execute is done as an event
+- probably also store the p0 team index in the battle struct so that we can access it onchain
+
+---------------------------------------------------------------------------------------------
+
 1) add team to local wallet [x]
 2) make 2nd wallet for local wallet (or just have it on second browser) (easier) [x]
 3) add team to second wallet [x]

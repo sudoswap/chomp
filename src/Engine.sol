@@ -26,6 +26,7 @@ contract Engine is IEngine {
     error BattleNotStarted();
     error NotP0OrP1();
     error AlreadyCommited();
+    error AlreadyRevealed();
     error RevealBeforeOtherCommit();
     error WrongTurnId();
     error WrongPreimage();
@@ -441,6 +442,11 @@ contract Engine is IEngine {
                     revert RevealBeforeOtherCommit();
                 }
             }
+        }
+
+        // If a reveal already happened, then revert
+        if (state.moveHistory[currentPlayerIndex].length > state.turnId) {
+            revert AlreadyRevealed();
         }
 
         // validate that the commited moves are legal

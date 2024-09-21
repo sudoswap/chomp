@@ -11,6 +11,13 @@ Events (for later)
 - return some info when execute is done as an event
 - probably also store the p0 team index in the battle struct so that we can access it onchain
 
+Saving gas
+- specify specifically which team items to get when querying instead of returning the entire amount for DefaultValidator
+- e.g. specify indices, should save a lot of gas, rn execute() is taking 1m gas which is not needed
+
+Debugging
+- revealing twice should revert (technically does nothing but should prevent this)
+
 ---------------------------------------------------------------------------------------------
 
 1) add team to local wallet [x]

@@ -3398,4 +3398,82 @@ contract EngineTest is Test {
         assertEq(state.monStates[0][0].hpDelta, 0);
         assertEq(state.monStates[1][0].hpDelta, 0);
     }
+
+    function double_reveal_reverts() public {
+        IMoveSet[] memory moves = new IMoveSet[](0);
+        Mon memory mon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        // Create both teams (teams of length 1)
+        Mon[] memory team = new Mon[](2);
+        team[0] = mon;
+        team[1] = mon;
+
+        // Register teams
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        // Create 0 move, 2 mon validator
+        DefaultValidator twoMoveValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 0, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        // Start battle
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMoveValidator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            )
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // Both Alice and Bob commit to switching to mon index 1
+        bytes32 salt = "";
+        bytes32 aliceMoveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, abi.encode(1)));
+        bytes32 bobMoveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, abi.encode(1)));
+        vm.startPrank(ALICE);
+        engine.commitMove(battleKey, aliceMoveHash);
+        
+        vm.startPrank(BOB);
+        engine.commitMove(battleKey, bobMoveHash);
+        
+        // Alice double reveals
+        vm.startPrank(ALICE);
+        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
+        
+        // This isn't allowed
+        vm.expectRevert(Engine.AlreadyRevealed.selector);
+        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
+    }
+
 }

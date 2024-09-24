@@ -17,6 +17,8 @@ Saving gas
 
 Debugging
 - revealing twice should revert (technically does nothing but should prevent this)
+    - currently fixed
+- ending a match before moves are committed is valid (just be aware)
 
 ---------------------------------------------------------------------------------------------
 

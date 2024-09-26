@@ -34,7 +34,7 @@ abstract contract AttackCalculator {
         if ((rng % 100) >= accuracy) {
             return;
         }
-
+        uint256[] memory monIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
         uint32 damage;
         Mon memory defenderMon;
         uint256 defenderPlayerIndex = (attackerPlayerIndex + 1) % 2;
@@ -43,12 +43,10 @@ abstract contract AttackCalculator {
             uint32 attackStat;
             uint32 defenceStat;
 
-            Mon memory attackerMon =
-                (ENGINE.getBattle(battleKey)).teams[attackerPlayerIndex][state.activeMonIndex[attackerPlayerIndex]];
+            Mon memory attackerMon = ENGINE.getMonForTeam(battleKey, attackerPlayerIndex, monIndex[attackerPlayerIndex]);
             MonState memory attackerMonState =
                 state.monStates[attackerPlayerIndex][state.activeMonIndex[attackerPlayerIndex]];
-            defenderMon =
-                (ENGINE.getBattle(battleKey)).teams[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]];
+            defenderMon = ENGINE.getMonForTeam(battleKey, defenderPlayerIndex, monIndex[defenderPlayerIndex]);
             MonState memory defenderMonState =
                 state.monStates[defenderPlayerIndex][state.activeMonIndex[defenderPlayerIndex]];
 

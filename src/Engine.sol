@@ -10,6 +10,7 @@ import "./moves/IMoveSet.sol";
 import {IEngine} from "./IEngine.sol";
 
 contract Engine is IEngine {
+
     // State variables
     bytes32 public battleKeyForWrite;
     mapping(bytes32 => uint256) public pairHashNonces;
@@ -56,8 +57,8 @@ contract Engine is IEngine {
         return battles[battleKey];
     }
 
-    function getTeamsForBattle(bytes32 battleKey) external view returns (Mon[][] memory) {
-        return battles[battleKey].teams;
+    function getMonForTeam(bytes32 battleKey, uint256 playerIndex, uint256 monIndex) external view returns (Mon memory) {
+        return battles[battleKey].teams[playerIndex][monIndex];
     }
 
     function getPlayersForBattle(bytes32 battleKey) external view returns (address[] memory) {
@@ -75,8 +76,12 @@ contract Engine is IEngine {
         return battleStates[battleKey].moveHistory;
     }
 
-    function getMonStatesForBattleState(bytes32 battleKey) external view returns (MonState[][] memory) {
-        return battleStates[battleKey].monStates;
+    function getMoveForBattleStateForTurn(bytes32 battleKey, uint256 playerIndex, uint256 turn) external view returns (RevealedMove memory) {
+        return battleStates[battleKey].moveHistory[playerIndex][turn];
+    }
+
+    function getMonStateForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex) external view returns (MonState memory) {
+        return battleStates[battleKey].monStates[playerIndex][monIndex];
     }
 
     function getTurnIdForBattleState(bytes32 battleKey) external view returns (uint256) {

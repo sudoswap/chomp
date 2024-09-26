@@ -83,13 +83,11 @@ contract DefaultValidator is IValidator {
         view
         returns (bool)
     {
-        MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
-
         if (monToSwitchIndex >= MONS_PER_TEAM) {
             return false;
         }
-        bool isNewMonKnockedOut = monStates[playerIndex][monToSwitchIndex].isKnockedOut;
+        bool isNewMonKnockedOut = ENGINE.getMonStateForBattle(battleKey, playerIndex, monToSwitchIndex).isKnockedOut;
         if (isNewMonKnockedOut) {
             return false;
         }
@@ -109,14 +107,13 @@ contract DefaultValidator is IValidator {
         uint256 playerIndex,
         bytes calldata extraData
     ) public view returns (bool) {
-        Mon[][] memory teams = ENGINE.getTeamsForBattle(battleKey);
-        MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
+        Mon memory activeMon = ENGINE.getMonForTeam(battleKey, playerIndex, activeMonIndex[playerIndex]);
 
         // A move cannot be selected if its stamina costs more than the mon's current stamina
-        IMoveSet moveSet = teams[playerIndex][activeMonIndex[playerIndex]].moves[moveIndex];
-        int256 monStaminaDelta = monStates[playerIndex][activeMonIndex[playerIndex]].staminaDelta;
-        uint256 monBaseStamina = teams[playerIndex][activeMonIndex[playerIndex]].stats.stamina;
+        IMoveSet moveSet = activeMon.moves[moveIndex];
+        int256 monStaminaDelta = ENGINE.getMonStateForBattle(battleKey, playerIndex, activeMonIndex[playerIndex]).staminaDelta;
+        uint256 monBaseStamina = activeMon.stats.stamina;
         uint256 monCurrentStamina = uint256(int256(monBaseStamina) + monStaminaDelta);
         if (moveSet.stamina(battleKey) > monCurrentStamina) {
             return false;
@@ -146,7 +143,6 @@ contract DefaultValidator is IValidator {
         view
         returns (bool)
     {
-        MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
 
         // Enforce a switch IF:
@@ -154,7 +150,7 @@ contract DefaultValidator is IValidator {
         // - if the active mon is knocked out
         {
             bool isTurnZero = ENGINE.getTurnIdForBattleState(battleKey) == 0;
-            bool isActiveMonKnockedOut = monStates[playerIndex][activeMonIndex[playerIndex]].isKnockedOut;
+            bool isActiveMonKnockedOut = ENGINE.getMonStateForBattle(battleKey, playerIndex, activeMonIndex[playerIndex]).isKnockedOut;
             if (isTurnZero || isActiveMonKnockedOut) {
                 if (moveIndex != SWITCH_MOVE_INDEX) {
                     return false;
@@ -190,7 +186,6 @@ contract DefaultValidator is IValidator {
     // Validates that the game is over, returns address(0) if no winner, otherwise returns the winner
     function validateGameOver(bytes32 battleKey, uint256 priorityPlayerIndex) external view returns (address) {
         address[] memory players = ENGINE.getPlayersForBattle(battleKey);
-        MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
 
         // A game is over if all of a player's mons are knocked out
         uint256[2] memory playerIndex = [uint256(0), uint256(1)];
@@ -200,7 +195,8 @@ contract DefaultValidator is IValidator {
         for (uint256 i; i < playerIndex.length; ++i) {
             uint256 numMonsKnockedOut;
             for (uint256 j; j < MONS_PER_TEAM; ++j) {
-                if (monStates[playerIndex[i]][j].isKnockedOut) {
+                MonState memory monState = ENGINE.getMonStateForBattle(battleKey, playerIndex[i], j);
+                if (monState.isKnockedOut) {
                     numMonsKnockedOut += 1;
                 }
             }
@@ -280,15 +276,12 @@ contract DefaultValidator is IValidator {
     }
 
     function computePriorityPlayerIndex(bytes32 battleKey, uint256 rng) external view returns (uint256) {
-        Mon[][] memory teams = ENGINE.getTeamsForBattle(battleKey);
-        RevealedMove[][] memory moveHistory = ENGINE.getMoveHistoryForBattleState(battleKey);
-
         uint256 turnId = ENGINE.getTurnIdForBattleState(battleKey);
-        RevealedMove memory p0Move = moveHistory[0][turnId];
-        RevealedMove memory p1Move = moveHistory[1][turnId];
-
+        RevealedMove memory p0Move = ENGINE.getMoveForBattleStateForTurn(battleKey, 0, turnId);
+        RevealedMove memory p1Move = ENGINE.getMoveForBattleStateForTurn(battleKey, 1, turnId);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
-        MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
+        Mon memory p0ActiveMon = ENGINE.getMonForTeam(battleKey, 0, activeMonIndex[0]);
+        Mon memory p1ActiveMon = ENGINE.getMonForTeam(battleKey, 1, activeMonIndex[1]);
 
         uint256 p0Priority;
         uint256 p1Priority;
@@ -298,14 +291,14 @@ contract DefaultValidator is IValidator {
             if (p0Move.moveIndex == SWITCH_MOVE_INDEX || p0Move.moveIndex == NO_OP_MOVE_INDEX) {
                 p0Priority = SWITCH_PRIORITY;
             } else {
-                IMoveSet p0MoveSet = teams[0][activeMonIndex[0]].moves[p0Move.moveIndex];
+                IMoveSet p0MoveSet = p0ActiveMon.moves[p0Move.moveIndex];
                 p0Priority = p0MoveSet.priority(battleKey);
             }
 
             if (p1Move.moveIndex == SWITCH_MOVE_INDEX || p1Move.moveIndex == NO_OP_MOVE_INDEX) {
                 p1Priority = SWITCH_PRIORITY;
             } else {
-                IMoveSet p1MoveSet = teams[1][activeMonIndex[1]].moves[p1Move.moveIndex];
+                IMoveSet p1MoveSet = p1ActiveMon.moves[p1Move.moveIndex];
                 p1Priority = p1MoveSet.priority(battleKey);
             }
         }
@@ -320,9 +313,9 @@ contract DefaultValidator is IValidator {
             return 1;
         } else {
             uint32 p0MonSpeed =
-                uint32(int32(teams[0][activeMonIndex[0]].stats.speed) + monStates[0][activeMonIndex[0]].speedDelta);
+                uint32(int32(p0ActiveMon.stats.speed) + ENGINE.getMonStateForBattle(battleKey, 0, activeMonIndex[0]).speedDelta);
             uint32 p1MonSpeed =
-                uint32(int32(teams[1][activeMonIndex[1]].stats.speed) + monStates[1][activeMonIndex[1]].speedDelta);
+                uint32(int32(p1ActiveMon.stats.speed) + ENGINE.getMonStateForBattle(battleKey, 1, activeMonIndex[1]).speedDelta);
             if (p0MonSpeed > p1MonSpeed) {
                 return 0;
             } else if (p0MonSpeed < p1MonSpeed) {

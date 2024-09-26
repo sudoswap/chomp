@@ -14,26 +14,8 @@ Events (for later)
 Saving gas
 - specify specifically which team items to get when querying instead of returning the entire amount for DefaultValidator
 - e.g. specify indices, should save a lot of gas, rn execute() is taking 1m gas which is not needed
-
-Debugging
-- revealing twice should revert (technically does nothing but should prevent this)
-    - currently fixed
-- ending a match before moves are committed is valid (just be aware)
-
----------------------------------------------------------------------------------------------
-
-1) add team to local wallet [x]
-2) make 2nd wallet for local wallet (or just have it on second browser) (easier) [x]
-3) add team to second wallet [x]
-
-4) create battle (use etherscan)
-5) start battle, load values
-6) (render active mon / moves)
-    - moves
-    - stats
-    - swap to other on
-7) listen to events emitted
-8) avoid writing the engine in ts for now (can do later)
+- turn commitments into just 2 sstores
+- turn mon state into uint8s for the bool flags
 
 ---------------------------------------------------------------------------------------------
 
@@ -51,6 +33,8 @@ Ways to mitigate:
 Ways to mitigate:
 - deal damage directly (but skip calling dealDamage) on the Engine
 - avoid dealing damage in the afterDamage hook itself, or in ways that are long-lasting
+
+3) Ending a match before any moves are committed is valid (just be aware)
 
 ---------------------------------------------------------------------------------------------
 

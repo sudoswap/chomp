@@ -26,13 +26,13 @@ contract DefaultStaminaRegen is IEffect {
     function onRoundEnd(uint256, bytes memory, uint256, uint256) external returns (bytes memory, bool) {
         bytes32 battleKey = ENGINE.battleKeyForWrite();
         uint256 playerSwitchForTurnFlag = ENGINE.getPlayerSwitchForTurnFlagForBattleState(battleKey);
-        MonState[][] memory monStates = ENGINE.getMonStatesForBattleState(battleKey);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
 
         // Update stamina for both active mons only if it's a 2 player turn
         if (playerSwitchForTurnFlag == 2) {
             for (uint256 playerIndex; playerIndex < 2; ++playerIndex) {
-                int256 currentActiveMonStaminaDelta = monStates[playerIndex][activeMonIndex[playerIndex]].staminaDelta;
+                
+                int256 currentActiveMonStaminaDelta = ENGINE.getMonStateForBattle(battleKey, playerIndex, activeMonIndex[playerIndex]).staminaDelta;
 
                 // Cannot go past max stamina, so we only add 1 stamina if the current delta is negative
                 if (currentActiveMonStaminaDelta < 0) {

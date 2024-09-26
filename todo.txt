@@ -1,21 +1,9 @@
 # TODO
 
-architecture changes after working on client:
-
-Propose/Accept (for later)
-- need a way to let the client know that there is a pending battle (e.g. a queue or way to show pending battles)
-- need a way for the original caller to auto-start after it's been accepted
-(so need to keep track of both in-flight matches for both the proposer and the accepter)
-
-Events (for later)
-- return some info when execute is done as an event
-- probably also store the p0 team index in the battle struct so that we can access it onchain
-
-Saving gas
-- specify specifically which team items to get when querying instead of returning the entire amount for DefaultValidator
-- e.g. specify indices, should save a lot of gas, rn execute() is taking 1m gas which is not needed
-- turn commitments into just 2 sstores
-- turn mon state into uint8s for the bool flags
+remaining things:
+- onchain matchmaking queue (save this for later)
+- rate limit team changes to prevent someone from creating a team last minute after p1 reveals their team
+    - can do either in validator or team registry
 
 ---------------------------------------------------------------------------------------------
 

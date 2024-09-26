@@ -37,11 +37,12 @@ contract Engine is IEngine {
     error GameAlreadyOver();
 
     // Events
-    event BattleProposal(bytes32 indexed battleKey);
+    event BattleProposal(bytes32 indexed battleKey, address indexed p1);
     event BattleAcceptance(bytes32 indexed battleKey, uint256 p1TeamIndex);
     event BattleStart(bytes32 indexed battleKey, uint256 p0TeamIndex);
     event MoveCommit(bytes32 indexed battleKey, address player);
     event MoveReveal(bytes32 indexed battleKey, address player);
+    event EngineExecute(bytes32 indexed battleKey, uint256 turnId);
     event MonSwitch(bytes32 indexed battleKey, uint256 playerIndex, uint256 newMonIndex);
     event MonStateUpdate(
         bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 stateVarIndex, int32 valueDelta
@@ -262,9 +263,7 @@ contract Engine is IEngine {
             p0TeamHash: args.p0TeamHash,
             p1TeamIndex: 0 // placeholder value until p1 responds
         });
-
-        emit BattleProposal(battleKey);
-
+        emit BattleProposal(battleKey, args.p1);
         return battleKey;
     }
 
@@ -314,6 +313,9 @@ contract Engine is IEngine {
         if (revealedP0TeamHash != battle.p0TeamHash) {
             revert InvalidP0TeamHash();
         }
+
+        // Set the teamHash to be teamIndex after verification
+        battle.p0TeamHash = bytes32(p0TeamIndex);
 
         // Set the team for p0
         battles[battleKey].teams[0] = battle.teamRegistry.getTeam(msg.sender, p0TeamIndex);
@@ -617,6 +619,7 @@ contract Engine is IEngine {
             state.turnId += 1;
             state.playerSwitchForTurnFlag = playerSwitchForTurnFlag;
         }
+        emit EngineExecute(battleKey, turnId);
     }
 
     function end(bytes32 battleKey) external {

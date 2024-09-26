@@ -37,7 +37,7 @@ contract Engine is IEngine {
     error GameAlreadyOver();
 
     // Events
-    event BattleProposal(bytes32 indexed battleKey, address indexed p1);
+    event BattleProposal(address indexed p1, address p0, bytes32 battleKey);
     event BattleAcceptance(bytes32 indexed battleKey, uint256 p1TeamIndex);
     event BattleStart(bytes32 indexed battleKey, uint256 p0TeamIndex);
     event MoveCommit(bytes32 indexed battleKey, address player);
@@ -51,182 +51,6 @@ contract Engine is IEngine {
     event EffectAdd(bytes32 indexed battleKey, uint256 effectIndex, uint256 monIndex, address effectAddress);
     event BattleComplete(bytes32 indexed battleKey, address winner);
 
-    /**
-     * - Getters to simplify read access for other components
-     */
-    function getBattle(bytes32 battleKey) external view returns (Battle memory) {
-        return battles[battleKey];
-    }
-
-    function getMonForTeam(bytes32 battleKey, uint256 playerIndex, uint256 monIndex) external view returns (Mon memory) {
-        return battles[battleKey].teams[playerIndex][monIndex];
-    }
-
-    function getPlayersForBattle(bytes32 battleKey) external view returns (address[] memory) {
-        address[] memory players = new address[](2);
-        players[0] = battles[battleKey].p0;
-        players[1] = battles[battleKey].p1;
-        return players;
-    }
-
-    function getBattleState(bytes32 battleKey) external view returns (BattleState memory) {
-        return battleStates[battleKey];
-    }
-
-    function getMoveHistoryForBattleState(bytes32 battleKey) external view returns (RevealedMove[][] memory) {
-        return battleStates[battleKey].moveHistory;
-    }
-
-    function getMoveForBattleStateForTurn(bytes32 battleKey, uint256 playerIndex, uint256 turn) external view returns (RevealedMove memory) {
-        return battleStates[battleKey].moveHistory[playerIndex][turn];
-    }
-
-    function getMonStateForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex) external view returns (MonState memory) {
-        return battleStates[battleKey].monStates[playerIndex][monIndex];
-    }
-
-    function getTurnIdForBattleState(bytes32 battleKey) external view returns (uint256) {
-        return battleStates[battleKey].turnId;
-    }
-
-    function getActiveMonIndexForBattleState(bytes32 battleKey) external view returns (uint256[] memory) {
-        return battleStates[battleKey].activeMonIndex;
-    }
-
-    function getPlayerSwitchForTurnFlagForBattleState(bytes32 battleKey) external view returns (uint256) {
-        return battleStates[battleKey].playerSwitchForTurnFlag;
-    }
-
-    function getGlobalKV(bytes32 battleKey, bytes32 key) external view returns (bytes32) {
-        return globalKV[battleKey][key];
-    }
-
-    function getCommitment(bytes32 battleKey, address player) external view returns (Commitment memory) {
-        return commitments[battleKey][player];
-    }
-
-    /**
-     * - Write functions for MonState, Effects, and GlobalKV
-     */
-    function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int32 valueToAdd)
-        external
-    {
-        bytes32 battleKey = battleKeyForWrite;
-        if (battleKey == bytes32(0)) {
-            revert NoWriteAllowed();
-        }
-        BattleState storage state = battleStates[battleKey];
-        MonState storage monState = state.monStates[playerIndex][monIndex];
-        if (stateVarIndex == MonStateIndexName.Hp) {
-            monState.hpDelta += valueToAdd;
-        } else if (stateVarIndex == MonStateIndexName.Stamina) {
-            monState.staminaDelta += valueToAdd;
-        } else if (stateVarIndex == MonStateIndexName.Speed) {
-            monState.speedDelta += valueToAdd;
-        } else if (stateVarIndex == MonStateIndexName.Attack) {
-            monState.attackDelta += valueToAdd;
-        } else if (stateVarIndex == MonStateIndexName.defense) {
-            monState.defenceDelta += valueToAdd;
-        } else if (stateVarIndex == MonStateIndexName.SpecialAttack) {
-            monState.specialAttackDelta += valueToAdd;
-        } else if (stateVarIndex == MonStateIndexName.specialDefense) {
-            monState.specialDefenceDelta += valueToAdd;
-        } else if (stateVarIndex == MonStateIndexName.IsKnockedOut) {
-            monState.isKnockedOut = (valueToAdd % 2) == 1;
-        } else if (stateVarIndex == MonStateIndexName.ShouldSkipTurn) {
-            monState.shouldSkipTurn = (valueToAdd % 2) == 1;
-        }
-        emit MonStateUpdate(battleKey, playerIndex, monIndex, uint256(stateVarIndex), valueToAdd);
-    }
-
-    function addEffect(uint256 targetIndex, uint256 monIndex, IEffect effect, bytes memory extraData) external {
-        bytes32 battleKey = battleKeyForWrite;
-        if (battleKey == bytes32(0)) {
-            revert NoWriteAllowed();
-        }
-        if (effect.shouldApply(extraData, targetIndex, monIndex)) {
-            BattleState storage state = battleStates[battleKey];
-            bytes[] storage effectsExtraData;
-            if (targetIndex == 2) {
-                state.globalEffects.push(effect);
-                state.extraDataForGlobalEffects.push(extraData);
-                effectsExtraData = state.extraDataForGlobalEffects;
-            } else {
-                state.monStates[targetIndex][monIndex].targetedEffects.push(effect);
-                state.monStates[targetIndex][monIndex].extraDataForTargetedEffects.push(extraData);
-                effectsExtraData = state.monStates[targetIndex][monIndex].extraDataForTargetedEffects;
-            }
-            // Check if we have to run an onApply state update
-            if (effect.shouldRunAtStep(EffectStep.OnApply)) {
-                uint256 rng = state.pRNGStream[state.pRNGStream.length - 1];
-                // If so, we run the effect first, and get updated extraData if necessary
-                extraData = effect.onApply(rng, extraData, targetIndex, monIndex);
-
-                // Set the extraData so be the returned value from onApply
-                effectsExtraData[effectsExtraData.length - 1] = extraData;
-            }
-            emit EffectAdd(battleKey, targetIndex, monIndex, address(effect));
-        }
-    }
-
-    function removeEffect(uint256 targetIndex, uint256 monIndex, uint256 indexToRemove) public {
-        bytes32 battleKey = battleKeyForWrite;
-        if (battleKey == bytes32(0)) {
-            revert NoWriteAllowed();
-        }
-        BattleState storage state = battleStates[battleKey];
-
-        // Set the appropriate effects/extra data array from storage
-        IEffect[] storage effects;
-        bytes[] storage extraData;
-        if (targetIndex == 2) {
-            effects = state.globalEffects;
-            extraData = state.extraDataForGlobalEffects;
-        } else {
-            effects = state.monStates[targetIndex][monIndex].targetedEffects;
-            extraData = state.monStates[targetIndex][monIndex].extraDataForTargetedEffects;
-        }
-
-        // One last check to see if we should run the final lifecycle hook
-        IEffect effect = effects[indexToRemove];
-        if (effect.shouldRunAtStep(EffectStep.OnRemove)) {
-            effect.onRemove(extraData[indexToRemove], targetIndex, monIndex);
-        }
-
-        // Remove effects and extra data
-        uint256 numEffects = effects.length;
-        effects[indexToRemove] = effects[numEffects - 1];
-        effects.pop();
-        extraData[indexToRemove] = extraData[numEffects - 1];
-        extraData.pop();
-    }
-
-    function setGlobalKV(bytes32 key, bytes32 value) external {
-        bytes32 battleKey = battleKeyForWrite;
-        if (battleKey == bytes32(0)) {
-            revert NoWriteAllowed();
-        }
-        globalKV[battleKey][key] = value;
-    }
-
-    function dealDamage(uint256 playerIndex, uint256 monIndex, uint32 damage) external {
-        bytes32 battleKey = battleKeyForWrite;
-        if (battleKey == bytes32(0)) {
-            revert NoWriteAllowed();
-        }
-        MonState storage monState = battleStates[battleKey].monStates[playerIndex][monIndex];
-        monState.hpDelta -= int32(damage);
-        // Set KO flag if the total hpDelta is greater than the original mon HP
-        uint32 baseHp = battles[battleKey].teams[playerIndex][monIndex].stats.hp;
-        if (monState.hpDelta + int32(baseHp) <= 0) {
-            monState.isKnockedOut = true;
-        } else {
-            uint256[] storage rngValues = battleStates[battleKey].pRNGStream;
-            uint256 rngValue = rngValues[rngValues.length - 1];
-            _runEffects(battleKey, rngValue, playerIndex, playerIndex, EffectStep.AfterDamage);
-        }
-        emit DamageDeal(battleKey, playerIndex, monIndex, damage);
-    }
 
     /**
      * - Core game functions
@@ -263,7 +87,7 @@ contract Engine is IEngine {
             p0TeamHash: args.p0TeamHash,
             p1TeamIndex: 0 // placeholder value until p1 responds
         });
-        emit BattleProposal(battleKey, args.p1);
+        emit BattleProposal(args.p1, msg.sender, battleKey);
         return battleKey;
     }
 
@@ -307,7 +131,8 @@ contract Engine is IEngine {
         battle.status = BattleProposalStatus.Started;
 
         // Calculate the p0 team hash
-        bytes32 revealedP0TeamHash = keccak256(abi.encodePacked(salt, p0TeamIndex));
+        uint256[] memory p0TeamIndices = battle.teamRegistry.getMonRegistryIndicesForTeam(msg.sender, p0TeamIndex);
+        bytes32 revealedP0TeamHash = keccak256(abi.encodePacked(salt, p0TeamIndex, p0TeamIndices));
 
         // Validate the team hash
         if (revealedP0TeamHash != battle.p0TeamHash) {
@@ -638,6 +463,131 @@ contract Engine is IEngine {
         }
     }
 
+
+    /**
+     * - Write functions for MonState, Effects, and GlobalKV
+     */
+    function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int32 valueToAdd)
+        external
+    {
+        bytes32 battleKey = battleKeyForWrite;
+        if (battleKey == bytes32(0)) {
+            revert NoWriteAllowed();
+        }
+        BattleState storage state = battleStates[battleKey];
+        MonState storage monState = state.monStates[playerIndex][monIndex];
+        if (stateVarIndex == MonStateIndexName.Hp) {
+            monState.hpDelta += valueToAdd;
+        } else if (stateVarIndex == MonStateIndexName.Stamina) {
+            monState.staminaDelta += valueToAdd;
+        } else if (stateVarIndex == MonStateIndexName.Speed) {
+            monState.speedDelta += valueToAdd;
+        } else if (stateVarIndex == MonStateIndexName.Attack) {
+            monState.attackDelta += valueToAdd;
+        } else if (stateVarIndex == MonStateIndexName.defense) {
+            monState.defenceDelta += valueToAdd;
+        } else if (stateVarIndex == MonStateIndexName.SpecialAttack) {
+            monState.specialAttackDelta += valueToAdd;
+        } else if (stateVarIndex == MonStateIndexName.specialDefense) {
+            monState.specialDefenceDelta += valueToAdd;
+        } else if (stateVarIndex == MonStateIndexName.IsKnockedOut) {
+            monState.isKnockedOut = (valueToAdd % 2) == 1;
+        } else if (stateVarIndex == MonStateIndexName.ShouldSkipTurn) {
+            monState.shouldSkipTurn = (valueToAdd % 2) == 1;
+        }
+        emit MonStateUpdate(battleKey, playerIndex, monIndex, uint256(stateVarIndex), valueToAdd);
+    }
+
+    function addEffect(uint256 targetIndex, uint256 monIndex, IEffect effect, bytes memory extraData) external {
+        bytes32 battleKey = battleKeyForWrite;
+        if (battleKey == bytes32(0)) {
+            revert NoWriteAllowed();
+        }
+        if (effect.shouldApply(extraData, targetIndex, monIndex)) {
+            BattleState storage state = battleStates[battleKey];
+            bytes[] storage effectsExtraData;
+            if (targetIndex == 2) {
+                state.globalEffects.push(effect);
+                state.extraDataForGlobalEffects.push(extraData);
+                effectsExtraData = state.extraDataForGlobalEffects;
+            } else {
+                state.monStates[targetIndex][monIndex].targetedEffects.push(effect);
+                state.monStates[targetIndex][monIndex].extraDataForTargetedEffects.push(extraData);
+                effectsExtraData = state.monStates[targetIndex][monIndex].extraDataForTargetedEffects;
+            }
+            // Check if we have to run an onApply state update
+            if (effect.shouldRunAtStep(EffectStep.OnApply)) {
+                uint256 rng = state.pRNGStream[state.pRNGStream.length - 1];
+                // If so, we run the effect first, and get updated extraData if necessary
+                extraData = effect.onApply(rng, extraData, targetIndex, monIndex);
+
+                // Set the extraData so be the returned value from onApply
+                effectsExtraData[effectsExtraData.length - 1] = extraData;
+            }
+            emit EffectAdd(battleKey, targetIndex, monIndex, address(effect));
+        }
+    }
+
+    function removeEffect(uint256 targetIndex, uint256 monIndex, uint256 indexToRemove) public {
+        bytes32 battleKey = battleKeyForWrite;
+        if (battleKey == bytes32(0)) {
+            revert NoWriteAllowed();
+        }
+        BattleState storage state = battleStates[battleKey];
+
+        // Set the appropriate effects/extra data array from storage
+        IEffect[] storage effects;
+        bytes[] storage extraData;
+        if (targetIndex == 2) {
+            effects = state.globalEffects;
+            extraData = state.extraDataForGlobalEffects;
+        } else {
+            effects = state.monStates[targetIndex][monIndex].targetedEffects;
+            extraData = state.monStates[targetIndex][monIndex].extraDataForTargetedEffects;
+        }
+
+        // One last check to see if we should run the final lifecycle hook
+        IEffect effect = effects[indexToRemove];
+        if (effect.shouldRunAtStep(EffectStep.OnRemove)) {
+            effect.onRemove(extraData[indexToRemove], targetIndex, monIndex);
+        }
+
+        // Remove effects and extra data
+        uint256 numEffects = effects.length;
+        effects[indexToRemove] = effects[numEffects - 1];
+        effects.pop();
+        extraData[indexToRemove] = extraData[numEffects - 1];
+        extraData.pop();
+    }
+
+    function setGlobalKV(bytes32 key, bytes32 value) external {
+        bytes32 battleKey = battleKeyForWrite;
+        if (battleKey == bytes32(0)) {
+            revert NoWriteAllowed();
+        }
+        globalKV[battleKey][key] = value;
+    }
+
+    function dealDamage(uint256 playerIndex, uint256 monIndex, uint32 damage) external {
+        bytes32 battleKey = battleKeyForWrite;
+        if (battleKey == bytes32(0)) {
+            revert NoWriteAllowed();
+        }
+        MonState storage monState = battleStates[battleKey].monStates[playerIndex][monIndex];
+        monState.hpDelta -= int32(damage);
+        // Set KO flag if the total hpDelta is greater than the original mon HP
+        uint32 baseHp = battles[battleKey].teams[playerIndex][monIndex].stats.hp;
+        if (monState.hpDelta + int32(baseHp) <= 0) {
+            monState.isKnockedOut = true;
+        } else {
+            uint256[] storage rngValues = battleStates[battleKey].pRNGStream;
+            uint256 rngValue = rngValues[rngValues.length - 1];
+            _runEffects(battleKey, rngValue, playerIndex, playerIndex, EffectStep.AfterDamage);
+        }
+        emit DamageDeal(battleKey, playerIndex, monIndex, damage);
+    }
+
+
     /**
      * - Internal helper functions
      */
@@ -786,8 +736,10 @@ contract Engine is IEngine {
         }
     }
 
-    // effect index: the index to grab the relevant effect array
-    // player index: the player to pass into the effects args
+    /** 
+       effect index: the index to grab the relevant effect array
+       player index: the player to pass into the effects args
+    */
     function _runEffects(bytes32 battleKey, uint256 rng, uint256 effectIndex, uint256 playerIndex, EffectStep round)
         internal
     {
@@ -848,5 +800,60 @@ contract Engine is IEngine {
                 ++i;
             }
         }
+    }
+
+
+    /**
+     * - Getters to simplify read access for other components
+     */
+    function getBattle(bytes32 battleKey) external view returns (Battle memory) {
+        return battles[battleKey];
+    }
+
+    function getMonForTeam(bytes32 battleKey, uint256 playerIndex, uint256 monIndex) external view returns (Mon memory) {
+        return battles[battleKey].teams[playerIndex][monIndex];
+    }
+
+    function getPlayersForBattle(bytes32 battleKey) external view returns (address[] memory) {
+        address[] memory players = new address[](2);
+        players[0] = battles[battleKey].p0;
+        players[1] = battles[battleKey].p1;
+        return players;
+    }
+
+    function getBattleState(bytes32 battleKey) external view returns (BattleState memory) {
+        return battleStates[battleKey];
+    }
+
+    function getMoveHistoryForBattleState(bytes32 battleKey) external view returns (RevealedMove[][] memory) {
+        return battleStates[battleKey].moveHistory;
+    }
+
+    function getMoveForBattleStateForTurn(bytes32 battleKey, uint256 playerIndex, uint256 turn) external view returns (RevealedMove memory) {
+        return battleStates[battleKey].moveHistory[playerIndex][turn];
+    }
+
+    function getMonStateForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex) external view returns (MonState memory) {
+        return battleStates[battleKey].monStates[playerIndex][monIndex];
+    }
+
+    function getTurnIdForBattleState(bytes32 battleKey) external view returns (uint256) {
+        return battleStates[battleKey].turnId;
+    }
+
+    function getActiveMonIndexForBattleState(bytes32 battleKey) external view returns (uint256[] memory) {
+        return battleStates[battleKey].activeMonIndex;
+    }
+
+    function getPlayerSwitchForTurnFlagForBattleState(bytes32 battleKey) external view returns (uint256) {
+        return battleStates[battleKey].playerSwitchForTurnFlag;
+    }
+
+    function getGlobalKV(bytes32 battleKey, bytes32 key) external view returns (bytes32) {
+        return globalKV[battleKey][key];
+    }
+
+    function getCommitment(bytes32 battleKey, address player) external view returns (Commitment memory) {
+        return commitments[battleKey][player];
     }
 }

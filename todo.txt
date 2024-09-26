@@ -1,28 +1,39 @@
 # TODO
 
-remaining things:
-- onchain matchmaking queue (save this for later)
-- rate limit team changes to prevent someone from creating a team last minute after p1 reveals their team
-    - can do either in validator or team registry
-
 ---------------------------------------------------------------------------------------------
 
 KNOWN BUGGY INTERACTIONS
 
-1) If a move forces a switch and triggers before the other player can make its move
+1) If a move forces a switch and triggers before the other player can make its move, then the new mon will try to execute its move still
 - The Engine handles the case where the stamina is insufficient (it just skips the move)
 
 Ways to mitigate:
-- avoid forcing opponent swap outs unless
+- avoid forcing opponent swap outs unless it's at low priority
+- have the engine set the skipTurn flag on newly swapped in mons (if they have yet to run their turn yet)
+    - look into this later
 
 2) If an effect calls dealDamage() and triggers AfterDamage, it can potentially cause an infinite loop!
 (either if it calls dealDamage() on the opposing mon who also has a damaging attack with an AfterDamage trigger)
 
 Ways to mitigate:
 - deal damage directly (but skip calling dealDamage) on the Engine
-- avoid dealing damage in the afterDamage hook itself, or in ways that are long-lasting
+- avoid dealing damage in the afterDamage hook itself
+- maintain manual mutex to prevent infinite recurse
 
-3) Ending a match before any moves are committed is valid (just be aware)
+3) Ending a match before any moves are committed is valid 
+- Bypasses the timeout for the default validator
+
+4) Malicious p0 can commit to a team that has an array of mons, but modify the mon moves prior to starting a battle (after p1 commits)
+
+Ways to mitigate:
+- Need to handle on the team registry angle probably
+- Atm, restricting it to the same array of mon indices reduces the attack surface somewhat
+
+5) No way to prevent move selection if the move is switch/no-op
+Some effects / moves way wish to lock the user in. No easy way to handle this currently with the engine as-is.
+
+Ways to mitigate
+- Future iterations of the engine can do additional validation before letting SWITCH_MOVE_INDEX be considered valid on move reveal
 
 ---------------------------------------------------------------------------------------------
 

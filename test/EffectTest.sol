@@ -149,7 +149,9 @@ contract EngineTest is Test {
             rngOracle: mockOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
@@ -264,7 +266,9 @@ contract EngineTest is Test {
             rngOracle: mockOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
@@ -410,7 +414,9 @@ contract EngineTest is Test {
             rngOracle: mockOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
-            p0TeamHash: keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
         });
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);

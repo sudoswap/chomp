@@ -806,8 +806,13 @@ contract Engine is IEngine {
     /**
      * - Getters to simplify read access for other components
      */
+    
+    // getBattle and getBattleState are intended to be consumed by offchain clients
     function getBattle(bytes32 battleKey) external view returns (Battle memory) {
         return battles[battleKey];
+    }
+    function getBattleState(bytes32 battleKey) external view returns (BattleState memory) {
+        return battleStates[battleKey];
     }
 
     function getMonForTeam(bytes32 battleKey, uint256 playerIndex, uint256 monIndex) external view returns (Mon memory) {
@@ -819,10 +824,6 @@ contract Engine is IEngine {
         players[0] = battles[battleKey].p0;
         players[1] = battles[battleKey].p1;
         return players;
-    }
-
-    function getBattleState(bytes32 battleKey) external view returns (BattleState memory) {
-        return battleStates[battleKey];
     }
 
     function getMoveHistoryForBattleState(bytes32 battleKey) external view returns (RevealedMove[][] memory) {

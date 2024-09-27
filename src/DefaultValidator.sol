@@ -266,7 +266,7 @@ contract DefaultValidator is IValidator {
                 if (movesPresumedAFKPlayerRevealed.length < (globalTurnId + 1)) {
                     return presumedHonestPlayer;
                 }
-
+                // Otherwise, if the player hasn't committed at all, then the other player also wins
                 if (presumedAFKPlayerCommitment.turnId < globalTurnId) {
                     return presumedHonestPlayer;
                 }

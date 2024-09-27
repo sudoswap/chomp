@@ -24,27 +24,27 @@ struct StartBattleArgs {
 
 struct Battle {
     address p0;
+    uint96 p1TeamIndex;
     address p1;
     IValidator validator;
     IRandomnessOracle rngOracle;
     IRuleset ruleset;
-    Mon[][] teams;
     BattleProposalStatus status;
     ITeamRegistry teamRegistry;
     bytes32 p0TeamHash;
-    uint96 p1TeamIndex;
+    Mon[][] teams;
 }
 
 struct BattleState {
     uint256 turnId;
     uint256 playerSwitchForTurnFlag; // 0 for p0 only move, 1 for p1 only move, 2 for both players
-    MonState[][] monStates;
     uint256[] activeMonIndex;
-    RevealedMove[][] moveHistory;
     uint256[] pRNGStream;
     address winner;
     IEffect[] globalEffects;
     bytes[] extraDataForGlobalEffects;
+    MonState[][] monStates;
+    RevealedMove[][] moveHistory;
 }
 
 struct MonStats {
@@ -61,8 +61,8 @@ struct MonStats {
 
 struct Mon {
     MonStats stats;
-    IMoveSet[] moves;
     IAbility ability;
+    IMoveSet[] moves;
 }
 
 struct MonState {

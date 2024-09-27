@@ -112,7 +112,8 @@ contract DefaultValidator is IValidator {
 
         // A move cannot be selected if its stamina costs more than the mon's current stamina
         IMoveSet moveSet = activeMon.moves[moveIndex];
-        int256 monStaminaDelta = ENGINE.getMonStateForBattle(battleKey, playerIndex, activeMonIndex[playerIndex]).staminaDelta;
+        int256 monStaminaDelta =
+            ENGINE.getMonStateForBattle(battleKey, playerIndex, activeMonIndex[playerIndex]).staminaDelta;
         uint256 monBaseStamina = activeMon.stats.stamina;
         uint256 monCurrentStamina = uint256(int256(monBaseStamina) + monStaminaDelta);
         if (moveSet.stamina(battleKey) > monCurrentStamina) {
@@ -150,7 +151,8 @@ contract DefaultValidator is IValidator {
         // - if the active mon is knocked out
         {
             bool isTurnZero = ENGINE.getTurnIdForBattleState(battleKey) == 0;
-            bool isActiveMonKnockedOut = ENGINE.getMonStateForBattle(battleKey, playerIndex, activeMonIndex[playerIndex]).isKnockedOut;
+            bool isActiveMonKnockedOut =
+                ENGINE.getMonStateForBattle(battleKey, playerIndex, activeMonIndex[playerIndex]).isKnockedOut;
             if (isTurnZero || isActiveMonKnockedOut) {
                 if (moveIndex != SWITCH_MOVE_INDEX) {
                     return false;
@@ -312,10 +314,12 @@ contract DefaultValidator is IValidator {
         } else if (p0Priority < p1Priority) {
             return 1;
         } else {
-            uint32 p0MonSpeed =
-                uint32(int32(p0ActiveMon.stats.speed) + ENGINE.getMonStateForBattle(battleKey, 0, activeMonIndex[0]).speedDelta);
-            uint32 p1MonSpeed =
-                uint32(int32(p1ActiveMon.stats.speed) + ENGINE.getMonStateForBattle(battleKey, 1, activeMonIndex[1]).speedDelta);
+            uint32 p0MonSpeed = uint32(
+                int32(p0ActiveMon.stats.speed) + ENGINE.getMonStateForBattle(battleKey, 0, activeMonIndex[0]).speedDelta
+            );
+            uint32 p1MonSpeed = uint32(
+                int32(p1ActiveMon.stats.speed) + ENGINE.getMonStateForBattle(battleKey, 1, activeMonIndex[1]).speedDelta
+            );
             if (p0MonSpeed > p1MonSpeed) {
                 return 0;
             } else if (p0MonSpeed < p1MonSpeed) {

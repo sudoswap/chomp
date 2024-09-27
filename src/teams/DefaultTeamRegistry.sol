@@ -125,7 +125,8 @@ contract DefaultTeamRegistry is ITeamRegistry {
         for (uint256 i; i < MONS_PER_TEAM; i++) {
             teams[msg.sender][teamId].push(teams[playerToCopy][teamIndex][i]);
         }
-        monRegistryIndicesForTeamPacked[msg.sender][teamIndex] = monRegistryIndicesForTeamPacked[playerToCopy][teamIndex];
+        monRegistryIndicesForTeamPacked[msg.sender][teamIndex] =
+            monRegistryIndicesForTeamPacked[playerToCopy][teamIndex];
 
         // Update the team index
         numTeams[msg.sender] += 1;
@@ -135,16 +136,16 @@ contract DefaultTeamRegistry is ITeamRegistry {
     function _setMonRegistryIndices(uint256 teamIndex, uint32 monId, uint256 position) internal {
         // Create a bitmask to clear the bits we want to modify
         uint256 clearBitmask = ~(ONES_MASK << (position * BITS_PER_MON_INDEX));
-        
+
         // Get the existing packed value
         uint256 existingPackedValue = monRegistryIndicesForTeamPacked[msg.sender][teamIndex];
-        
+
         // Clear the bits we want to modify
         uint256 clearedValue = existingPackedValue & clearBitmask;
-        
+
         // Create the value bitmask with the new monId
         uint256 valueBitmask = uint256(monId) << (position * BITS_PER_MON_INDEX);
-        
+
         // Combine the cleared value with the new value
         monRegistryIndicesForTeamPacked[msg.sender][teamIndex] = clearedValue | valueBitmask;
     }

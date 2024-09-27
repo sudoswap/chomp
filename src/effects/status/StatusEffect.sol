@@ -6,7 +6,6 @@ import {IEngine} from "../../IEngine.sol";
 import {IEffect} from "../IEffect.sol";
 
 abstract contract StatusEffect is IEffect {
-    
     IEngine immutable ENGINE;
 
     constructor(IEngine _ENGINE) {
@@ -101,7 +100,7 @@ abstract contract StatusEffect is IEffect {
         updatedExtraData = extraData;
     }
 
-    function onRemove(bytes memory , uint256 targetIndex, uint256 monIndex) public virtual {
+    function onRemove(bytes memory, uint256 targetIndex, uint256 monIndex) public virtual {
         // On remove, reset the status flag
         bytes32 keyForMon = _getKeyForMonIndex(targetIndex, monIndex);
         ENGINE.setGlobalKV(keyForMon, bytes32(0));

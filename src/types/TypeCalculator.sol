@@ -9,7 +9,11 @@ contract TypeCalculator is ITypeCalculator {
         98387940970013939441334902218489111171706662712193966632938886332804419114328; // First 128 type combinations
     uint256 private constant MULTIPLIERS_2 = 8859915444081173009646859022170283285020904064171667527525; // Remaining 97 type combinations
 
-    function getTypeEffectiveness(Type attackerType, Type defenderType, uint32 basePower) external pure returns (uint32) {
+    function getTypeEffectiveness(Type attackerType, Type defenderType, uint32 basePower)
+        external
+        pure
+        returns (uint32)
+    {
         uint256 index = uint256(attackerType) * 15 + uint256(defenderType);
         uint256 shift;
         uint256 multipliers;

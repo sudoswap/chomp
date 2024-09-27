@@ -11,10 +11,19 @@ interface IEngine {
     // Getters
     function getBattle(bytes32 battleKey) external view returns (Battle memory);
 
-    function getMonForTeam(bytes32 battleKey, uint256 playerIndex, uint256 monIndex) external view returns (Mon memory);
+    function getMonForTeam(bytes32 battleKey, uint256 playerIndex, uint256 monIndex)
+        external
+        view
+        returns (Mon memory);
     function getMoveHistoryForBattleState(bytes32 battleKey) external view returns (RevealedMove[][] memory);
-    function getMoveForBattleStateForTurn(bytes32 battleKey, uint256 playerIndex, uint256 turn) external view returns (RevealedMove memory);
-    function getMonStateForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex) external view returns (MonState memory);
+    function getMoveForBattleStateForTurn(bytes32 battleKey, uint256 playerIndex, uint256 turn)
+        external
+        view
+        returns (RevealedMove memory);
+    function getMonStateForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex)
+        external
+        view
+        returns (MonState memory);
 
     function getPlayersForBattle(bytes32 battleKey) external view returns (address[] memory);
     function getBattleState(bytes32 battleKey) external view returns (BattleState memory);

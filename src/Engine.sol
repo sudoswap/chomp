@@ -10,7 +10,6 @@ import "./moves/IMoveSet.sol";
 import {IEngine} from "./IEngine.sol";
 
 contract Engine is IEngine {
-
     // State variables
     bytes32 public battleKeyForWrite;
     mapping(bytes32 => uint256) public pairHashNonces;
@@ -50,7 +49,6 @@ contract Engine is IEngine {
     event DamageDeal(bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 damageDealt);
     event EffectAdd(bytes32 indexed battleKey, uint256 effectIndex, uint256 monIndex, address effectAddress);
     event BattleComplete(bytes32 indexed battleKey, address winner);
-
 
     /**
      * - Core game functions
@@ -463,7 +461,6 @@ contract Engine is IEngine {
         }
     }
 
-
     /**
      * - Write functions for MonState, Effects, and GlobalKV
      */
@@ -586,7 +583,6 @@ contract Engine is IEngine {
         }
         emit DamageDeal(battleKey, playerIndex, monIndex, damage);
     }
-
 
     /**
      * - Internal helper functions
@@ -736,10 +732,10 @@ contract Engine is IEngine {
         }
     }
 
-    /** 
-       effect index: the index to grab the relevant effect array
-       player index: the player to pass into the effects args
-    */
+    /**
+     * effect index: the index to grab the relevant effect array
+     *    player index: the player to pass into the effects args
+     */
     function _runEffects(bytes32 battleKey, uint256 rng, uint256 effectIndex, uint256 playerIndex, EffectStep round)
         internal
     {
@@ -802,20 +798,24 @@ contract Engine is IEngine {
         }
     }
 
-
     /**
      * - Getters to simplify read access for other components
      */
-    
+
     // getBattle and getBattleState are intended to be consumed by offchain clients
     function getBattle(bytes32 battleKey) external view returns (Battle memory) {
         return battles[battleKey];
     }
+
     function getBattleState(bytes32 battleKey) external view returns (BattleState memory) {
         return battleStates[battleKey];
     }
 
-    function getMonForTeam(bytes32 battleKey, uint256 playerIndex, uint256 monIndex) external view returns (Mon memory) {
+    function getMonForTeam(bytes32 battleKey, uint256 playerIndex, uint256 monIndex)
+        external
+        view
+        returns (Mon memory)
+    {
         return battles[battleKey].teams[playerIndex][monIndex];
     }
 
@@ -830,11 +830,19 @@ contract Engine is IEngine {
         return battleStates[battleKey].moveHistory;
     }
 
-    function getMoveForBattleStateForTurn(bytes32 battleKey, uint256 playerIndex, uint256 turn) external view returns (RevealedMove memory) {
+    function getMoveForBattleStateForTurn(bytes32 battleKey, uint256 playerIndex, uint256 turn)
+        external
+        view
+        returns (RevealedMove memory)
+    {
         return battleStates[battleKey].moveHistory[playerIndex][turn];
     }
 
-    function getMonStateForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex) external view returns (MonState memory) {
+    function getMonStateForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex)
+        external
+        view
+        returns (MonState memory)
+    {
         return battleStates[battleKey].monStates[playerIndex][monIndex];
     }
 

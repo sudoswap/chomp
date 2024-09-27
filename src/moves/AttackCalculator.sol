@@ -59,9 +59,11 @@ abstract contract AttackCalculator {
                 defenceStat = uint32(int32(defenderMon.stats.specialDefense) + defenderMonState.specialDefenceDelta);
             }
 
-            uint32 scaledBasePower = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.stats.type1, basePower);
+            uint32 scaledBasePower =
+                TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.stats.type1, basePower);
             if (defenderMon.stats.type2 != Type.None) {
-                scaledBasePower = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.stats.type2, scaledBasePower);
+                scaledBasePower =
+                    TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderMon.stats.type2, scaledBasePower);
             }
 
             uint32 rngScaling = 0;

@@ -48,8 +48,7 @@ contract FrightStatus is StatusEffect {
     // Sleep just skips the turn
     function _applyFright(uint256, uint256 targetIndex, uint256 monIndex) internal {
         // Get current stamina delta of the target mon
-        int32 staminaDelta =
-            ENGINE.getMonStateForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex).staminaDelta;
+        int32 staminaDelta = ENGINE.getMonStateForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex).staminaDelta;
 
         // If the stamina is less than the max stamina, then reduce stamina by 1
         uint32 maxStamina = ENGINE.getMonForTeam(ENGINE.battleKeyForWrite(), targetIndex, monIndex).stats.stamina;

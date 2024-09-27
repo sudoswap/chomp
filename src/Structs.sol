@@ -73,7 +73,6 @@ struct MonState {
     int32 defenceDelta;
     int32 specialAttackDelta;
     int32 specialDefenceDelta;
-    // TODO: can change these to be uint8 to save on space
     bool isKnockedOut; // Is either 0 or 1
     bool shouldSkipTurn; // Used for effects to skip turn, or when moves become invalid (outside of user control)
     // These we can't do much about

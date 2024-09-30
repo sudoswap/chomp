@@ -8,30 +8,26 @@ import "./Structs.sol";
 import "./moves/IMoveSet.sol";
 
 import {IEngine} from "./IEngine.sol";
+import {ICommitManager} from "./ICommitManager.sol";
 
 contract Engine is IEngine {
-    // State variables
+
+    // Public state variables
     bytes32 public battleKeyForWrite;
+    ICommitManager public commitManager;
+
+    // Private state variables
     mapping(bytes32 => uint256) public pairHashNonces;
     mapping(bytes32 battleKey => Battle) private battles;
     mapping(bytes32 battleKey => BattleState) private battleStates;
-    mapping(bytes32 battleKey => mapping(address player => Commitment)) private commitments;
     mapping(bytes32 battleKey => mapping(bytes32 => bytes32)) private globalKV;
 
     // Errors
     error NoWriteAllowed();
     error WrongCaller();
+    error CommitManagerAlreadySet();
     error BattleChangedBeforeAcceptance();
     error InvalidP0TeamHash();
-    error BattleNotStarted();
-    error NotP0OrP1();
-    error AlreadyCommited();
-    error AlreadyRevealed();
-    error RevealBeforeOtherCommit();
-    error WrongTurnId();
-    error WrongPreimage();
-    error InvalidMove(address player);
-    error PlayerNotAllowed();
     error InvalidBattleConfig();
     error GameAlreadyOver();
 
@@ -39,8 +35,6 @@ contract Engine is IEngine {
     event BattleProposal(address indexed p1, address p0, bytes32 battleKey);
     event BattleAcceptance(bytes32 indexed battleKey, uint256 p1TeamIndex);
     event BattleStart(bytes32 indexed battleKey, uint256 p0TeamIndex);
-    event MoveCommit(bytes32 indexed battleKey, address player);
-    event MoveReveal(bytes32 indexed battleKey, address player);
     event EngineExecute(bytes32 indexed battleKey, uint256 turnId);
     event MonSwitch(bytes32 indexed battleKey, uint256 playerIndex, uint256 newMonIndex);
     event MonStateUpdate(
@@ -146,7 +140,6 @@ contract Engine is IEngine {
         // Initialize empty mon state, move history, and active mon index for each team
         for (uint256 i; i < 2; ++i) {
             battleStates[battleKey].monStates.push();
-            battleStates[battleKey].moveHistory.push();
             battleStates[battleKey].activeMonIndex.push();
 
             // Initialize empty mon delta states for each mon on the team
@@ -164,6 +157,9 @@ contract Engine is IEngine {
             }
         }
 
+        // Call the CommitManager to initialize the move history
+        commitManager.initMoveHistory(battleKey);
+
         // Validate the battle config
         if (
             !battle.validator.validateGameStart(
@@ -177,127 +173,6 @@ contract Engine is IEngine {
         battleStates[battleKey].playerSwitchForTurnFlag = 2;
 
         emit BattleStart(battleKey, p0TeamIndex);
-    }
-
-    function commitMove(bytes32 battleKey, bytes32 moveHash) external {
-        Battle storage battle = battles[battleKey];
-        BattleState storage state = battleStates[battleKey];
-
-        // only battle participants can commit
-        if (msg.sender != battle.p0 && msg.sender != battle.p1) {
-            revert NotP0OrP1();
-        }
-
-        // Can only commit moves to battles with a Started status
-        // (reveal relies on commit, and execute relies on both of those)
-        // (so transitively, it's safe to just check battle proposal status on commit)
-        if (battle.status != BattleProposalStatus.Started) {
-            revert BattleNotStarted();
-        }
-
-        // validate no commitment already exists for this turn
-        uint256 turnId = state.turnId;
-
-        // if it's the zeroth turn, require that no hash is set for the player
-        if (turnId == 0) {
-            if (commitments[battleKey][msg.sender].moveHash != bytes32(0)) {
-                revert AlreadyCommited();
-            }
-        }
-        // otherwise, just check if the turn id (which we overwrite each turn) is in sync
-        // (if we already committed this turn, then the turn id should match)
-        else if (commitments[battleKey][msg.sender].turnId == turnId) {
-            revert AlreadyCommited();
-        }
-
-        // cannot commit if the battle state says it's only for one player
-        if (
-            (state.playerSwitchForTurnFlag == 0 && msg.sender != battle.p0)
-                || (state.playerSwitchForTurnFlag == 1 && msg.sender != battle.p1)
-        ) {
-            revert PlayerNotAllowed();
-        }
-
-        // store commitment
-        commitments[battleKey][msg.sender] =
-            Commitment({moveHash: moveHash, turnId: turnId, timestamp: block.timestamp});
-
-        emit MoveCommit(battleKey, msg.sender);
-    }
-
-    function revealMove(bytes32 battleKey, uint256 moveIndex, bytes32 salt, bytes calldata extraData) external {
-        // validate preimage
-        Commitment storage commitment = commitments[battleKey][msg.sender];
-        Battle storage battle = battles[battleKey];
-        BattleState storage state = battleStates[battleKey];
-        if (keccak256(abi.encodePacked(moveIndex, salt, extraData)) != commitment.moveHash) {
-            revert WrongPreimage();
-        }
-
-        // only battle participants can reveal
-        if (msg.sender != battle.p0 && msg.sender != battle.p1) {
-            revert NotP0OrP1();
-        }
-
-        // ensure reveal happens after caller commits
-        if (commitment.turnId != state.turnId) {
-            revert WrongTurnId();
-        }
-
-        uint256 currentPlayerIndex;
-        uint256 otherPlayerIndex;
-        address otherPlayer;
-
-        // Set current and other player based on the caller
-        if (msg.sender == battle.p0) {
-            otherPlayer = battle.p1;
-            otherPlayerIndex = 1;
-        } else {
-            otherPlayer = battle.p0;
-            currentPlayerIndex = 1;
-        }
-
-        // ensure reveal happens after opponent commits
-        // (only if it is a turn where both players need to select an action)
-        if (state.playerSwitchForTurnFlag == 2) {
-            // if it's not the zeroth turn, make sure that player cannot reveal until other player has committed
-            if (state.turnId != 0) {
-                if (commitments[battleKey][otherPlayer].turnId != state.turnId) {
-                    revert RevealBeforeOtherCommit();
-                }
-            }
-            // if it is the zeroth turn, do the same check, but check moveHash instead of turnId
-            else {
-                if (commitments[battleKey][otherPlayer].moveHash == bytes32(0)) {
-                    revert RevealBeforeOtherCommit();
-                }
-            }
-        }
-
-        // If a reveal already happened, then revert
-        if (state.moveHistory[currentPlayerIndex].length > state.turnId) {
-            revert AlreadyRevealed();
-        }
-
-        // validate that the commited moves are legal
-        // (e.g. there is enough stamina, move is not disabled, etc.)
-        if (!battle.validator.validatePlayerMove(battleKey, moveIndex, currentPlayerIndex, extraData)) {
-            revert InvalidMove(msg.sender);
-        }
-
-        // store revealed move and extra data for the current player
-        battleStates[battleKey].moveHistory[currentPlayerIndex].push(
-            RevealedMove({moveIndex: moveIndex, salt: salt, extraData: extraData})
-        );
-
-        // store empty move for other player if it's a turn where only a single player has to make a move
-        if (state.playerSwitchForTurnFlag == 0 || state.playerSwitchForTurnFlag == 1) {
-            battleStates[battleKey].moveHistory[otherPlayerIndex].push(
-                RevealedMove({moveIndex: NO_OP_MOVE_INDEX, salt: "", extraData: ""})
-            );
-        }
-
-        emit MoveReveal(battleKey, msg.sender);
     }
 
     function execute(bytes32 battleKey) external {
@@ -366,8 +241,8 @@ contract Engine is IEngine {
         else {
             // Validate both moves have been revealed for the current turn
             // (accessing the values will revert if they haven't been set)
-            RevealedMove storage p0Move = battleStates[battleKey].moveHistory[0][turnId];
-            RevealedMove storage p1Move = battleStates[battleKey].moveHistory[1][turnId];
+            RevealedMove memory p0Move = commitManager.getMoveForBattleStateForTurn(battleKey, 0, turnId);
+            RevealedMove memory p1Move = commitManager.getMoveForBattleStateForTurn(battleKey, 1, turnId);
 
             // Update the PRNG hash to include the newest value
             uint256 rng = battle.rngOracle.getRNG(p0Move.salt, p1Move.salt);
@@ -481,11 +356,11 @@ contract Engine is IEngine {
             monState.speedDelta += valueToAdd;
         } else if (stateVarIndex == MonStateIndexName.Attack) {
             monState.attackDelta += valueToAdd;
-        } else if (stateVarIndex == MonStateIndexName.defense) {
+        } else if (stateVarIndex == MonStateIndexName.Defense) {
             monState.defenceDelta += valueToAdd;
         } else if (stateVarIndex == MonStateIndexName.SpecialAttack) {
             monState.specialAttackDelta += valueToAdd;
-        } else if (stateVarIndex == MonStateIndexName.specialDefense) {
+        } else if (stateVarIndex == MonStateIndexName.SpecialDefense) {
             monState.specialDefenceDelta += valueToAdd;
         } else if (stateVarIndex == MonStateIndexName.IsKnockedOut) {
             monState.isKnockedOut = (valueToAdd % 2) == 1;
@@ -674,7 +549,7 @@ contract Engine is IEngine {
     function _handlePlayerMove(bytes32 battleKey, uint256 rng, uint256 playerIndex) internal {
         Battle storage battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
-        RevealedMove storage move = battleStates[battleKey].moveHistory[playerIndex][state.turnId];
+        RevealedMove memory move = commitManager.getMoveForBattleStateForTurn(battleKey, playerIndex, state.turnId);
 
         // Handle shouldSkipTurn flag first and toggle it off if set
         MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
@@ -811,6 +686,14 @@ contract Engine is IEngine {
         return battleStates[battleKey];
     }
 
+    function getBattleStatus(bytes32 battleKey) external view returns (BattleProposalStatus) {
+        return battles[battleKey].status;
+    }
+
+    function getBattleValidator(bytes32 battleKey) external view returns (IValidator) {
+        return battles[battleKey].validator;
+    }
+
     function getMonForTeam(bytes32 battleKey, uint256 playerIndex, uint256 monIndex)
         external
         view
@@ -824,18 +707,6 @@ contract Engine is IEngine {
         players[0] = battles[battleKey].p0;
         players[1] = battles[battleKey].p1;
         return players;
-    }
-
-    function getMoveHistoryForBattleState(bytes32 battleKey) external view returns (RevealedMove[][] memory) {
-        return battleStates[battleKey].moveHistory;
-    }
-
-    function getMoveForBattleStateForTurn(bytes32 battleKey, uint256 playerIndex, uint256 turn)
-        external
-        view
-        returns (RevealedMove memory)
-    {
-        return battleStates[battleKey].moveHistory[playerIndex][turn];
     }
 
     function getMonStateForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex)
@@ -862,7 +733,11 @@ contract Engine is IEngine {
         return globalKV[battleKey][key];
     }
 
-    function getCommitment(bytes32 battleKey, address player) external view returns (Commitment memory) {
-        return commitments[battleKey][player];
+    // To be called once (after CommitManager is deployed and set to the Engine)
+    function setCommitManager(address a) external {
+        if (address(commitManager) != address(0)) {
+            revert CommitManagerAlreadySet();
+        }
+        commitManager = ICommitManager(a);
     }
 }

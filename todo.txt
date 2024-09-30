@@ -1,5 +1,8 @@
 # TODO
 
+- only engine can init the move array
+- only players in a battle can commit a move / reveal a move
+
 ---------------------------------------------------------------------------------------------
 
 KNOWN BUGGY INTERACTIONS

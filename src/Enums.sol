@@ -48,9 +48,9 @@ enum MonStateIndexName {
     Stamina,
     Speed,
     Attack,
-    defense,
+    Defense,
     SpecialAttack,
-    specialDefense,
+    SpecialDefense,
     IsKnockedOut,
     ShouldSkipTurn
 }

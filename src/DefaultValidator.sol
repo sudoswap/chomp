@@ -10,6 +10,7 @@ import {IValidator} from "./IValidator.sol";
 
 import {IMonRegistry} from "./teams/IMonRegistry.sol";
 import {ITeamRegistry} from "./teams/ITeamRegistry.sol";
+import {ICommitManager} from "./ICommitManager.sol";
 
 contract DefaultValidator is IValidator {
     struct Args {
@@ -225,7 +226,6 @@ contract DefaultValidator is IValidator {
     // - afk player does not commit to a move
     // - i.e. honest player has a commitment one turn ahead of afk player
     function validateTimeout(bytes32 battleKey, uint256 presumedAFKPlayerIndex) external view returns (address) {
-        RevealedMove[][] memory moveHistory = ENGINE.getMoveHistoryForBattleState(battleKey);
         address[] memory players = ENGINE.getPlayersForBattle(battleKey);
         uint256 presumedHonestPlayerIndex = (presumedAFKPlayerIndex + 1) % 2;
         address presumedHonestPlayer;
@@ -237,20 +237,23 @@ contract DefaultValidator is IValidator {
             presumedHonestPlayer = players[1];
             presumedAFKPlayer = players[0];
         }
-        Commitment memory presumedHonestPlayerCommitment = ENGINE.getCommitment(battleKey, presumedHonestPlayer);
+
+        ICommitManager commitManager = ENGINE.commitManager();
+        Commitment memory presumedHonestPlayerCommitment = commitManager.getCommitment(battleKey, presumedHonestPlayer);
 
         // If it's been enough to check for a TIMEOUT (otherwise we don't bother at all):
         if (presumedHonestPlayerCommitment.timestamp + TIMEOUT_DURATION <= block.timestamp) {
-            RevealedMove[] memory movesPresumedAFKPlayerRevealed = moveHistory[presumedAFKPlayerIndex];
-            RevealedMove[] memory movesPresumedHonestPlayerRevealed = moveHistory[presumedHonestPlayerIndex];
 
-            Commitment memory presumedAFKPlayerCommitment = ENGINE.getCommitment(battleKey, presumedAFKPlayer);
+            uint256 movesPresumedAFKPlayerRevealed = commitManager.getMoveCountForBattleState(battleKey, presumedAFKPlayerIndex);
+            uint256 movesPresumedHonestPlayerRevealed = commitManager.getMoveCountForBattleState(battleKey, presumedHonestPlayerIndex);
+
+            Commitment memory presumedAFKPlayerCommitment = commitManager.getCommitment(battleKey, presumedAFKPlayer);
 
             // If it's a turn where both players have to make a move:
             uint256 playerSwitchForTurnFlag = ENGINE.getPlayerSwitchForTurnFlagForBattleState(battleKey);
             if (playerSwitchForTurnFlag == 2) {
                 // If the honest player has revealed more moves than the afk player, then the honest player wins
-                if (movesPresumedHonestPlayerRevealed.length > movesPresumedAFKPlayerRevealed.length) {
+                if (movesPresumedHonestPlayerRevealed > movesPresumedAFKPlayerRevealed) {
                     return presumedHonestPlayer;
                 }
 
@@ -265,7 +268,7 @@ contract DefaultValidator is IValidator {
                 uint256 globalTurnId = ENGINE.getTurnIdForBattleState(battleKey);
 
                 // If the player who is supposed to reveal has not revealed (i.e. the turn id is behind), then the other player wins
-                if (movesPresumedAFKPlayerRevealed.length < (globalTurnId + 1)) {
+                if (movesPresumedAFKPlayerRevealed < (globalTurnId + 1)) {
                     return presumedHonestPlayer;
                 }
                 // Otherwise, if the player hasn't committed at all, then the other player also wins
@@ -279,8 +282,9 @@ contract DefaultValidator is IValidator {
 
     function computePriorityPlayerIndex(bytes32 battleKey, uint256 rng) external view returns (uint256) {
         uint256 turnId = ENGINE.getTurnIdForBattleState(battleKey);
-        RevealedMove memory p0Move = ENGINE.getMoveForBattleStateForTurn(battleKey, 0, turnId);
-        RevealedMove memory p1Move = ENGINE.getMoveForBattleStateForTurn(battleKey, 1, turnId);
+        ICommitManager commitManager = ENGINE.commitManager();
+        RevealedMove memory p0Move = commitManager.getMoveForBattleStateForTurn(battleKey, 0, turnId);
+        RevealedMove memory p1Move = commitManager.getMoveForBattleStateForTurn(battleKey, 1, turnId);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
         Mon memory p0ActiveMon = ENGINE.getMonForTeam(battleKey, 0, activeMonIndex[0]);
         Mon memory p1ActiveMon = ENGINE.getMonForTeam(battleKey, 1, activeMonIndex[1]);

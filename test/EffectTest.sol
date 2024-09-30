@@ -10,6 +10,7 @@ import "../src/Structs.sol";
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultValidator} from "../src/DefaultValidator.sol";
 import {Engine} from "../src/Engine.sol";
+import {CommitManager} from "../src/CommitManager.sol";
 import {IValidator} from "../src/IValidator.sol";
 import {IAbility} from "../src/abilities/IAbility.sol";
 import {IEffect} from "../src/effects/IEffect.sol";
@@ -32,6 +33,7 @@ import {CustomEffectAttack} from "../src/moves/CustomEffectAttack.sol";
 import {CustomEffectAttackFactory} from "../src/moves/CustomEffectAttackFactory.sol";
 
 contract EngineTest is Test {
+    CommitManager commitManager;
     Engine engine;
     DefaultValidator oneMonOneMoveValidator;
     ITypeCalculator typeCalc;
@@ -62,6 +64,8 @@ contract EngineTest is Test {
     function setUp() public {
         mockOracle = new MockRandomnessOracle();
         engine = new Engine();
+        commitManager = new CommitManager(engine);
+        engine.setCommitManager(address(commitManager));
         oneMonOneMoveValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
@@ -89,13 +93,13 @@ contract EngineTest is Test {
         bytes32 aliceMoveHash = keccak256(abi.encodePacked(aliceMoveIndex, salt, aliceExtraData));
         bytes32 bobMoveHash = keccak256(abi.encodePacked(bobMoveIndex, salt, bobExtraData));
         vm.startPrank(ALICE);
-        engine.commitMove(battleKey, aliceMoveHash);
+        commitManager.commitMove(battleKey, aliceMoveHash);
         vm.startPrank(BOB);
-        engine.commitMove(battleKey, bobMoveHash);
+        commitManager.commitMove(battleKey, bobMoveHash);
         vm.startPrank(ALICE);
-        engine.revealMove(battleKey, aliceMoveIndex, salt, aliceExtraData);
+        commitManager.revealMove(battleKey, aliceMoveIndex, salt, aliceExtraData);
         vm.startPrank(BOB);
-        engine.revealMove(battleKey, bobMoveIndex, salt, bobExtraData);
+        commitManager.revealMove(battleKey, bobMoveIndex, salt, bobExtraData);
         engine.execute(battleKey);
     }
 

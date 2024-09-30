@@ -154,7 +154,7 @@ contract CommitManager is ICommitManager {
 
         // validate that the commited moves are legal
         // (e.g. there is enough stamina, move is not disabled, etc.)
-        if (ENGINE.getBattleValidator(battleKey).validatePlayerMove(battleKey, moveIndex, currentPlayerIndex, extraData)) {
+        if (!ENGINE.getBattleValidator(battleKey).validatePlayerMove(battleKey, moveIndex, currentPlayerIndex, extraData)) {
             revert InvalidMove(msg.sender);
         }
 

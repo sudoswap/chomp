@@ -735,7 +735,7 @@ contract Engine is IEngine {
 
     // To be called once (after CommitManager is deployed and set to the Engine)
     function setCommitManager(address a) external {
-        if (address(a) != address(0)) {
+        if (address(commitManager) != address(0)) {
             revert CommitManagerAlreadySet();
         }
         commitManager = ICommitManager(a);

@@ -9,6 +9,7 @@ import "../src/Structs.sol";
 
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultValidator} from "../src/DefaultValidator.sol";
+import {CommitManager} from "../src/CommitManager.sol";
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
 import {IAbility} from "../src/abilities/IAbility.sol";
@@ -57,6 +58,7 @@ import {TestTypeCalculator} from "./mocks/TestTypeCalculator.sol";
  * Moves that force switch work and revert when expected (e.g. invalid switch) [ ]
  */
 contract EngineTest is Test {
+    CommitManager commitManager;
     Engine engine;
     DefaultValidator validator;
     ITypeCalculator typeCalc;
@@ -73,6 +75,8 @@ contract EngineTest is Test {
     function setUp() public {
         defaultOracle = new DefaultRandomnessOracle();
         engine = new Engine();
+        commitManager = new CommitManager(engine);
+        engine.setCommitManager(address(commitManager));
         validator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
@@ -156,13 +160,13 @@ contract EngineTest is Test {
         bytes32 aliceMoveHash = keccak256(abi.encodePacked(aliceMoveIndex, salt, aliceExtraData));
         bytes32 bobMoveHash = keccak256(abi.encodePacked(bobMoveIndex, salt, bobExtraData));
         vm.startPrank(ALICE);
-        engine.commitMove(battleKey, aliceMoveHash);
+        commitManager.commitMove(battleKey, aliceMoveHash);
         vm.startPrank(BOB);
-        engine.commitMove(battleKey, bobMoveHash);
+        commitManager.commitMove(battleKey, bobMoveHash);
         vm.startPrank(ALICE);
-        engine.revealMove(battleKey, aliceMoveIndex, salt, aliceExtraData);
+        commitManager.revealMove(battleKey, aliceMoveIndex, salt, aliceExtraData);
         vm.startPrank(BOB);
-        engine.revealMove(battleKey, bobMoveIndex, salt, bobExtraData);
+        commitManager.revealMove(battleKey, bobMoveIndex, salt, bobExtraData);
         engine.execute(battleKey);
     }
 
@@ -213,14 +217,14 @@ contract EngineTest is Test {
         assertEq(battleKey, updatedBattleKey);
 
         // Assert it reverts for Alice upon commit
-        vm.expectRevert(Engine.BattleNotStarted.selector);
+        vm.expectRevert(CommitManager.BattleNotStarted.selector);
         vm.startPrank(ALICE);
-        engine.commitMove(battleKey, "");
+        commitManager.commitMove(battleKey, "");
 
         // Assert it reverts for Bob upon commit
-        vm.expectRevert(Engine.BattleNotStarted.selector);
+        vm.expectRevert(CommitManager.BattleNotStarted.selector);
         vm.startPrank(BOB);
-        engine.commitMove(battleKey, "");
+        commitManager.commitMove(battleKey, "");
 
         // Have Alice accept the battle
         vm.startPrank(ALICE);
@@ -271,47 +275,47 @@ contract EngineTest is Test {
         bytes memory extraData = abi.encode(0);
         bytes32 moveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, extraData));
         vm.startPrank(ALICE);
-        engine.commitMove(battleKey, moveHash);
+        commitManager.commitMove(battleKey, moveHash);
 
         // Ensure Alice cannot reveal yet because Bob has not committed
-        vm.expectRevert(Engine.RevealBeforeOtherCommit.selector);
-        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+        vm.expectRevert(CommitManager.RevealBeforeOtherCommit.selector);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
 
         // Ensure Bob cannot reveal before choosing a move
         // (on turn 0, this will be a Wrong Preimage error as finding the hash to bytes32(0) is intractable)
         vm.startPrank(BOB);
-        vm.expectRevert(Engine.WrongPreimage.selector);
-        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+        vm.expectRevert(CommitManager.WrongPreimage.selector);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
 
         // Let Bob commit to choosing move index of 0 instead
         uint256 moveIndex = 0;
         moveHash = keccak256(abi.encodePacked(moveIndex, salt, ""));
-        engine.commitMove(battleKey, moveHash);
+        commitManager.commitMove(battleKey, moveHash);
 
         // Ensure that Bob cannot reveal correctly because validation will fail
         // (move index MUST be SWITCH_INDEX on turn 0)
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", BOB));
-        engine.revealMove(battleKey, moveIndex, salt, "");
+        commitManager.revealMove(battleKey, moveIndex, salt, "");
 
         // Ensure that Bob cannot reveal incorrectly because the preimage will fail
-        vm.expectRevert(Engine.WrongPreimage.selector);
-        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+        vm.expectRevert(CommitManager.WrongPreimage.selector);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
 
         // Ensure that Bob cannot re-commit because he has already committed
-        vm.expectRevert(Engine.AlreadyCommited.selector);
-        engine.commitMove(battleKey, moveHash);
+        vm.expectRevert(CommitManager.AlreadyCommited.selector);
+        commitManager.commitMove(battleKey, moveHash);
 
         // Check that Alice can still reveal
         vm.startPrank(ALICE);
-        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
 
         // Ensure that execute cannot proceed
         vm.expectRevert();
         engine.execute(battleKey);
 
         // Check that Alice cannot commit a new move
-        vm.expectRevert(Engine.AlreadyCommited.selector);
-        engine.commitMove(battleKey, moveHash);
+        vm.expectRevert(CommitManager.AlreadyCommited.selector);
+        commitManager.commitMove(battleKey, moveHash);
 
         // Check that timeout succeeds (need to add to validator/engine)
         vm.warp(TIMEOUT_DURATION + 1);
@@ -338,17 +342,17 @@ contract EngineTest is Test {
         bytes memory extraData = abi.encode(0);
         bytes32 moveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, extraData));
         vm.startPrank(ALICE);
-        engine.commitMove(battleKey, moveHash);
+        commitManager.commitMove(battleKey, moveHash);
 
         // Let Bob commit to choosing switch as well
         vm.startPrank(BOB);
-        engine.commitMove(battleKey, moveHash);
+        commitManager.commitMove(battleKey, moveHash);
 
         // Let Alice and Bob both reveal
         vm.startPrank(ALICE);
-        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
         vm.startPrank(BOB);
-        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
 
         // Advance game state
         engine.execute(battleKey);
@@ -357,15 +361,15 @@ contract EngineTest is Test {
         extraData = "";
         moveHash = keccak256(abi.encodePacked(NO_OP_MOVE_INDEX, salt, extraData));
         vm.startPrank(ALICE);
-        engine.commitMove(battleKey, moveHash);
+        commitManager.commitMove(battleKey, moveHash);
         vm.startPrank(BOB);
-        engine.commitMove(battleKey, moveHash);
+        commitManager.commitMove(battleKey, moveHash);
 
         // Let Alice and Bob both reveal
         vm.startPrank(ALICE);
-        engine.revealMove(battleKey, NO_OP_MOVE_INDEX, salt, extraData);
+        commitManager.revealMove(battleKey, NO_OP_MOVE_INDEX, salt, extraData);
         vm.startPrank(BOB);
-        engine.revealMove(battleKey, NO_OP_MOVE_INDEX, salt, extraData);
+        commitManager.revealMove(battleKey, NO_OP_MOVE_INDEX, salt, extraData);
 
         // Advance game state
         engine.execute(battleKey);
@@ -681,17 +685,17 @@ contract EngineTest is Test {
         // Alice now switches to mon index 1, Bob does not choose
         vm.startPrank(ALICE);
         bytes32 aliceMoveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, bytes32(""), abi.encode(1)));
-        engine.commitMove(battleKey, aliceMoveHash);
+        commitManager.commitMove(battleKey, aliceMoveHash);
 
         // Assert that Bob cannot commit anything because of the turn flag
         // (we just reuse Alice's move hash bc it doesn't matter)
         vm.startPrank(BOB);
-        vm.expectRevert(Engine.PlayerNotAllowed.selector);
-        engine.commitMove(battleKey, aliceMoveHash);
+        vm.expectRevert(CommitManager.PlayerNotAllowed.selector);
+        commitManager.commitMove(battleKey, aliceMoveHash);
 
         // Reveal Alice's move, and advance game state
         vm.startPrank(ALICE);
-        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, bytes32(""), abi.encode(1));
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, bytes32(""), abi.encode(1));
         engine.execute(battleKey);
 
         // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
@@ -716,12 +720,12 @@ contract EngineTest is Test {
         // Alice now switches (invalidly) to mon index 0
         vm.startPrank(ALICE);
         bytes32 aliceMoveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, bytes32(""), abi.encode(0)));
-        engine.commitMove(battleKey, aliceMoveHash);
+        commitManager.commitMove(battleKey, aliceMoveHash);
 
         // Attempt to reveal Alice's move, and assert that we cannot advance the game state
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
-        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, bytes32(""), abi.encode(0));
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, bytes32(""), abi.encode(0));
 
         // Attempt to forcibly advance the game state
         vm.expectRevert();
@@ -1364,21 +1368,21 @@ contract EngineTest is Test {
         uint256 moveIndex = 0;
         vm.startPrank(ALICE);
         bytes32 aliceMoveHash = keccak256(abi.encodePacked(moveIndex, bytes32(""), ""));
-        engine.commitMove(battleKey, aliceMoveHash);
+        commitManager.commitMove(battleKey, aliceMoveHash);
 
         // Commit move index 0 for Bob
         vm.startPrank(BOB);
         bytes32 bobMoveHash = keccak256(abi.encodePacked(moveIndex, bytes32(""), ""));
-        engine.commitMove(battleKey, bobMoveHash);
+        commitManager.commitMove(battleKey, bobMoveHash);
 
         // Reveal Bob's move (valid)
         vm.startPrank(BOB);
-        engine.revealMove(battleKey, moveIndex, bytes32(""), "");
+        commitManager.revealMove(battleKey, moveIndex, bytes32(""), "");
 
         // Assert that Alice cannot reveal anything because of the stamina cost (she has the high stamina cost mon)
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
-        engine.revealMove(battleKey, moveIndex, bytes32(""), "");
+        commitManager.revealMove(battleKey, moveIndex, bytes32(""), "");
     }
 
     // Ensure that we cannot write to mon state when there is no active execute() call in the call stack
@@ -1605,10 +1609,10 @@ contract EngineTest is Test {
         vm.startPrank(ALICE);
         bytes32 salt = "";
         bytes32 moveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, abi.encode(1)));
-        engine.commitMove(battleKey, moveHash);
+        commitManager.commitMove(battleKey, moveHash);
 
         // Alice should be able to reveal because she is the only player (player flag should be set)
-        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
 
         // Execute the switch
         engine.execute(battleKey);
@@ -1821,22 +1825,22 @@ contract EngineTest is Test {
         bytes32 salt = "";
         uint256 aliceMoveIndex = 0;
         bytes32 aliceMoveHash = keccak256(abi.encodePacked(aliceMoveIndex, salt, extraData));
-        engine.commitMove(battleKey, aliceMoveHash);
+        commitManager.commitMove(battleKey, aliceMoveHash);
 
         // (Assume Bob correctly commits to swapping his mon)
         vm.startPrank(BOB);
         salt = "";
         bytes32 bobMoveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, abi.encode(1)));
-        engine.commitMove(battleKey, bobMoveHash);
+        commitManager.commitMove(battleKey, bobMoveHash);
 
         // Bob's reveal should succeed
         vm.startPrank(BOB);
-        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
 
         // Alice's reveal will revert (must choose switch)
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
-        engine.revealMove(battleKey, aliceMoveIndex, salt, extraData);
+        commitManager.revealMove(battleKey, aliceMoveIndex, salt, extraData);
     }
 
     function test_moveKOAndEffectKOLeadToDualSwapAndSwapSucceeds() public {
@@ -2359,20 +2363,20 @@ contract EngineTest is Test {
         bytes32 salt = "";
         uint256 moveIndex = 0;
         vm.startPrank(ALICE);
-        engine.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, abi.encode(0, 0))));
+        commitManager.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, abi.encode(0, 0))));
 
         // Let Bob commit and reveal to attack (move index 0)
         bytes memory extraData = "";
         vm.startPrank(BOB);
-        engine.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, extraData)));
+        commitManager.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, extraData)));
 
         // Ensure Bob can reveal
-        engine.revealMove(battleKey, moveIndex, salt, extraData);
+        commitManager.revealMove(battleKey, moveIndex, salt, extraData);
 
         // Expect revert if Alice tries to reveal (should be marked as invalid switch)
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
-        engine.revealMove(battleKey, moveIndex, salt, abi.encode(0, 0));
+        commitManager.revealMove(battleKey, moveIndex, salt, abi.encode(0, 0));
     }
 
     function test_forceSwitchMoveRevertsWhenInvalidSwitchTargetNonPriorityPlayerAfterAttacking() public {
@@ -2474,20 +2478,20 @@ contract EngineTest is Test {
         bytes32 salt = "";
         uint256 moveIndex = 0;
         vm.startPrank(ALICE);
-        engine.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, abi.encode(1, 0))));
+        commitManager.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, abi.encode(1, 0))));
 
         // Let Bob commit and reveal to attack (move index 0)
         bytes memory extraData = "";
         vm.startPrank(BOB);
-        engine.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, extraData)));
+        commitManager.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, extraData)));
 
         // Ensure Bob can reveal
-        engine.revealMove(battleKey, moveIndex, salt, extraData);
+        commitManager.revealMove(battleKey, moveIndex, salt, extraData);
 
         // Expect revert if Alice tries to reveal (should be marked as invalid switch)
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
-        engine.revealMove(battleKey, moveIndex, salt, abi.encode(1, 0));
+        commitManager.revealMove(battleKey, moveIndex, salt, abi.encode(1, 0));
     }
 
     // environmental effect kills mon after switch in from player move and forces switch
@@ -3278,16 +3282,16 @@ contract EngineTest is Test {
         vm.startPrank(ALICE);
         uint256 moveIndex = 0;
         bytes32 aliceMoveHash = keccak256(abi.encodePacked(moveIndex, bytes32(""), ""));
-        engine.commitMove(battleKey, aliceMoveHash);
+        commitManager.commitMove(battleKey, aliceMoveHash);
 
         // Have Bob commit to do the same (it's fine bc we test Alice revert)
         vm.startPrank(BOB);
-        engine.commitMove(battleKey, aliceMoveHash);
+        commitManager.commitMove(battleKey, aliceMoveHash);
 
         // Alice should revert when revealing
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
-        engine.revealMove(battleKey, 0, bytes32(""), "");
+        commitManager.revealMove(battleKey, 0, bytes32(""), "");
     }
 
     function test_onMonSwitchOutHookWorksWithTempStatBoost() public {
@@ -3531,17 +3535,17 @@ contract EngineTest is Test {
         bytes32 aliceMoveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, abi.encode(1)));
         bytes32 bobMoveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, abi.encode(1)));
         vm.startPrank(ALICE);
-        engine.commitMove(battleKey, aliceMoveHash);
+        commitManager.commitMove(battleKey, aliceMoveHash);
 
         vm.startPrank(BOB);
-        engine.commitMove(battleKey, bobMoveHash);
+        commitManager.commitMove(battleKey, bobMoveHash);
 
         // Alice double reveals
         vm.startPrank(ALICE);
-        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
 
         // This isn't allowed
-        vm.expectRevert(Engine.AlreadyRevealed.selector);
-        engine.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
+        vm.expectRevert(CommitManager.AlreadyRevealed.selector);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
     }
 }

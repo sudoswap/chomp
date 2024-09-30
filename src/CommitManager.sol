@@ -35,18 +35,19 @@ contract CommitManager is ICommitManager {
     }
 
     // Init two player move history
-    function initMoveHistory(bytes32 battleKey) external {
+    function initMoveHistory(bytes32 battleKey) external returns (bool) {
         if (msg.sender != address(ENGINE)) {
             revert NotEngine();
         }
         // Only if the length is zero
         if (moveHistory[battleKey].length != 0) {
             // No need to revert as someone could be overriding a proposed battle, just don't do anything
-            return;
+            return false;
         }
         else {
             moveHistory[battleKey].push();
             moveHistory[battleKey].push();
+            return true;
         }
     }
 

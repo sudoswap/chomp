@@ -44,7 +44,6 @@ struct BattleState {
     IEffect[] globalEffects;
     bytes[] extraDataForGlobalEffects;
     MonState[][] monStates;
-    RevealedMove[][] moveHistory;
 }
 
 struct MonStats {

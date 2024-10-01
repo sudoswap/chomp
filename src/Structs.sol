@@ -24,15 +24,15 @@ struct StartBattleArgs {
 
 struct Battle {
     address p0;
-    uint96 p1TeamIndex;
     address p1;
+    ITeamRegistry teamRegistry;
     IValidator validator;
     IRandomnessOracle rngOracle;
     IRuleset ruleset;
-    BattleProposalStatus status;
-    ITeamRegistry teamRegistry;
     bytes32 p0TeamHash;
     Mon[][] teams;
+    BattleProposalStatus status;
+    uint96 p1TeamIndex;
 }
 
 struct BattleState {

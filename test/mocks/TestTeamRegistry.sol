@@ -8,7 +8,9 @@ import {IMonRegistry} from "../../src/teams/IMonRegistry.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 
 contract TestTeamRegistry is ITeamRegistry {
+
     mapping(address => Mon[]) public teams;
+    uint256[] indices;
 
     function setTeam(address player, Mon[] memory team) public {
         teams[player] = team;
@@ -26,7 +28,11 @@ contract TestTeamRegistry is ITeamRegistry {
         return IMonRegistry(address(0));
     }
 
-    function getMonRegistryIndicesForTeam(address, uint256) external pure returns (uint256[] memory) {
-        return new uint256[](0);
+    function setIndices(uint256[] memory _indices) public {
+        indices = _indices;
+    }
+
+    function getMonRegistryIndicesForTeam(address, uint256) external returns (uint256[] memory) {
+        return indices;
     }
 }

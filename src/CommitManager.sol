@@ -34,7 +34,6 @@ contract CommitManager is ICommitManager {
         ENGINE = engine;
     }
 
-    // Init two player move history
     function initMoveHistory(bytes32 battleKey) external returns (bool) {
         if (msg.sender != address(ENGINE)) {
             revert NotEngine();

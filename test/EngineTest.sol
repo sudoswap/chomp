@@ -3470,7 +3470,7 @@ contract EngineTest is Test {
         assertEq(state.monStates[1][0].hpDelta, 0);
     }
 
-    function double_reveal_reverts() public {
+    function test_doubleRevealReverts() public {
         IMoveSet[] memory moves = new IMoveSet[](0);
         Mon memory mon = Mon({
             stats: MonStats({
@@ -3547,5 +3547,125 @@ contract EngineTest is Test {
         // This isn't allowed
         vm.expectRevert(CommitManager.AlreadyRevealed.selector);
         commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
+    }
+
+    function test_changingBattleParamsReverts() public {
+        DefaultValidator twoMoveValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 0, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        // Start battle
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMoveValidator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            )
+        );
+        // Start a new battle with a different validator
+        args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        // Battle key should stay the same
+        engine.proposeBattle(args);
+        vm.startPrank(BOB);
+
+        // This should revert
+        vm.expectRevert(Engine.BattleChangedBeforeAcceptance.selector);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+    }
+
+    function test_changingTeamIndicesLeadsToRevert() public {
+        IMoveSet[] memory moves = new IMoveSet[](0);
+        Mon memory mon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        // Create both teams (teams of length 1)
+        Mon[] memory team = new Mon[](2);
+        team[0] = mon;
+        team[1] = mon;
+
+        // Register teams
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        // Create 0 move, 2 mon validator
+        DefaultValidator twoMoveValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 0, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        // Start battle
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMoveValidator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.startPrank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            )
+        );
+
+        // Accept the battle
+        vm.startPrank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+
+        // Change the index
+        uint256[] memory test = new uint256[](1);
+        test[0] = 1;
+        vm.startPrank(ALICE);
+        defaultRegistry.setIndices(test);
+
+        // This should revert
+        vm.expectRevert(Engine.InvalidP0TeamHash.selector);
+        engine.startBattle(battleKey, "", 0);
     }
 }

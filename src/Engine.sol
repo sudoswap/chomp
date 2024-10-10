@@ -35,7 +35,7 @@ contract Engine is IEngine {
     event BattleProposal(address indexed p1, address p0, bytes32 battleKey);
     event BattleAcceptance(bytes32 indexed battleKey, uint256 p1TeamIndex);
     event BattleStart(bytes32 indexed battleKey, uint256 p0TeamIndex);
-    event EngineExecute(bytes32 indexed battleKey, uint256 turnId);
+    event EngineExecute(bytes32 indexed battleKey, uint256 turnId, uint256 playerSwitchForTurnFlag);
     event MonSwitch(bytes32 indexed battleKey, uint256 playerIndex, uint256 newMonIndex);
     event MonStateUpdate(
         bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 stateVarIndex, int32 valueDelta
@@ -184,6 +184,7 @@ contract Engine is IEngine {
         }
 
         uint256 turnId = state.turnId;
+        uint256 playerSwitchForTurnFlag;
 
         // If only a single player has a move to submit, then we don't trigger any effects
         // (Basically this only handles switching mons for now)
@@ -199,7 +200,7 @@ contract Engine is IEngine {
             // Run the move (trust that the validator only lets valid single player moves happen as a switch action)
             _handlePlayerMove(battleKey, rngForSoloTurn, playerIndex);
 
-            uint256 playerSwitchForTurnFlag = 2;
+            playerSwitchForTurnFlag = 2;
             bool isGameOver;
 
             // Check if either player's mon has been KO'ed, and if we need to force a switch for next turn
@@ -265,7 +266,6 @@ contract Engine is IEngine {
             _handlePlayerMove(battleKey, rng, priorityPlayerIndex);
 
             // Initialize variables for checking game state
-            uint256 playerSwitchForTurnFlag;
             bool isPriorityPlayerMonKOed;
             bool isNonPriorityPlayerMonKOed;
             bool isGameOver;
@@ -317,7 +317,7 @@ contract Engine is IEngine {
             state.turnId += 1;
             state.playerSwitchForTurnFlag = playerSwitchForTurnFlag;
         }
-        emit EngineExecute(battleKey, turnId);
+        emit EngineExecute(battleKey, turnId, playerSwitchForTurnFlag);
     }
 
     function end(bytes32 battleKey) external {

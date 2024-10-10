@@ -28,7 +28,7 @@ contract CommitManager is ICommitManager {
 
     // Events
     event MoveCommit(bytes32 indexed battleKey, address player);
-    event MoveReveal(bytes32 indexed battleKey, address player);
+    event MoveReveal(bytes32 indexed battleKey, address player, uint256 moveIndex);
 
     constructor(IEngine engine) {
         ENGINE = engine;
@@ -171,7 +171,7 @@ contract CommitManager is ICommitManager {
             );
         }
 
-        emit MoveReveal(battleKey, msg.sender);
+        emit MoveReveal(battleKey, msg.sender, moveIndex);
     }
 
     function getCommitment(bytes32 battleKey, address player) external view returns (Commitment memory) {

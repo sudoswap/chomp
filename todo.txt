@@ -1,7 +1,7 @@
 # TODO
 
-- only engine can init the move array
-- only players in a battle can commit a move / reveal a move
+Add accuracy to IMoveSet interface
+For prod, add variance, STAB, and critical hit into AttackCalculator
 
 ---------------------------------------------------------------------------------------------
 

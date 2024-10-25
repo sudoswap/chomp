@@ -42,6 +42,7 @@ contract Engine is IEngine {
     );
     event DamageDeal(bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 damageDealt);
     event EffectAdd(bytes32 indexed battleKey, uint256 effectIndex, uint256 monIndex, address effectAddress);
+    event EffectRemove(bytes32 indexed battleKey, uint256 effectIndex, uint256 monIndex, address effectAddress);
     event BattleComplete(bytes32 indexed battleKey, address winner);
 
     /**
@@ -430,6 +431,7 @@ contract Engine is IEngine {
         effects.pop();
         extraData[indexToRemove] = extraData[numEffects - 1];
         extraData.pop();
+        emit EffectRemove(battleKey, targetIndex, monIndex, address(effect));
     }
 
     function setGlobalKV(bytes32 key, bytes32 value) external {

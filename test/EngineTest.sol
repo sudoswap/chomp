@@ -7,9 +7,9 @@ import "../src/Constants.sol";
 import "../src/Enums.sol";
 import "../src/Structs.sol";
 
+import {CommitManager} from "../src/CommitManager.sol";
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultValidator} from "../src/DefaultValidator.sol";
-import {CommitManager} from "../src/CommitManager.sol";
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
 import {IAbility} from "../src/abilities/IAbility.sol";
@@ -164,9 +164,9 @@ contract EngineTest is Test {
         vm.startPrank(BOB);
         commitManager.commitMove(battleKey, bobMoveHash);
         vm.startPrank(ALICE);
-        commitManager.revealMove(battleKey, aliceMoveIndex, salt, aliceExtraData);
+        commitManager.revealMove(battleKey, aliceMoveIndex, salt, aliceExtraData, false);
         vm.startPrank(BOB);
-        commitManager.revealMove(battleKey, bobMoveIndex, salt, bobExtraData);
+        commitManager.revealMove(battleKey, bobMoveIndex, salt, bobExtraData, false);
         engine.execute(battleKey);
     }
 
@@ -279,13 +279,13 @@ contract EngineTest is Test {
 
         // Ensure Alice cannot reveal yet because Bob has not committed
         vm.expectRevert(CommitManager.RevealBeforeOtherCommit.selector);
-        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData, false);
 
         // Ensure Bob cannot reveal before choosing a move
         // (on turn 0, this will be a Wrong Preimage error as finding the hash to bytes32(0) is intractable)
         vm.startPrank(BOB);
         vm.expectRevert(CommitManager.WrongPreimage.selector);
-        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData, false);
 
         // Let Bob commit to choosing move index of 0 instead
         uint256 moveIndex = 0;
@@ -295,11 +295,11 @@ contract EngineTest is Test {
         // Ensure that Bob cannot reveal correctly because validation will fail
         // (move index MUST be SWITCH_INDEX on turn 0)
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", BOB));
-        commitManager.revealMove(battleKey, moveIndex, salt, "");
+        commitManager.revealMove(battleKey, moveIndex, salt, "", false);
 
         // Ensure that Bob cannot reveal incorrectly because the preimage will fail
         vm.expectRevert(CommitManager.WrongPreimage.selector);
-        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData, false);
 
         // Ensure that Bob cannot re-commit because he has already committed
         vm.expectRevert(CommitManager.AlreadyCommited.selector);
@@ -307,7 +307,7 @@ contract EngineTest is Test {
 
         // Check that Alice can still reveal
         vm.startPrank(ALICE);
-        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData, false);
 
         // Ensure that execute cannot proceed
         vm.expectRevert();
@@ -350,9 +350,9 @@ contract EngineTest is Test {
 
         // Let Alice and Bob both reveal
         vm.startPrank(ALICE);
-        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData, false);
         vm.startPrank(BOB);
-        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData, false);
 
         // Advance game state
         engine.execute(battleKey);
@@ -367,9 +367,9 @@ contract EngineTest is Test {
 
         // Let Alice and Bob both reveal
         vm.startPrank(ALICE);
-        commitManager.revealMove(battleKey, NO_OP_MOVE_INDEX, salt, extraData);
+        commitManager.revealMove(battleKey, NO_OP_MOVE_INDEX, salt, extraData, false);
         vm.startPrank(BOB);
-        commitManager.revealMove(battleKey, NO_OP_MOVE_INDEX, salt, extraData);
+        commitManager.revealMove(battleKey, NO_OP_MOVE_INDEX, salt, extraData, false);
 
         // Advance game state
         engine.execute(battleKey);
@@ -695,7 +695,7 @@ contract EngineTest is Test {
 
         // Reveal Alice's move, and advance game state
         vm.startPrank(ALICE);
-        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, bytes32(""), abi.encode(1));
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, bytes32(""), abi.encode(1), false);
         engine.execute(battleKey);
 
         // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
@@ -725,7 +725,7 @@ contract EngineTest is Test {
         // Attempt to reveal Alice's move, and assert that we cannot advance the game state
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
-        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, bytes32(""), abi.encode(0));
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, bytes32(""), abi.encode(0), false);
 
         // Attempt to forcibly advance the game state
         vm.expectRevert();
@@ -1377,12 +1377,12 @@ contract EngineTest is Test {
 
         // Reveal Bob's move (valid)
         vm.startPrank(BOB);
-        commitManager.revealMove(battleKey, moveIndex, bytes32(""), "");
+        commitManager.revealMove(battleKey, moveIndex, bytes32(""), "", false);
 
         // Assert that Alice cannot reveal anything because of the stamina cost (she has the high stamina cost mon)
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
-        commitManager.revealMove(battleKey, moveIndex, bytes32(""), "");
+        commitManager.revealMove(battleKey, moveIndex, bytes32(""), "", false);
     }
 
     // Ensure that we cannot write to mon state when there is no active execute() call in the call stack
@@ -1612,7 +1612,7 @@ contract EngineTest is Test {
         commitManager.commitMove(battleKey, moveHash);
 
         // Alice should be able to reveal because she is the only player (player flag should be set)
-        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1), false);
 
         // Execute the switch
         engine.execute(battleKey);
@@ -1835,12 +1835,12 @@ contract EngineTest is Test {
 
         // Bob's reveal should succeed
         vm.startPrank(BOB);
-        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1), false);
 
         // Alice's reveal will revert (must choose switch)
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
-        commitManager.revealMove(battleKey, aliceMoveIndex, salt, extraData);
+        commitManager.revealMove(battleKey, aliceMoveIndex, salt, extraData, false);
     }
 
     function test_moveKOAndEffectKOLeadToDualSwapAndSwapSucceeds() public {
@@ -2371,12 +2371,12 @@ contract EngineTest is Test {
         commitManager.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, extraData)));
 
         // Ensure Bob can reveal
-        commitManager.revealMove(battleKey, moveIndex, salt, extraData);
+        commitManager.revealMove(battleKey, moveIndex, salt, extraData, false);
 
         // Expect revert if Alice tries to reveal (should be marked as invalid switch)
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
-        commitManager.revealMove(battleKey, moveIndex, salt, abi.encode(0, 0));
+        commitManager.revealMove(battleKey, moveIndex, salt, abi.encode(0, 0), false);
     }
 
     function test_forceSwitchMoveRevertsWhenInvalidSwitchTargetNonPriorityPlayerAfterAttacking() public {
@@ -2486,12 +2486,12 @@ contract EngineTest is Test {
         commitManager.commitMove(battleKey, keccak256(abi.encodePacked(moveIndex, salt, extraData)));
 
         // Ensure Bob can reveal
-        commitManager.revealMove(battleKey, moveIndex, salt, extraData);
+        commitManager.revealMove(battleKey, moveIndex, salt, extraData, false);
 
         // Expect revert if Alice tries to reveal (should be marked as invalid switch)
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
-        commitManager.revealMove(battleKey, moveIndex, salt, abi.encode(1, 0));
+        commitManager.revealMove(battleKey, moveIndex, salt, abi.encode(1, 0), false);
     }
 
     // environmental effect kills mon after switch in from player move and forces switch
@@ -3291,7 +3291,7 @@ contract EngineTest is Test {
         // Alice should revert when revealing
         vm.startPrank(ALICE);
         vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
-        commitManager.revealMove(battleKey, 0, bytes32(""), "");
+        commitManager.revealMove(battleKey, 0, bytes32(""), "", false);
     }
 
     function test_onMonSwitchOutHookWorksWithTempStatBoost() public {
@@ -3542,11 +3542,11 @@ contract EngineTest is Test {
 
         // Alice double reveals
         vm.startPrank(ALICE);
-        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1), false);
 
         // This isn't allowed
         vm.expectRevert(CommitManager.AlreadyRevealed.selector);
-        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1));
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, abi.encode(1), false);
     }
 
     function test_changingBattleParamsReverts() public {

@@ -8,5 +8,4 @@ import "../src/Enums.sol";
 import {ITypeCalculator} from "../src/types/ITypeCalculator.sol";
 import {TypeCalculator} from "../src/types/TypeCalculator.sol";
 
-contract TypeCalculatorTest is Test {
-}
+contract TypeCalculatorTest is Test {}

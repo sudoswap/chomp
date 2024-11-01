@@ -8,7 +8,6 @@ import {IMonRegistry} from "../../src/teams/IMonRegistry.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 
 contract TestTeamRegistry is ITeamRegistry {
-
     mapping(address => Mon[]) public teams;
     uint256[] indices;
 

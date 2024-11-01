@@ -8,9 +8,9 @@ import "./moves/IMoveSet.sol";
 import {IEngine} from "./IEngine.sol";
 import {IValidator} from "./IValidator.sol";
 
+import {ICommitManager} from "./ICommitManager.sol";
 import {IMonRegistry} from "./teams/IMonRegistry.sol";
 import {ITeamRegistry} from "./teams/ITeamRegistry.sol";
-import {ICommitManager} from "./ICommitManager.sol";
 
 contract DefaultValidator is IValidator {
     struct Args {
@@ -243,9 +243,10 @@ contract DefaultValidator is IValidator {
 
         // If it's been enough to check for a TIMEOUT (otherwise we don't bother at all):
         if (presumedHonestPlayerCommitment.timestamp + TIMEOUT_DURATION <= block.timestamp) {
-
-            uint256 movesPresumedAFKPlayerRevealed = commitManager.getMoveCountForBattleState(battleKey, presumedAFKPlayerIndex);
-            uint256 movesPresumedHonestPlayerRevealed = commitManager.getMoveCountForBattleState(battleKey, presumedHonestPlayerIndex);
+            uint256 movesPresumedAFKPlayerRevealed =
+                commitManager.getMoveCountForBattleState(battleKey, presumedAFKPlayerIndex);
+            uint256 movesPresumedHonestPlayerRevealed =
+                commitManager.getMoveCountForBattleState(battleKey, presumedHonestPlayerIndex);
 
             Commitment memory presumedAFKPlayerCommitment = commitManager.getCommitment(battleKey, presumedAFKPlayer);
 

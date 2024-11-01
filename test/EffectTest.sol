@@ -7,10 +7,10 @@ import "../src/Constants.sol";
 import "../src/Enums.sol";
 import "../src/Structs.sol";
 
+import {CommitManager} from "../src/CommitManager.sol";
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultValidator} from "../src/DefaultValidator.sol";
 import {Engine} from "../src/Engine.sol";
-import {CommitManager} from "../src/CommitManager.sol";
 import {IValidator} from "../src/IValidator.sol";
 import {IAbility} from "../src/abilities/IAbility.sol";
 import {IEffect} from "../src/effects/IEffect.sol";
@@ -97,9 +97,9 @@ contract EngineTest is Test {
         vm.startPrank(BOB);
         commitManager.commitMove(battleKey, bobMoveHash);
         vm.startPrank(ALICE);
-        commitManager.revealMove(battleKey, aliceMoveIndex, salt, aliceExtraData);
+        commitManager.revealMove(battleKey, aliceMoveIndex, salt, aliceExtraData, false);
         vm.startPrank(BOB);
-        commitManager.revealMove(battleKey, bobMoveIndex, salt, bobExtraData);
+        commitManager.revealMove(battleKey, bobMoveIndex, salt, bobExtraData, false);
         engine.execute(battleKey);
     }
 

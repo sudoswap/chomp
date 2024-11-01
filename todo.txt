@@ -1,5 +1,9 @@
 # TODO
 
+- Add auto execute flow to reveal move
+    - need to do tests / finish implementation
+    - only stub is done for now
+
 Add accuracy to IMoveSet interface
 For prod, add variance, STAB, and critical hit into AttackCalculator
 

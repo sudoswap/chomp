@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import "./Structs.sol";
 import "./Constants.sol";
 import "./Enums.sol";
+import "./Structs.sol";
 
 import {ICommitManager} from "./ICommitManager.sol";
 import {IEngine} from "./IEngine.sol";
@@ -42,8 +42,7 @@ contract CommitManager is ICommitManager {
         if (moveHistory[battleKey].length != 0) {
             // No need to revert as someone could be overriding a proposed battle, just don't do anything
             return false;
-        }
-        else {
+        } else {
             moveHistory[battleKey].push();
             moveHistory[battleKey].push();
             return true;
@@ -96,7 +95,9 @@ contract CommitManager is ICommitManager {
         emit MoveCommit(battleKey, msg.sender);
     }
 
-    function revealMove(bytes32 battleKey, uint256 moveIndex, bytes32 salt, bytes calldata extraData) external {
+    function revealMove(bytes32 battleKey, uint256 moveIndex, bytes32 salt, bytes calldata extraData, bool autoExecute)
+        external
+    {
         // validate preimage
         Commitment storage commitment = commitments[battleKey][msg.sender];
         if (keccak256(abi.encodePacked(moveIndex, salt, extraData)) != commitment.moveHash) {
@@ -154,21 +155,29 @@ contract CommitManager is ICommitManager {
 
         // validate that the commited moves are legal
         // (e.g. there is enough stamina, move is not disabled, etc.)
-        if (!ENGINE.getBattleValidator(battleKey).validatePlayerMove(battleKey, moveIndex, currentPlayerIndex, extraData)) {
+        if (
+            !ENGINE.getBattleValidator(battleKey).validatePlayerMove(battleKey, moveIndex, currentPlayerIndex, extraData)
+        ) {
             revert InvalidMove(msg.sender);
         }
 
         // store revealed move and extra data for the current player
-        playerMoveHistory.push(
-            RevealedMove({moveIndex: moveIndex, salt: salt, extraData: extraData})
-        );
+        playerMoveHistory.push(RevealedMove({moveIndex: moveIndex, salt: salt, extraData: extraData}));
 
         // store empty move for other player if it's a turn where only a single player has to make a move
         if (playerSwitchForTurnFlag == 0 || playerSwitchForTurnFlag == 1) {
             RevealedMove[] storage otherPlayerMoveHistory = moveHistory[battleKey][otherPlayerIndex];
-            otherPlayerMoveHistory.push(
-                RevealedMove({moveIndex: NO_OP_MOVE_INDEX, salt: "", extraData: ""})
-            );
+            otherPlayerMoveHistory.push(RevealedMove({moveIndex: NO_OP_MOVE_INDEX, salt: "", extraData: ""}));
+        }
+        // if we want to auto execute
+        if (autoExecute) {
+            // check if the other player has revealed already 
+            // (even for 1 player turns, the above statements guarantee we'll have a move revealed)
+            RevealedMove[] storage otherPlayerMoveHistory = moveHistory[battleKey][otherPlayerIndex];
+            // if so, we can automatically advance game state
+            if (otherPlayerMoveHistory.length > turnId) {
+                ENGINE.execute(battleKey);
+            }
         }
 
         emit MoveReveal(battleKey, msg.sender, moveIndex);

@@ -7,11 +7,10 @@ import "../src/Constants.sol";
 import "../src/Enums.sol";
 import "../src/Structs.sol";
 
-import {Engine} from "../src/Engine.sol";
 import {CommitManager} from "../src/CommitManager.sol";
+import {Engine} from "../src/Engine.sol";
 
 contract CommitManagerTest is Test {
-
     CommitManager commitManager;
     Engine engine;
 

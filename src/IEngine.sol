@@ -2,9 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "./Enums.sol";
-import "./Structs.sol";
-import "./IValidator.sol";
+
 import "./ICommitManager.sol";
+import "./IValidator.sol";
+import "./Structs.sol";
 
 interface IEngine {
     // Global battle key to determine which battle to apply state mutations
@@ -38,4 +39,5 @@ interface IEngine {
     function removeEffect(uint256 targetIndex, uint256 monIndex, uint256 effectIndex) external;
     function setGlobalKV(bytes32 key, bytes32 value) external;
     function dealDamage(uint256 playerIndex, uint256 monIndex, uint32 damage) external;
+    function execute(bytes32 battleKey) external;
 }

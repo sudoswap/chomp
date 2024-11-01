@@ -7,11 +7,10 @@ import "./Enums.sol";
 import "./Structs.sol";
 import "./moves/IMoveSet.sol";
 
-import {IEngine} from "./IEngine.sol";
 import {ICommitManager} from "./ICommitManager.sol";
+import {IEngine} from "./IEngine.sol";
 
 contract Engine is IEngine {
-
     // Public state variables
     bytes32 public battleKeyForWrite;
     ICommitManager public commitManager;
@@ -35,7 +34,9 @@ contract Engine is IEngine {
     event BattleProposal(address indexed p1, address p0, bytes32 battleKey);
     event BattleAcceptance(bytes32 indexed battleKey, uint256 p1TeamIndex);
     event BattleStart(bytes32 indexed battleKey, uint256 p0TeamIndex);
-    event EngineExecute(bytes32 indexed battleKey, uint256 turnId, uint256 playerSwitchForTurnFlag);
+    event EngineExecute(
+        bytes32 indexed battleKey, uint256 turnId, uint256 playerSwitchForTurnFlag, uint256 priorityPlayerIndex
+    );
     event MonSwitch(bytes32 indexed battleKey, uint256 playerIndex, uint256 newMonIndex);
     event MonStateUpdate(
         bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 stateVarIndex, int32 valueDelta
@@ -186,6 +187,7 @@ contract Engine is IEngine {
 
         uint256 turnId = state.turnId;
         uint256 playerSwitchForTurnFlag;
+        uint256 priorityPlayerIndex;
 
         // If only a single player has a move to submit, then we don't trigger any effects
         // (Basically this only handles switching mons for now)
@@ -251,7 +253,7 @@ contract Engine is IEngine {
             state.pRNGStream.push(rng);
 
             // Calculate the priority and non-priority player indices
-            uint256 priorityPlayerIndex = battle.validator.computePriorityPlayerIndex(battleKey, rng);
+            priorityPlayerIndex = battle.validator.computePriorityPlayerIndex(battleKey, rng);
             uint256 otherPlayerIndex;
             if (priorityPlayerIndex == 0) {
                 otherPlayerIndex = 1;
@@ -318,7 +320,7 @@ contract Engine is IEngine {
             state.turnId += 1;
             state.playerSwitchForTurnFlag = playerSwitchForTurnFlag;
         }
-        emit EngineExecute(battleKey, turnId, playerSwitchForTurnFlag);
+        emit EngineExecute(battleKey, turnId, playerSwitchForTurnFlag, priorityPlayerIndex);
     }
 
     function end(bytes32 battleKey) external {

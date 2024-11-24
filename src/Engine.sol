@@ -332,8 +332,9 @@ contract Engine is IEngine {
         for (uint256 i; i < 2; ++i) {
             address afkResult = battle.validator.validateTimeout(battleKey, i);
             if (afkResult != address(0)) {
-                emit BattleComplete(battleKey, afkResult);
                 state.winner = afkResult;
+                battle.status = BattleProposalStatus.Ended;
+                emit BattleComplete(battleKey, afkResult);
                 return;
             }
         }
@@ -494,6 +495,7 @@ contract Engine is IEngine {
         address gameResult = battle.validator.validateGameOver(battleKey, priorityPlayerIndex);
         if (gameResult != address(0)) {
             state.winner = gameResult;
+            battle.status = BattleProposalStatus.Ended;
             emit BattleComplete(battleKey, gameResult);
             isGameOver = true;
         } else {

@@ -1,8 +1,7 @@
 # TODO
 
-- Add auto execute flow to reveal move
-    - need to do tests / finish implementation
-    - only stub is done for now
+https://sepolia.basescan.org/tx/0xc377589f447326087e5bb9442f0f37c12dc69dfb90bf8964cc9da1f7facc5e8c 
+- why isn't frostbite triggering end of round damage?
 
 Add accuracy to IMoveSet interface
 For prod, add variance, STAB, and critical hit into AttackCalculator
@@ -35,12 +34,15 @@ Ways to mitigate:
 Ways to mitigate:
 - Need to handle on the team registry angle probably
 - Atm, restricting it to the same array of mon indices reduces the attack surface somewhat
+- OR, just add the move indices to the integrity hash
 
 5) No way to prevent move selection if the move is switch/no-op
 Some effects / moves way wish to lock the user in. No easy way to handle this currently with the engine as-is.
 
 Ways to mitigate
 - Future iterations of the engine can do additional validation before letting SWITCH_MOVE_INDEX be considered valid on move reveal
+
+6) Committing
 
 ---------------------------------------------------------------------------------------------
 

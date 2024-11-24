@@ -64,7 +64,7 @@ contract CommitManager is ICommitManager {
             revert BattleNotStarted();
         }
 
-        // validate no commitment already exists for this turn
+        // Validate no commitment already exists for this turn:
         uint256 turnId = ENGINE.getTurnIdForBattleState(battleKey);
 
         // if it's the zeroth turn, require that no hash is set for the player

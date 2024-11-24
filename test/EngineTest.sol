@@ -138,7 +138,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -226,7 +226,7 @@ contract EngineTest is Test {
         vm.startPrank(BOB);
         commitManager.commitMove(battleKey, "");
 
-        // Have Alice accept the battle
+        // Have Alice accept the battle bob proposed
         vm.startPrank(ALICE);
         bytes32 battleIntegrityHash = keccak256(
             abi.encodePacked(
@@ -234,16 +234,16 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                bobArgs.p0TeamHash
             )
         );
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
 
-        // Have Bob start the Battle (givne that Alice accepted)
+        // Have Bob start the Battle (given that Alice accepted)
         vm.startPrank(BOB);
         engine.startBattle(battleKey, "", 0);
 
-        // Have Bob start a new battle
+        // Have Bob propose a new battle
         vm.warp(validator.TIMEOUT_DURATION() + 1);
         vm.startPrank(BOB);
         bytes32 newBattleKey = engine.proposeBattle(bobArgs);
@@ -448,7 +448,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -549,7 +549,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -656,7 +656,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -813,7 +813,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -904,7 +904,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -984,7 +984,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -1064,7 +1064,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -1145,7 +1145,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -1252,7 +1252,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -1352,7 +1352,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -1480,7 +1480,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -1586,7 +1586,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -1693,7 +1693,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -1800,7 +1800,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -1925,7 +1925,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -2025,7 +2025,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -2134,7 +2134,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -2240,7 +2240,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -2346,7 +2346,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -2461,7 +2461,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -2581,7 +2581,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -2676,7 +2676,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -2770,7 +2770,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -2867,7 +2867,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -2988,7 +2988,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -3114,7 +3114,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -3195,7 +3195,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -3265,7 +3265,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -3350,7 +3350,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -3444,7 +3444,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -3522,7 +3522,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         vm.prank(BOB);
@@ -3574,7 +3574,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
         // Start a new battle with a different validator
@@ -3650,7 +3650,7 @@ contract EngineTest is Test {
                 args.rngOracle,
                 args.ruleset,
                 args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+                args.p0TeamHash
             )
         );
 
@@ -3667,5 +3667,85 @@ contract EngineTest is Test {
         // This should revert
         vm.expectRevert(Engine.InvalidP0TeamHash.selector);
         engine.startBattle(battleKey, "", 0);
+    }
+
+    function test_cannotCommitToEndedBattle() public {
+        IMoveSet[] memory empty = new IMoveSet[](0);
+        Mon memory mon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: empty,
+            ability: IAbility(address(0))
+        });
+        Mon[] memory team = new Mon[](1);
+        team[0] = mon;
+        // Register teams
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+        DefaultValidator noMoveValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 0, TIMEOUT_DURATION: 0})
+        );
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: noMoveValidator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                args.p0TeamHash
+            )
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // Both players send in mon index 0
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice commits to a move
+        bytes32 salt = "";
+        uint256 moveIndex = 0;
+        bytes32 moveHash = keccak256(abi.encodePacked(moveIndex, salt, ""));
+        vm.startPrank(ALICE);
+        commitManager.commitMove(battleKey, moveHash);
+
+        // Skip ahead 1 second
+        vm.warp(block.timestamp + 1);
+
+        // End the battle
+        engine.end(battleKey);
+
+        // Check that ALICE wins (Bob didn't commit for round 2)
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, ALICE);
+
+        // // Bob should not be able to commit to the ended battle
+        vm.startPrank(BOB);
+        vm.expectRevert(CommitManager.BattleNotStarted.selector);
+        commitManager.commitMove(battleKey, moveHash);
     }
 }

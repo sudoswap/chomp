@@ -23,7 +23,8 @@ enum Type {
 enum BattleProposalStatus {
     Proposed,
     Accepted,
-    Started
+    Started,
+    Ended
 }
 
 enum EffectStep {

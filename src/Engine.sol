@@ -320,6 +320,7 @@ contract Engine is IEngine {
             state.turnId += 1;
             state.playerSwitchForTurnFlag = playerSwitchForTurnFlag;
         }
+        // Emits switch for turn flag for the next turn, but the priority index for this current turn
         emit EngineExecute(battleKey, turnId, playerSwitchForTurnFlag, priorityPlayerIndex);
     }
 

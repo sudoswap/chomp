@@ -204,6 +204,14 @@ contract EngineTest is Test {
 
         assertEq(state.monStates[0][0].hpDelta, -2);
         assertEq(state.monStates[1][0].hpDelta, -2);
+
+        // Alice and Bob both select to do a no op
+        _commitRevealExecuteForAliceAndBob(battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, "", "");
+
+        // Check that health was reduced
+        state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][0].hpDelta, -3);
+        assertEq(state.monStates[1][0].hpDelta, -3);
     }
 
     function test_sleep() public {

@@ -12,14 +12,13 @@ general flow of the game is:
 (think normal pokemon style)
 
 mechanical differences are:
-- extensible engine, write your own Mons or Moves
+- extensible engine, write your own Effects or Moves
 - far greater support for state-based moves / mechanics
 - stamina-based resource system instead of PP for balancing moves
 
 ## Getting Started
 
 This repo uses [foundry](https://book.getfoundry.sh/getting-started/installation).
-
 
 To get started:
 
@@ -28,28 +27,27 @@ To get started:
 `forge test`
 
 ### Engine.sol
-Main entry point for handling Battles.
-Handles committing, revealing, and executing moves to advance battle state.
+Main entry point for creating/advancing Battles.
+Handles executing moves to advance battle state.
 Stores global state / data available to all players.
 
-General flow:
+### CommitManager.sol
+Main entry point for managing moves.
+Allows users to commit/reveal moves for battles.
+Stores commitment history.
+
+### IMoveSet.sol
+Interface for a Move, an available choice for a Mon.
+
+### IEffect.sol
+Interface for an Effect, which can mutate game state and manage its own state. Moves and Effects can attach new Effects to a game state.
+
+## Game Flow
+General flow of battle:
 - p1 commits hash of a Move
 - p2 commits hash of a Move
 - p1 reveals hash
 - p2 reveals hash
-- anyone can execute to advance game state
-- validator ensures moves are legal at each stage
+- execute to advance game state
 
 During a player's turn, they can choose either a Move on their active Mon, or switch to a new Mon.
-
-### Validator
-Validators do auxiliary verification outside of the game engine. They handle additional game ending conditions like timeouts and hook into the Battle's lifecycle, e.g. Battle start and Battle end.
-
-### Mons
-Mons are the player's game pieces. They can each hold a number of Moves and have their own stats as well as a unique Ability. Abilities trigger on switch in, and can also mutate game state.
-
-### Moves
-A Move can mutate game state, e.g. alter stats, deal damage, or attach effects. Moves cost a Mon stamina to use, with stronger moves requiring more stamina. See `IMove.sol` for the current working interface.
-
-### Effects
-Effects are persistent side effects that alter game state. Effects can be called on several lifecycle hooks during a Battle's execution by the Engine, e.g. during a Mon switching in, at the beginning of a round, etc. See `IEffect.sol` for the current working interface.

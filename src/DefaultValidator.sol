@@ -88,7 +88,7 @@ contract DefaultValidator is IValidator {
         if (monToSwitchIndex >= MONS_PER_TEAM) {
             return false;
         }
-        bool isNewMonKnockedOut = ENGINE.getMonStateForBattle(battleKey, playerIndex, monToSwitchIndex).isKnockedOut;
+        bool isNewMonKnockedOut = ENGINE.getMonStateForBattle(battleKey, playerIndex, monToSwitchIndex, MonStateIndexName.IsKnockedOut) == 1;
         if (isNewMonKnockedOut) {
             return false;
         }
@@ -109,13 +109,11 @@ contract DefaultValidator is IValidator {
         bytes calldata extraData
     ) public view returns (bool) {
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
-        Mon memory activeMon = ENGINE.getMonForTeam(battleKey, playerIndex, activeMonIndex[playerIndex]);
 
         // A move cannot be selected if its stamina costs more than the mon's current stamina
-        IMoveSet moveSet = activeMon.moves[moveIndex];
-        int256 monStaminaDelta =
-            ENGINE.getMonStateForBattle(battleKey, playerIndex, activeMonIndex[playerIndex]).staminaDelta;
-        uint256 monBaseStamina = activeMon.stats.stamina;
+        IMoveSet moveSet = ENGINE.getMoveForMonForBattle(battleKey, playerIndex, activeMonIndex[playerIndex], moveIndex);
+        int256 monStaminaDelta = ENGINE.getMonStateForBattle(battleKey, playerIndex, activeMonIndex[playerIndex], MonStateIndexName.Stamina);
+        uint256 monBaseStamina = ENGINE.getMonValueForBattle(battleKey, playerIndex, activeMonIndex[playerIndex], MonStateIndexName.Stamina);
         uint256 monCurrentStamina = uint256(int256(monBaseStamina) + monStaminaDelta);
         if (moveSet.stamina(battleKey) > monCurrentStamina) {
             return false;
@@ -152,8 +150,7 @@ contract DefaultValidator is IValidator {
         // - if the active mon is knocked out
         {
             bool isTurnZero = ENGINE.getTurnIdForBattleState(battleKey) == 0;
-            bool isActiveMonKnockedOut =
-                ENGINE.getMonStateForBattle(battleKey, playerIndex, activeMonIndex[playerIndex]).isKnockedOut;
+            bool isActiveMonKnockedOut = ENGINE.getMonStateForBattle(battleKey, playerIndex, activeMonIndex[playerIndex], MonStateIndexName.IsKnockedOut) == 1;
             if (isTurnZero || isActiveMonKnockedOut) {
                 if (moveIndex != SWITCH_MOVE_INDEX) {
                     return false;
@@ -198,10 +195,8 @@ contract DefaultValidator is IValidator {
         for (uint256 i; i < playerIndex.length; ++i) {
             uint256 numMonsKnockedOut;
             for (uint256 j; j < MONS_PER_TEAM; ++j) {
-                MonState memory monState = ENGINE.getMonStateForBattle(battleKey, playerIndex[i], j);
-                if (monState.isKnockedOut) {
-                    numMonsKnockedOut += 1;
-                }
+                int32 isKnockedOut = ENGINE.getMonStateForBattle(battleKey, playerIndex[i], j, MonStateIndexName.IsKnockedOut);
+                numMonsKnockedOut += uint32(isKnockedOut);
             }
             if (numMonsKnockedOut == MONS_PER_TEAM) {
                 if (playerIndex[i] == 0) {
@@ -287,8 +282,6 @@ contract DefaultValidator is IValidator {
         RevealedMove memory p0Move = commitManager.getMoveForBattleStateForTurn(battleKey, 0, turnId);
         RevealedMove memory p1Move = commitManager.getMoveForBattleStateForTurn(battleKey, 1, turnId);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
-        Mon memory p0ActiveMon = ENGINE.getMonForTeam(battleKey, 0, activeMonIndex[0]);
-        Mon memory p1ActiveMon = ENGINE.getMonForTeam(battleKey, 1, activeMonIndex[1]);
 
         uint256 p0Priority;
         uint256 p1Priority;
@@ -298,14 +291,14 @@ contract DefaultValidator is IValidator {
             if (p0Move.moveIndex == SWITCH_MOVE_INDEX || p0Move.moveIndex == NO_OP_MOVE_INDEX) {
                 p0Priority = SWITCH_PRIORITY;
             } else {
-                IMoveSet p0MoveSet = p0ActiveMon.moves[p0Move.moveIndex];
+                IMoveSet p0MoveSet = ENGINE.getMoveForMonForBattle(battleKey, 0, activeMonIndex[0], p0Move.moveIndex);
                 p0Priority = p0MoveSet.priority(battleKey);
             }
 
             if (p1Move.moveIndex == SWITCH_MOVE_INDEX || p1Move.moveIndex == NO_OP_MOVE_INDEX) {
                 p1Priority = SWITCH_PRIORITY;
             } else {
-                IMoveSet p1MoveSet = p1ActiveMon.moves[p1Move.moveIndex];
+                IMoveSet p1MoveSet = ENGINE.getMoveForMonForBattle(battleKey, 1, activeMonIndex[1], p1Move.moveIndex);
                 p1Priority = p1MoveSet.priority(battleKey);
             }
         }
@@ -320,10 +313,10 @@ contract DefaultValidator is IValidator {
             return 1;
         } else {
             uint32 p0MonSpeed = uint32(
-                int32(p0ActiveMon.stats.speed) + ENGINE.getMonStateForBattle(battleKey, 0, activeMonIndex[0]).speedDelta
+                int32(ENGINE.getMonValueForBattle(battleKey, 0, activeMonIndex[0], MonStateIndexName.Speed)) + ENGINE.getMonStateForBattle(battleKey, 0, activeMonIndex[0], MonStateIndexName.Speed)
             );
             uint32 p1MonSpeed = uint32(
-                int32(p1ActiveMon.stats.speed) + ENGINE.getMonStateForBattle(battleKey, 1, activeMonIndex[1]).speedDelta
+                int32(ENGINE.getMonValueForBattle(battleKey, 1, activeMonIndex[1], MonStateIndexName.Speed)) + ENGINE.getMonStateForBattle(battleKey, 1, activeMonIndex[1], MonStateIndexName.Speed)
             );
             if (p0MonSpeed > p1MonSpeed) {
                 return 0;

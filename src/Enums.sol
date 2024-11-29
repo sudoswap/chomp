@@ -53,5 +53,7 @@ enum MonStateIndexName {
     SpecialAttack,
     SpecialDefense,
     IsKnockedOut,
-    ShouldSkipTurn
+    ShouldSkipTurn,
+    Type1,
+    Type2
 }

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./Enums.sol";
-
+import "./moves/IMoveSet.sol";
 import "./ICommitManager.sol";
 import "./IValidator.sol";
 import "./Structs.sol";
@@ -16,14 +16,18 @@ interface IEngine {
     function getBattle(bytes32 battleKey) external view returns (Battle memory);
     function getBattleState(bytes32 battleKey) external view returns (BattleState memory);
 
-    function getMonForTeam(bytes32 battleKey, uint256 playerIndex, uint256 monIndex)
+    function getMonValueForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex)
         external
         view
-        returns (Mon memory);
-    function getMonStateForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex)
+        returns (uint32);
+    function getMonStateForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex)
         external
         view
-        returns (MonState memory);
+        returns (int32);
+    function getMoveForMonForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex, uint256 moveIndex)
+        external
+        view
+        returns (IMoveSet);
     function getPlayersForBattle(bytes32 battleKey) external view returns (address[] memory);
     function getTurnIdForBattleState(bytes32 battleKey) external view returns (uint256);
     function getActiveMonIndexForBattleState(bytes32 battleKey) external view returns (uint256[] memory);

@@ -34,8 +34,8 @@ contract AfterDamageReboundEffect is IEffect {
         returns (bytes memory, bool)
     {
         // Heals for all damage done
-        int32 currentMonHp = ENGINE.getMonStateForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex).hpDelta;
-        ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Hp, currentMonHp * -1);
+        int32 currentDamage = ENGINE.getMonStateForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.Hp);
+        ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Hp, currentDamage * -1);
         return (extraData, false);
     }
 

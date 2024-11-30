@@ -41,27 +41,70 @@ abstract contract AttackCalculator {
 
             // Grab the right atk/defense stats, and apply the delta if needed
             if (attackSupertype == MoveClass.Physical) {
-                attackStat = uint32(int32(
-                    ENGINE.getMonValueForBattle(battleKey, attackerPlayerIndex, monIndex[attackerPlayerIndex], MonStateIndexName.Attack)
-                ) + ENGINE.getMonStateForBattle(battleKey, attackerPlayerIndex, monIndex[attackerPlayerIndex], MonStateIndexName.Attack));
-                defenceStat = uint32(int32(
-                    ENGINE.getMonValueForBattle(battleKey, defenderPlayerIndex, monIndex[defenderPlayerIndex], MonStateIndexName.Defense)
-                ) + ENGINE.getMonStateForBattle(battleKey, defenderPlayerIndex, monIndex[defenderPlayerIndex], MonStateIndexName.Defense));
+                attackStat = uint32(
+                    int32(
+                        ENGINE.getMonValueForBattle(
+                            battleKey, attackerPlayerIndex, monIndex[attackerPlayerIndex], MonStateIndexName.Attack
+                        )
+                    )
+                        + ENGINE.getMonStateForBattle(
+                            battleKey, attackerPlayerIndex, monIndex[attackerPlayerIndex], MonStateIndexName.Attack
+                        )
+                );
+                defenceStat = uint32(
+                    int32(
+                        ENGINE.getMonValueForBattle(
+                            battleKey, defenderPlayerIndex, monIndex[defenderPlayerIndex], MonStateIndexName.Defense
+                        )
+                    )
+                        + ENGINE.getMonStateForBattle(
+                            battleKey, defenderPlayerIndex, monIndex[defenderPlayerIndex], MonStateIndexName.Defense
+                        )
+                );
             } else {
-                attackStat = uint32(int32(
-                    ENGINE.getMonValueForBattle(battleKey, attackerPlayerIndex, monIndex[attackerPlayerIndex], MonStateIndexName.SpecialAttack)
-                ) + ENGINE.getMonStateForBattle(battleKey, attackerPlayerIndex, monIndex[attackerPlayerIndex], MonStateIndexName.SpecialAttack));
-                defenceStat = uint32(int32(
-                    ENGINE.getMonValueForBattle(battleKey, defenderPlayerIndex, monIndex[defenderPlayerIndex], MonStateIndexName.SpecialDefense)
-                ) + ENGINE.getMonStateForBattle(battleKey, defenderPlayerIndex, monIndex[defenderPlayerIndex], MonStateIndexName.SpecialDefense));
+                attackStat = uint32(
+                    int32(
+                        ENGINE.getMonValueForBattle(
+                            battleKey,
+                            attackerPlayerIndex,
+                            monIndex[attackerPlayerIndex],
+                            MonStateIndexName.SpecialAttack
+                        )
+                    )
+                        + ENGINE.getMonStateForBattle(
+                            battleKey, attackerPlayerIndex, monIndex[attackerPlayerIndex], MonStateIndexName.SpecialAttack
+                        )
+                );
+                defenceStat = uint32(
+                    int32(
+                        ENGINE.getMonValueForBattle(
+                            battleKey,
+                            defenderPlayerIndex,
+                            monIndex[defenderPlayerIndex],
+                            MonStateIndexName.SpecialDefense
+                        )
+                    )
+                        + ENGINE.getMonStateForBattle(
+                            battleKey, defenderPlayerIndex, monIndex[defenderPlayerIndex], MonStateIndexName.SpecialDefense
+                        )
+                );
             }
-            uint32 scaledBasePower =
-                TYPE_CALCULATOR.getTypeEffectiveness(attackType, 
-                Type(ENGINE.getMonValueForBattle(battleKey, defenderPlayerIndex, monIndex[defenderPlayerIndex], MonStateIndexName.Type1)), basePower);
-            Type defenderType2 = Type(ENGINE.getMonValueForBattle(battleKey, defenderPlayerIndex, monIndex[defenderPlayerIndex], MonStateIndexName.Type2));
+            uint32 scaledBasePower = TYPE_CALCULATOR.getTypeEffectiveness(
+                attackType,
+                Type(
+                    ENGINE.getMonValueForBattle(
+                        battleKey, defenderPlayerIndex, monIndex[defenderPlayerIndex], MonStateIndexName.Type1
+                    )
+                ),
+                basePower
+            );
+            Type defenderType2 = Type(
+                ENGINE.getMonValueForBattle(
+                    battleKey, defenderPlayerIndex, monIndex[defenderPlayerIndex], MonStateIndexName.Type2
+                )
+            );
             if (defenderType2 != Type.None) {
-                scaledBasePower =
-                    TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderType2, scaledBasePower);
+                scaledBasePower = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderType2, scaledBasePower);
             }
             uint32 rngScaling = 0;
             if (MOVE_VARIANCE > 0) {

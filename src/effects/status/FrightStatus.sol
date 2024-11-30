@@ -47,7 +47,6 @@ contract FrightStatus is StatusEffect {
 
     // Sleep just skips the turn
     function _applyFright(uint256, uint256 targetIndex, uint256 monIndex) internal {
-
         bytes32 battleKey = ENGINE.battleKeyForWrite();
 
         // Get current stamina delta of the target mon

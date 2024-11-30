@@ -2,10 +2,11 @@
 pragma solidity ^0.8.0;
 
 import "./Enums.sol";
-import "./moves/IMoveSet.sol";
+
 import "./ICommitManager.sol";
 import "./IValidator.sol";
 import "./Structs.sol";
+import "./moves/IMoveSet.sol";
 
 interface IEngine {
     // Global battle key to determine which battle to apply state mutations
@@ -16,14 +17,18 @@ interface IEngine {
     function getBattle(bytes32 battleKey) external view returns (Battle memory);
     function getBattleState(bytes32 battleKey) external view returns (BattleState memory);
 
-    function getMonValueForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex)
-        external
-        view
-        returns (uint32);
-    function getMonStateForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex)
-        external
-        view
-        returns (int32);
+    function getMonValueForBattle(
+        bytes32 battleKey,
+        uint256 playerIndex,
+        uint256 monIndex,
+        MonStateIndexName stateVarIndex
+    ) external view returns (uint32);
+    function getMonStateForBattle(
+        bytes32 battleKey,
+        uint256 playerIndex,
+        uint256 monIndex,
+        MonStateIndexName stateVarIndex
+    ) external view returns (int32);
     function getMoveForMonForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex, uint256 moveIndex)
         external
         view

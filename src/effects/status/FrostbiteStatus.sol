@@ -27,7 +27,9 @@ contract FrostbiteStatus is StatusEffect {
         returns (bytes memory updatedExtraData)
     {
         // Get the special attack of the affected mon
-        uint32 baseSpecialAttack = ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.SpecialAttack);
+        uint32 baseSpecialAttack = ENGINE.getMonValueForBattle(
+            ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.SpecialAttack
+        );
 
         // Reduce special attack by half
         int32 specialAttackAmountToReduce = int32(baseSpecialAttack / SP_ATTACK_DENOMINATOR) * -1;
@@ -45,7 +47,9 @@ contract FrostbiteStatus is StatusEffect {
         // Reset the special attack reduction
 
         // Get the special attack of the affected mon
-        uint32 baseSpecialAttack = ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.SpecialAttack);
+        uint32 baseSpecialAttack = ENGINE.getMonValueForBattle(
+            ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.SpecialAttack
+        );
 
         // Reduce special attack by half
         int32 specialAttackAmountToIncrease = int32(baseSpecialAttack / SP_ATTACK_DENOMINATOR);
@@ -60,7 +64,8 @@ contract FrostbiteStatus is StatusEffect {
         returns (bytes memory, bool)
     {
         // Get the max health of the affected mon
-        uint32 maxHealth = ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.Hp);
+        uint32 maxHealth =
+            ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.Hp);
 
         // Calculate damage
         uint32 damage = maxHealth / DAMAGE_DENOMINATOR;

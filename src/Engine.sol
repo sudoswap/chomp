@@ -702,10 +702,12 @@ contract Engine is IEngine {
         return battles[battleKey].validator;
     }
 
-    function getMonValueForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex)
-        external
-        view
-        returns (uint32) {
+    function getMonValueForBattle(
+        bytes32 battleKey,
+        uint256 playerIndex,
+        uint256 monIndex,
+        MonStateIndexName stateVarIndex
+    ) external view returns (uint32) {
         if (stateVarIndex == MonStateIndexName.Hp) {
             return battles[battleKey].teams[playerIndex][monIndex].stats.hp;
         } else if (stateVarIndex == MonStateIndexName.Stamina) {
@@ -724,8 +726,7 @@ contract Engine is IEngine {
             return uint32(battles[battleKey].teams[playerIndex][monIndex].stats.type1);
         } else if (stateVarIndex == MonStateIndexName.Type2) {
             return uint32(battles[battleKey].teams[playerIndex][monIndex].stats.type2);
-        }
-        else {
+        } else {
             return 0;
         }
     }
@@ -745,7 +746,12 @@ contract Engine is IEngine {
         return players;
     }
 
-    function getMonStateForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex) external view returns (int32) {
+    function getMonStateForBattle(
+        bytes32 battleKey,
+        uint256 playerIndex,
+        uint256 monIndex,
+        MonStateIndexName stateVarIndex
+    ) external view returns (int32) {
         if (stateVarIndex == MonStateIndexName.Hp) {
             return battleStates[battleKey].monStates[playerIndex][monIndex].hpDelta;
         } else if (stateVarIndex == MonStateIndexName.Stamina) {
@@ -763,23 +769,20 @@ contract Engine is IEngine {
         } else if (stateVarIndex == MonStateIndexName.IsKnockedOut) {
             if (battleStates[battleKey].monStates[playerIndex][monIndex].isKnockedOut) {
                 return 1;
-            }
-            else {
+            } else {
                 return 0;
             }
-        } 
-        else if (stateVarIndex == MonStateIndexName.ShouldSkipTurn) {
+        } else if (stateVarIndex == MonStateIndexName.ShouldSkipTurn) {
             if (battleStates[battleKey].monStates[playerIndex][monIndex].shouldSkipTurn) {
                 return 1;
-            }
-            else {
+            } else {
                 return 0;
             }
-        }
-        else {
+        } else {
             return 0;
         }
     }
+
     function getTurnIdForBattleState(bytes32 battleKey) external view returns (uint256) {
         return battleStates[battleKey].turnId;
     }

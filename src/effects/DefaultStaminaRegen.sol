@@ -31,7 +31,9 @@ contract DefaultStaminaRegen is IEffect {
         // Update stamina for both active mons only if it's a 2 player turn
         if (playerSwitchForTurnFlag == 2) {
             for (uint256 playerIndex; playerIndex < 2; ++playerIndex) {
-                int256 currentActiveMonStaminaDelta = ENGINE.getMonStateForBattle(battleKey, playerIndex, activeMonIndex[playerIndex], MonStateIndexName.Stamina);
+                int256 currentActiveMonStaminaDelta = ENGINE.getMonStateForBattle(
+                    battleKey, playerIndex, activeMonIndex[playerIndex], MonStateIndexName.Stamina
+                );
 
                 // Cannot go past max stamina, so we only add 1 stamina if the current delta is negative
                 if (currentActiveMonStaminaDelta < 0) {

@@ -171,7 +171,7 @@ contract CommitManager is ICommitManager {
         }
         // if we want to auto execute
         if (autoExecute) {
-            // check if the other player has revealed already 
+            // check if the other player has revealed already
             // (even for 1 player turns, the above statements guarantee we'll have a move revealed)
             RevealedMove[] storage otherPlayerMoveHistory = moveHistory[battleKey][otherPlayerIndex];
             // if so, we can automatically advance game state

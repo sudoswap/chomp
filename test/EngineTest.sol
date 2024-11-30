@@ -34,6 +34,7 @@ import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
 import {SingleInstanceEffect} from "./mocks/SingleInstanceEffect.sol";
 import {SkipTurnMove} from "./mocks/SkipTurnMove.sol";
 import {TempStatBoostEffect} from "./mocks/TempStatBoostEffect.sol";
+import {OneTurnStatBoost} from "./mocks/OneTurnStatBoost.sol";
 import {TestTeamRegistry} from "./mocks/TestTeamRegistry.sol";
 
 import {TestTypeCalculator} from "./mocks/TestTypeCalculator.sol";
@@ -1616,6 +1617,85 @@ contract EngineTest is Test {
 
         // Execute the switch
         engine.execute(battleKey);
+    }
+
+    function test_effectAppliedByAttackCorrectlyAppliesToTargetedMonEvenAfterSwitch() public {
+        // Mon that has a temporary stat boost effect
+        IEffect statBoost = new OneTurnStatBoost(engine);
+        IMoveSet[] memory moves = new IMoveSet[](1);
+
+        // Create new effect attack that applies the temporary stat boost effect
+        IMoveSet effectAttack = new EffectAttack(
+            engine, statBoost, EffectAttack.Args({TYPE: Type.Fire, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        moves[0] = effectAttack;
+        Mon memory mon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon[] memory team = new Mon[](2);
+        team[0] = mon;
+        team[1] = mon;
+
+        DefaultValidator oneMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        // Register teams
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: oneMonValidator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                args.p0TeamHash
+            )
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice swaps to mon index 1, and Bob applies the effect
+        // The effect should be applied to mon index 1 for Alice but only during the duration of the turn
+        // (We have a check for 2 instead of 1 to avoid confusing it with the base case state)
+        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, 0, abi.encode(1), "");
+
+        // Assert that the temporary stat boost effect is updated to 2 because the roundEnd hook also runs
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][1].attackDelta, 2);
     }
 
     function test_moveKOSupersedesRoundEndEffectKOForGameEnd() public {

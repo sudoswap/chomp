@@ -630,6 +630,7 @@ contract Engine is IEngine {
             effects = state.globalEffects;
             extraData = state.extraDataForGlobalEffects;
         } else {
+            monIndex = state.activeMonIndex[effectIndex];
             effects = state.monStates[effectIndex][monIndex].targetedEffects;
             extraData = state.monStates[effectIndex][monIndex].extraDataForTargetedEffects;
         }

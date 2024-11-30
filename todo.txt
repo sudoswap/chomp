@@ -1,16 +1,14 @@
 # TODO
 
-gas optimization:
-- remove getMon and getMonState
-- add fine grained access
-
-then:
-
 https://sepolia.basescan.org/tx/0xc377589f447326087e5bb9442f0f37c12dc69dfb90bf8964cc9da1f7facc5e8c 
 - why isn't frostbite triggering end of round damage?
 
 - try locally running tests with both default stamina regen and a mon that knows the move
 - run that + do nothing, and inspect the trace, see if it's the same
+
+Is `validateGameStart` actually doing any useful work?
+- especially if we trust that the team registry is valid?
+- oh, i guess we need to call the team registry at runtime in case the registry rules have changed
 
 
 Add accuracy to IMoveSet interface

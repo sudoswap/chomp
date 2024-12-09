@@ -167,7 +167,10 @@ contract LazyTeamRegistry is ITeamRegistry {
         return uint32(monRegistryIndicesForTeamPacked[player][teamIndex] >> (position * BITS_PER_MON_INDEX));
     }
 
-    function getMonRegistryIndicesForTeam(address player, uint256 teamIndex) external view returns (uint256[] memory) {
+    function getMonRegistryIndicesForTeam(address player, uint256 teamIndex) public view returns (uint256[] memory) {
+        if (teamIndex == DEFAULT_INDEX && msg.sender != firstToRegister) {
+            return getMonRegistryIndicesForTeam(firstToRegister, DEFAULT_INDEX);
+        }
         uint256[] memory ids = new uint256[](MONS_PER_TEAM);
         for (uint256 i; i < MONS_PER_TEAM; ++i) {
             ids[i] = _getMonRegistryIndex(player, teamIndex, i);

@@ -169,6 +169,10 @@ contract CommitManager is ICommitManager {
             RevealedMove[] storage otherPlayerMoveHistory = moveHistory[battleKey][otherPlayerIndex];
             otherPlayerMoveHistory.push(RevealedMove({moveIndex: NO_OP_MOVE_INDEX, salt: "", extraData: ""}));
         }
+
+        // Emit move reveal event before game engine execution
+        emit MoveReveal(battleKey, msg.sender, moveIndex);
+
         // if we want to auto execute
         if (autoExecute) {
             // check if the other player has revealed already
@@ -179,8 +183,6 @@ contract CommitManager is ICommitManager {
                 ENGINE.execute(battleKey);
             }
         }
-
-        emit MoveReveal(battleKey, msg.sender, moveIndex);
     }
 
     function getCommitment(bytes32 battleKey, address player) external view returns (Commitment memory) {

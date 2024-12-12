@@ -19,7 +19,7 @@ contract dTeam is Script {
     function run() external {
         uint256 deployerPrivateKey = uint256(vm.envBytes32("PRIVATE_KEY"));
         vm.startBroadcast(deployerPrivateKey);
-        createMons();
+        // createMons();
         createTeam();
         vm.stopBroadcast();
     }

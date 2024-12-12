@@ -41,6 +41,7 @@ contract Engine is IEngine {
     event MonStateUpdate(
         bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 stateVarIndex, int32 valueDelta
     );
+    event MonMove(bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, bytes extraData);
     event DamageDeal(bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 damageDealt);
     event EffectAdd(bytes32 indexed battleKey, uint256 effectIndex, uint256 monIndex, address effectAddress);
     event EffectRemove(bytes32 indexed battleKey, uint256 effectIndex, uint256 monIndex, address effectAddress);
@@ -564,6 +565,9 @@ contract Engine is IEngine {
             currentMonState.shouldSkipTurn = false;
             return;
         }
+
+        // Emit event
+        emit MonMove(battleKey, playerIndex, state.activeMonIndex[playerIndex], move.extraData);
 
         // Handle a switch or a no-op
         // otherwise, execute the moveset

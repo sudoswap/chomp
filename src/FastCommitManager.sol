@@ -8,7 +8,7 @@ import "./Structs.sol";
 import {ICommitManager} from "./ICommitManager.sol";
 import {IEngine} from "./IEngine.sol";
 
-contract CommitManager is ICommitManager {
+contract FastCommitManager is ICommitManager {
     // State variables
     IEngine private immutable ENGINE;
     mapping(bytes32 battleKey => mapping(address player => Commitment)) private commitments;
@@ -51,10 +51,10 @@ contract CommitManager is ICommitManager {
     }
 
     /**
-        Committing is for:
-        - p0 if the turn index % 2 == 0
-        - p1 if the turn index % 2 == 1
-        - UNLESS there is a player switch for turn flag, in which case, no commits at all
+     * Committing is for:
+     *     - p0 if the turn index % 2 == 0
+     *     - p1 if the turn index % 2 == 1
+     *     - UNLESS there is a player switch for turn flag, in which case, no commits at all
      */
     function commitMove(bytes32 battleKey, bytes32 moveHash) external {
         address[] memory p0AndP1 = ENGINE.getPlayersForBattle(battleKey);
@@ -81,8 +81,7 @@ contract CommitManager is ICommitManager {
             if (commitments[battleKey][msg.sender].moveHash != bytes32(0)) {
                 revert AlreadyCommited();
             }
-        }
-        else if (commitments[battleKey][msg.sender].turnId == turnId) {
+        } else if (commitments[battleKey][msg.sender].turnId == turnId) {
             revert AlreadyCommited();
         }
 
@@ -111,7 +110,6 @@ contract CommitManager is ICommitManager {
     function revealMove(bytes32 battleKey, uint256 moveIndex, bytes32 salt, bytes calldata extraData, bool autoExecute)
         external
     {
-
         // 1) Only battle participants can reveal
         address[] memory p0AndP1 = ENGINE.getPlayersForBattle(battleKey);
         if (msg.sender != p0AndP1[0] && msg.sender != p0AndP1[1]) {
@@ -131,27 +129,27 @@ contract CommitManager is ICommitManager {
         // Get turn id and switch for turn flag
         uint256 turnId = ENGINE.getTurnIdForBattleState(battleKey);
         uint256 playerSwitchForTurnFlag = ENGINE.getPlayerSwitchForTurnFlagForBattleState(battleKey);
-        
-        // 2) If switch for turn flag is set...
-        // OR, if the turn index does not line up with the player index:
-        // We need to check that the other player has already committed
-        // (But we don't need to check the preimage)
+
+        // 2) If the turn index does not line up with the player index
+        // OR it's a turn with only one player, and that player is us:
+        // Then we don't need to check the preimage
         bool playerSkipsPreimageCheck;
         if (playerSwitchForTurnFlag == 2) {
-            playerSkipsPreimageCheck = (
-                ((turnId % 2 == 1 ) && (currentPlayerIndex == 1)) || 
-                ((turnId % 2 == 0 ) && (currentPlayerIndex == 0))
-            )
-        }
-        else {
-            playerSkipsPreimageCheck = (
-                playerSwitchForTurnFlag == currentPlayerIndex
-            );
+            playerSkipsPreimageCheck =
+                (((turnId % 2 == 1) && (currentPlayerIndex == 1)) || ((turnId % 2 == 0) && (currentPlayerIndex == 0)));
+        } else {
+            playerSkipsPreimageCheck = (playerSwitchForTurnFlag == currentPlayerIndex);
+
+            // We cannot reveal if the player index is different than the switch for turn flag
+            // (if it's a one player turn, but it's not our turn to reveal)
+            if (!playerSkipsPreimageCheck) {
+                revert PlayerNotAllowed();
+            }
         }
         if (playerSkipsPreimageCheck) {
-
-            // If it's a 2 player turn (and we can skip the preimage verification), 
+            // If it's a 2 player turn (and we can skip the preimage verification),
             // then we check to see if an existing commitment from the other player exists
+            // (we can only reveal after other player commit)
             if (playerSwitchForTurnFlag == 2) {
                 // If it's not the zeroth turn, make sure that player cannot reveal until other player has committed
                 if (turnId != 0) {
@@ -159,17 +157,18 @@ contract CommitManager is ICommitManager {
                         revert RevealBeforeOtherCommit();
                     }
                 }
-                // If it is the zeroth turn, do the same check, but check moveHash instead of turnId
+                // If it is the zeroth turn, do the same check, but check moveHash instead of turnId (which would be zero)
                 else {
                     if (commitments[battleKey][otherPlayer].moveHash == bytes32(0)) {
                         revert RevealBeforeOtherCommit();
                     }
                 }
             }
+            // (Otherwise, it's a single player turn, so we don't need to check for an existing commitment)
         }
         // 3) Otherwise (we need to both commit + reveal), so we need to check:
         // - the preimage checks out
-        // - reveal happens after a commit 
+        // - reveal happens after a commit
         // - the other player has already *revealed*
         else {
             // - validate preimage
@@ -217,17 +216,12 @@ contract CommitManager is ICommitManager {
         // 8) Emit move reveal event before game engine execution
         emit MoveReveal(battleKey, msg.sender, moveIndex);
 
-
-        // TODO
-        // Who executes is now deterministic, fix this
-
-        // If we want to auto execute
+        // 9) Auto execute if desired/available
         if (autoExecute) {
-            // check if the other player has revealed already
-            // (even for 1 player turns, the above statements guarantee we'll have a move revealed)
-            RevealedMove[] storage otherPlayerMoveHistory = moveHistory[battleKey][otherPlayerIndex];
-            // if so, we can automatically advance game state
-            if (otherPlayerMoveHistory.length > turnId) {
+            // We can execute if:
+            // - it's a single player turn (no other commitments to wait on)
+            // - we're the player who previously committed (the other party already revealed)
+            if ((playerSwitchForTurnFlag == playerIndex) || (!playerSkipsPreimageCheck)) {
                 ENGINE.execute(battleKey);
             }
         }

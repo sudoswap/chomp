@@ -40,7 +40,6 @@ contract LazyTeamRegistry is ITeamRegistry {
     }
 
     function createTeam(uint256[] memory monIndices, IMoveSet[][] memory moves, IAbility[] memory abilities) external {
-
         // Set first to register
         if (firstToRegister == address(0)) {
             firstToRegister = msg.sender;

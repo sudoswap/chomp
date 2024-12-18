@@ -123,6 +123,35 @@ contract FastEngineTest is Test {
         return battleKey;
     }
 
+    function _commitRevealExecuteForAliceAndBob(
+        bytes32 battleKey,
+        uint256 aliceMoveIndex,
+        uint256 bobMoveIndex,
+        bytes memory aliceExtraData,
+        bytes memory bobExtraData
+    ) internal {
+        bytes32 salt = "";
+        bytes32 aliceMoveHash = keccak256(abi.encodePacked(aliceMoveIndex, salt, aliceExtraData));
+        bytes32 bobMoveHash = keccak256(abi.encodePacked(bobMoveIndex, salt, bobExtraData));
+        // Decide which player commits
+        uint256 turnId = engine.getTurnIdForBattleState(battleKey);
+        if (turnId % 2 == 0) {
+            vm.startPrank(ALICE);
+            commitManager.commitMove(battleKey, aliceMoveHash);
+            vm.startPrank(BOB);
+            commitManager.revealMove(battleKey, bobMoveIndex, salt, bobExtraData, true);
+            vm.startPrank(ALICE);
+            commitManager.revealMove(battleKey, aliceMoveIndex, salt, aliceExtraData, true);
+        } else {
+            vm.startPrank(BOB);
+            commitManager.commitMove(battleKey, bobMoveHash);
+            vm.startPrank(ALICE);
+            commitManager.revealMove(battleKey, aliceMoveIndex, salt, aliceExtraData, true);
+            vm.startPrank(BOB);
+            commitManager.revealMove(battleKey, bobMoveIndex, salt, bobExtraData, true);
+        }
+    }
+
     function test_commitBattleWithoutAcceptReverts() public {
 
         /*
@@ -357,4 +386,246 @@ contract FastEngineTest is Test {
         uint256 turnId = engine.getTurnIdForBattleState(battleKey);
         assertEq(turnId, 2);
     }
+
+    function test_canStartBattleBothPlayersNoOpAfterSwap() public {
+        bytes32 battleKey = _startDummyBattle();
+
+        // Let Alice commit to choosing switch
+        bytes32 salt = "";
+        bytes memory extraData = abi.encode(0);
+        bytes32 moveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, extraData));
+        vm.startPrank(ALICE);
+        commitManager.commitMove(battleKey, moveHash);
+
+        // Let Bob reveal to choosing switch as well
+        vm.startPrank(BOB);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData, true);
+
+        // Let Alice reveal and advance game state
+        vm.startPrank(ALICE);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData, true);
+
+        // Set args for a no op
+        extraData = "";
+        moveHash = keccak256(abi.encodePacked(NO_OP_MOVE_INDEX, salt, extraData));
+
+        // Let Bob commit
+        vm.startPrank(BOB);
+        commitManager.commitMove(battleKey, moveHash);
+
+        // Let Alice reveal
+        vm.startPrank(ALICE);
+        commitManager.revealMove(battleKey, NO_OP_MOVE_INDEX, salt, extraData, true);
+
+        // Let Bob both reveal
+        vm.startPrank(BOB);
+        commitManager.revealMove(battleKey, NO_OP_MOVE_INDEX, salt, extraData, true);
+
+        // Turn ID should now be 2
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.turnId, 2);
+    }
+
+    function test_fasterSpeedKOsGameOver() public {
+        // Initialize mons
+        IMoveSet normalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 0})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = normalAttack;
+        Mon memory fastMon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 2,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon memory slowMon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 1,
+                speed: 1,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory fastTeam = new Mon[](1);
+        fastTeam[0] = fastMon;
+        Mon[] memory slowTeam = new Mon[](1);
+        slowTeam[0] = slowMon;
+        teams[0] = fastTeam;
+        teams[1] = slowTeam;
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        IValidator validator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                args.p0TeamHash
+            )
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
+        // (Alice should win because her mon is faster)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Assert Alice wins
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, ALICE);
+
+        // Assert that the staminaDelta was set correctly
+        assertEq(state.monStates[0][0].staminaDelta, -1);
+    }
+
+    function test_fasterPriorityKOsGameOver() public {
+        // Initialize fast and slow mons
+        IMoveSet slowAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 0})
+        );
+        IMoveSet fastAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 1})
+        );
+        IMoveSet[] memory slowMoves = new IMoveSet[](1);
+        slowMoves[0] = slowAttack;
+        IMoveSet[] memory fastMoves = new IMoveSet[](1);
+        fastMoves[0] = fastAttack;
+        Mon memory fastMon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: slowMoves,
+            ability: IAbility(address(0))
+        });
+        Mon memory slowMon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 1,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: fastMoves,
+            ability: IAbility(address(0))
+        });
+        Mon[][] memory teams = new Mon[][](2);
+        Mon[] memory fastTeam = new Mon[](1);
+        fastTeam[0] = fastMon;
+        Mon[] memory slowTeam = new Mon[](1);
+        slowTeam[0] = slowMon;
+        teams[0] = fastTeam;
+        teams[1] = slowTeam;
+        // Register teams
+        defaultRegistry.setTeam(ALICE, teams[0]);
+        defaultRegistry.setTeam(BOB, teams[1]);
+
+        IValidator validator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                args.p0TeamHash
+            )
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Assert Bob wins as he has faster priority on a slower mon
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, BOB);
+
+        // Assert that the staminaDelta was set correctly for Bob's mon
+        assertEq(state.monStates[1][0].staminaDelta, -1);
+    }
+
 }

@@ -12,11 +12,12 @@ import {IEngine} from "./IEngine.sol";
 
 contract Engine is IEngine {
     // Public state variables
-    bytes32 public battleKeyForWrite;
+    uint256 transient currentStep;
+    bytes32 public transient battleKeyForWrite;
     ICommitManager public commitManager;
+    mapping(bytes32 => uint256) public pairHashNonces;
 
     // Private state variables
-    mapping(bytes32 => uint256) public pairHashNonces;
     mapping(bytes32 battleKey => Battle) private battles;
     mapping(bytes32 battleKey => BattleState) private battleStates;
     mapping(bytes32 battleKey => mapping(bytes32 => bytes32)) private globalKV;
@@ -37,14 +38,42 @@ contract Engine is IEngine {
     event EngineExecute(
         bytes32 indexed battleKey, uint256 turnId, uint256 playerSwitchForTurnFlag, uint256 priorityPlayerIndex
     );
-    event MonSwitch(bytes32 indexed battleKey, uint256 playerIndex, uint256 newMonIndex);
+    event MonSwitch(bytes32 indexed battleKey, uint256 playerIndex, uint256 newMonIndex, address source);
     event MonStateUpdate(
-        bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 stateVarIndex, int32 valueDelta
+        bytes32 indexed battleKey,
+        uint256 playerIndex,
+        uint256 monIndex,
+        uint256 stateVarIndex,
+        int32 valueDelta,
+        address source,
+        uint256 step
     );
-    event MonMove(bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, bytes extraData);
-    event DamageDeal(bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 damageDealt);
-    event EffectAdd(bytes32 indexed battleKey, uint256 effectIndex, uint256 monIndex, address effectAddress);
-    event EffectRemove(bytes32 indexed battleKey, uint256 effectIndex, uint256 monIndex, address effectAddress);
+    event MonMove(bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 moveIndex, bytes extraData);
+    event DamageDeal(
+        bytes32 indexed battleKey,
+        uint256 playerIndex,
+        uint256 monIndex,
+        uint256 damageDealt,
+        address source,
+        uint256 step
+    );
+    event EffectAdd(
+        bytes32 indexed battleKey,
+        uint256 effectIndex,
+        uint256 monIndex,
+        address effectAddress,
+        bytes extraData,
+        address source,
+        uint256 step
+    );
+    event EffectRemove(
+        bytes32 indexed battleKey,
+        uint256 effectIndex,
+        uint256 monIndex,
+        address effectAddress,
+        address source,
+        uint256 step
+    );
     event BattleComplete(bytes32 indexed battleKey, address winner);
 
     /**
@@ -179,16 +208,23 @@ contract Engine is IEngine {
     }
 
     function execute(bytes32 battleKey) external {
+        // Load storage vars
         Battle storage battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
 
+        // Check for game over
         if (state.winner != address(0)) {
             revert GameAlreadyOver();
         }
 
+        // Set up turn / player vars
         uint256 turnId = state.turnId;
         uint256 playerSwitchForTurnFlag;
         uint256 priorityPlayerIndex;
+
+        // Set the battle key for the stack frame
+        // (gets cleared at the end of the transaction)
+        battleKeyForWrite = battleKey;
 
         // If only a single player has a move to submit, then we don't trigger any effects
         // (Basically this only handles switching mons for now)
@@ -373,7 +409,9 @@ contract Engine is IEngine {
         } else if (stateVarIndex == MonStateIndexName.ShouldSkipTurn) {
             monState.shouldSkipTurn = (valueToAdd % 2) == 1;
         }
-        emit MonStateUpdate(battleKey, playerIndex, monIndex, uint256(stateVarIndex), valueToAdd);
+        emit MonStateUpdate(
+            battleKey, playerIndex, monIndex, uint256(stateVarIndex), valueToAdd, msg.sender, currentStep
+        );
     }
 
     function addEffect(uint256 targetIndex, uint256 monIndex, IEffect effect, bytes memory extraData) external {
@@ -402,7 +440,7 @@ contract Engine is IEngine {
                 // Set the extraData so be the returned value from onApply
                 effectsExtraData[effectsExtraData.length - 1] = extraData;
             }
-            emit EffectAdd(battleKey, targetIndex, monIndex, address(effect));
+            emit EffectAdd(battleKey, targetIndex, monIndex, address(effect), extraData, msg.sender, currentStep);
         }
     }
 
@@ -436,7 +474,7 @@ contract Engine is IEngine {
         effects.pop();
         extraData[indexToRemove] = extraData[numEffects - 1];
         extraData.pop();
-        emit EffectRemove(battleKey, targetIndex, monIndex, address(effect));
+        emit EffectRemove(battleKey, targetIndex, monIndex, address(effect), msg.sender, currentStep);
     }
 
     function setGlobalKV(bytes32 key, bytes32 value) external {
@@ -463,7 +501,7 @@ contract Engine is IEngine {
             uint256 rngValue = rngValues[rngValues.length - 1];
             _runEffects(battleKey, rngValue, playerIndex, playerIndex, EffectStep.AfterDamage);
         }
-        emit DamageDeal(battleKey, playerIndex, monIndex, damage);
+        emit DamageDeal(battleKey, playerIndex, monIndex, damage, msg.sender, currentStep);
     }
 
     /**
@@ -522,7 +560,7 @@ contract Engine is IEngine {
         }
     }
 
-    function _handleSwitch(bytes32 battleKey, uint256 playerIndex, uint256 monToSwitchIndex) internal {
+    function _handleSwitch(bytes32 battleKey, uint256 playerIndex, uint256 monToSwitchIndex, address source) internal {
         BattleState storage state = battleStates[battleKey];
         MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
         uint256 rng = state.pRNGStream[state.pRNGStream.length - 1];
@@ -546,7 +584,7 @@ contract Engine is IEngine {
             mon.ability.activateOnSwitch(battleKey, playerIndex, monToSwitchIndex);
         }
 
-        emit MonSwitch(battleKey, playerIndex, monToSwitchIndex);
+        emit MonSwitch(battleKey, playerIndex, monToSwitchIndex, source);
 
         // NOTE: We will check for game over after the switch in the engine for two player turns, so we don't do it here
         // But this also means that the current flow of OnMonSwitchOut effects -> OnMonSwitchIn effects -> ability activateOnSwitch
@@ -567,19 +605,13 @@ contract Engine is IEngine {
         }
 
         // Emit event
-        emit MonMove(battleKey, playerIndex, state.activeMonIndex[playerIndex], move.extraData);
+        emit MonMove(battleKey, playerIndex, state.activeMonIndex[playerIndex], move.moveIndex, move.extraData);
 
         // Handle a switch or a no-op
         // otherwise, execute the moveset
         if (move.moveIndex == SWITCH_MOVE_INDEX) {
-            // Set the key to allow for writes
-            battleKeyForWrite = battleKey;
-
             // Handle the switch
-            _handleSwitch(battleKey, playerIndex, abi.decode(move.extraData, (uint256)));
-
-            // Set the battleKey back to 0 to prevent writes
-            battleKeyForWrite = bytes32(0);
+            _handleSwitch(battleKey, playerIndex, abi.decode(move.extraData, (uint256)), address(0));
         } else if (move.moveIndex == NO_OP_MOVE_INDEX) {
             // do nothing (e.g. just recover stamina)
             return;
@@ -600,9 +632,6 @@ contract Engine is IEngine {
             state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta -=
                 int32(moveSet.stamina(battleKey));
 
-            // Set the key to allow for writes
-            battleKeyForWrite = battleKey;
-
             // Run the move and see if we need to handle a switch
             bool doSwitch = moveSet.move(battleKey, playerIndex, move.extraData, rng);
 
@@ -610,11 +639,8 @@ contract Engine is IEngine {
             if (doSwitch) {
                 (uint256 switchFlag, uint256 monToSwitchIndex) =
                     moveSet.postMoveSwitch(battleKey, playerIndex, move.extraData);
-                _handleSwitch(battleKey, switchFlag, monToSwitchIndex);
+                _handleSwitch(battleKey, switchFlag, monToSwitchIndex, address(moveSet));
             }
-
-            // Set the battleKey back to 0 to prevent writes
-            battleKeyForWrite = bytes32(0);
         }
     }
 
@@ -644,9 +670,13 @@ contract Engine is IEngine {
         }
         uint256 i;
         while (i < effects.length) {
+            bool currentStepUpdated;
             if (effects[i].shouldRunAtStep(round)) {
-                // Set the battleKey to allow for writes
-                battleKeyForWrite = battleKey;
+                // Only update the current step if we need to run any effects, and only update it once per step
+                if (!currentStepUpdated) {
+                    currentStep = uint256(round);
+                    currentStepUpdated = true;
+                }
 
                 // Run the effects (depending on which round stage we are on)
                 bytes memory updatedExtraData;
@@ -676,9 +706,6 @@ contract Engine is IEngine {
                     extraData[i] = updatedExtraData;
                     ++i;
                 }
-
-                // Unset the battleKey to lock writes
-                battleKeyForWrite = bytes32(0);
             } else {
                 ++i;
             }

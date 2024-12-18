@@ -1,14 +1,9 @@
 # TODO
 
-1) Add Engine test case for where both mons get KO'ed but not a game over.
+1) Change how DefaultValidator handles timeouts to account for this
 
-2) Commit Manager overhaul:
-- one player commits, the other reveals, the first reveals + executes
-- on turns where only one player moves, just reveal is sufficient
-- change how DefaultValidator handles timeouts to account for this
-
-Add accuracy to IMoveSet interface
-For prod, add variance, STAB, and critical hit into AttackCalculator
+2) Add Engine test case for where both mons get KO'ed but not a game over.
+- Ensure that both players have to swap to someone new
 
 ---------------------------------------------------------------------------------------------
 
@@ -69,6 +64,9 @@ Missing from attack calculator:
 - critical hits
 - variance
 - STAB
+
+Add accuracy to IMoveSet interface
+For prod, add variance, STAB, and critical hit into AttackCalculator
 
 ---------------------------------------------------------------------------------------------
 

@@ -101,8 +101,7 @@ contract FastCommitManager is ICommitManager {
         }
 
         // 7) Store the commitment
-        commitments[battleKey][caller] =
-            Commitment({moveHash: moveHash, turnId: turnId, timestamp: block.timestamp});
+        commitments[battleKey][caller] = Commitment({moveHash: moveHash, turnId: turnId, timestamp: block.timestamp});
 
         // 8) Emit event
         emit MoveCommit(battleKey, caller);

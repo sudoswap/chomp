@@ -58,9 +58,10 @@ contract FastCommitManager is ICommitManager {
      */
     function commitMove(bytes32 battleKey, bytes32 moveHash) external {
         address[] memory p0AndP1 = ENGINE.getPlayersForBattle(battleKey);
+        address caller = msg.sender;
 
         // 1) Only battle participants can commit
-        if (msg.sender != p0AndP1[0] && msg.sender != p0AndP1[1]) {
+        if (caller != p0AndP1[0] && caller != p0AndP1[1]) {
             revert NotP0OrP1();
         }
 
@@ -78,10 +79,10 @@ contract FastCommitManager is ICommitManager {
         // otherwise, just check if the turn id (which we overwrite each turn) is in sync
         // (if we already committed this turn, then the turn id should match)
         if (turnId == 0) {
-            if (commitments[battleKey][msg.sender].moveHash != bytes32(0)) {
+            if (commitments[battleKey][caller].moveHash != bytes32(0)) {
                 revert AlreadyCommited();
             }
-        } else if (commitments[battleKey][msg.sender].turnId == turnId) {
+        } else if (commitments[battleKey][caller].turnId == turnId) {
             revert AlreadyCommited();
         }
 
@@ -93,18 +94,18 @@ contract FastCommitManager is ICommitManager {
 
         // 6) Can only commit if the turn index % lines up with the player index
         // (Otherwise, just go straight to revealing)
-        if (msg.sender == p0AndP1[0] && turnId % 2 == 1) {
+        if (caller == p0AndP1[0] && turnId % 2 == 1) {
             revert PlayerNotAllowed();
-        } else if (msg.sender == p0AndP1[1] && turnId % 2 == 0) {
+        } else if (caller == p0AndP1[1] && turnId % 2 == 0) {
             revert PlayerNotAllowed();
         }
 
         // 7) Store the commitment
-        commitments[battleKey][msg.sender] =
+        commitments[battleKey][caller] =
             Commitment({moveHash: moveHash, turnId: turnId, timestamp: block.timestamp});
 
         // 8) Emit event
-        emit MoveCommit(battleKey, msg.sender);
+        emit MoveCommit(battleKey, caller);
     }
 
     function revealMove(bytes32 battleKey, uint256 moveIndex, bytes32 salt, bytes calldata extraData, bool autoExecute)
@@ -130,13 +131,13 @@ contract FastCommitManager is ICommitManager {
         uint256 turnId = ENGINE.getTurnIdForBattleState(battleKey);
         uint256 playerSwitchForTurnFlag = ENGINE.getPlayerSwitchForTurnFlagForBattleState(battleKey);
 
-        // 2) If the turn index does not line up with the player index
+        // 2) If the turn index does NOT line up with the player index
         // OR it's a turn with only one player, and that player is us:
         // Then we don't need to check the preimage
         bool playerSkipsPreimageCheck;
         if (playerSwitchForTurnFlag == 2) {
             playerSkipsPreimageCheck =
-                (((turnId % 2 == 1) && (currentPlayerIndex == 1)) || ((turnId % 2 == 0) && (currentPlayerIndex == 0)));
+                (((turnId % 2 == 1) && (currentPlayerIndex == 0)) || ((turnId % 2 == 0) && (currentPlayerIndex == 1)));
         } else {
             playerSkipsPreimageCheck = (playerSwitchForTurnFlag == currentPlayerIndex);
 
@@ -221,7 +222,7 @@ contract FastCommitManager is ICommitManager {
             // We can execute if:
             // - it's a single player turn (no other commitments to wait on)
             // - we're the player who previously committed (the other party already revealed)
-            if ((playerSwitchForTurnFlag == playerIndex) || (!playerSkipsPreimageCheck)) {
+            if ((playerSwitchForTurnFlag == currentPlayerIndex) || (!playerSkipsPreimageCheck)) {
                 ENGINE.execute(battleKey);
             }
         }

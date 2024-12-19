@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
 
-import {CommitManager} from "../src/CommitManager.sol";
+import {FastCommitManager} from "../src/FastCommitManager.sol";
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
 import {DefaultValidator} from "../src/DefaultValidator.sol";
 import {Engine} from "../src/Engine.sol";
@@ -13,19 +13,19 @@ import {CustomEffectAttack} from "../src/moves/CustomEffectAttack.sol";
 import {CustomEffectAttackFactory} from "../src/moves/CustomEffectAttackFactory.sol";
 import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
 import {DefaultMonRegistry} from "../src/teams/DefaultMonRegistry.sol";
-import {DefaultTeamRegistry} from "../src/teams/DefaultTeamRegistry.sol";
+import {LazyTeamRegistry} from "../src/teams/LazyTeamRegistry.sol";
 import {TypeCalculator} from "../src/types/TypeCalculator.sol";
 
 contract dCommitAndFactories is Script {
     function run()
         external
         returns (
-            CommitManager commitManager,
+            FastCommitManager commitManager,
             DefaultStaminaRegen defaultStaminaRegen,
             DefaultRuleset defaultRuleset,
             DefaultValidator defaultValidator,
             DefaultMonRegistry defaultMonRegistry,
-            DefaultTeamRegistry defaultTeamRegistry,
+            LazyTeamRegistry teamRegistry,
             CustomEffectAttack customEffectAttack,
             CustomEffectAttackFactory customEffectAttackFactory
         )
@@ -34,7 +34,7 @@ contract dCommitAndFactories is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Create Commit Manager and set it on the engine
-        commitManager = new CommitManager(Engine(vm.envAddress("ENGINE")));
+        commitManager = new FastCommitManager(Engine(vm.envAddress("ENGINE")));
         Engine(vm.envAddress("ENGINE")).setCommitManager(address(commitManager));
 
         // Create default stamina regen/rulesets
@@ -53,8 +53,8 @@ contract dCommitAndFactories is Script {
 
         // Create Mon/Team registry
         defaultMonRegistry = new DefaultMonRegistry();
-        defaultTeamRegistry = new DefaultTeamRegistry(
-            DefaultTeamRegistry.Args({REGISTRY: defaultMonRegistry, MONS_PER_TEAM: 6, MOVES_PER_MON: 4})
+        teamRegistry = new LazyTeamRegistry(
+            LazyTeamRegistry.Args({REGISTRY: defaultMonRegistry, MONS_PER_TEAM: 6, MOVES_PER_MON: 4})
         );
 
         vm.stopBroadcast();

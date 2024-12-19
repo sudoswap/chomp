@@ -8,7 +8,7 @@ import "../src/Structs.sol";
 
 import {IAbility} from "../src/abilities/IAbility.sol";
 import {IMoveSet} from "../src/moves/IMoveSet.sol";
-import {DefaultTeamRegistry} from "../src/teams/DefaultTeamRegistry.sol";
+import {LazyTeamRegistry} from "../src/teams/LazyTeamRegistry.sol";
 import {Engine} from "../src/Engine.sol";
 import {DefaultMonRegistry} from "../src/teams/DefaultMonRegistry.sol";
 
@@ -54,19 +54,19 @@ contract dTeam is Script {
 
         // Liftogg is bulky and fast, but not a strong attacker
         // BST sum: 400+200+175+120+150+80 = 1125
-        MonStats memory liftoggStats = MonStats({
-            hp: 400,
+        MonStats memory sofabbiStats = MonStats({
+            hp: 350,
             stamina: STAMINA,
-            speed: 200,
-            attack: 175,
-            defense: 120,
+            speed: 140,
+            attack: 150,
+            defense: 150,
             specialAttack: 150,
-            specialDefense: 80,
-            type1: Type.Air,
+            specialDefense: 150,
+            type1: Type.Nature,
             type2: Type.None
         });
-        string[] memory liftoggName = new string[](1);
-        liftoggName[0] = "Liftogg";
+        string[] memory sofabbiName = new string[](1);
+        sofabbiName[0] = "Sofabbi";
 
         // Ghoulias is slow but hits hard, not high hp tho
         // BST sum: 250+80+250+120+180+140 = 1020
@@ -90,10 +90,10 @@ contract dTeam is Script {
             hp: 350,
             stamina: STAMINA,
             speed: 100,
-            attack: 200,
+            attack: 190,
             defense: 200,
             specialAttack: 100,
-            specialDefense: 100,
+            specialDefense: 110,
             type1: Type.Earth,
             type2: Type.None
         });
@@ -135,13 +135,13 @@ contract dTeam is Script {
         // Milady is high special attack / speed, glass cannon
         // BST sum: 250+180+220+50+250+50 = 1000
         MonStats memory malalienStats = MonStats({
-            hp: 280,
+            hp: 270,
             stamina: STAMINA,
-            speed: 180,
+            speed: 170,
             attack: 220,
-            defense: 50,
-            specialAttack: 220,
-            specialDefense: 50,
+            defense: 80,
+            specialAttack: 200,
+            specialDefense: 80,
             type1: Type.Mythic,
             type2: Type.None
         });
@@ -149,7 +149,7 @@ contract dTeam is Script {
         malalienName[0] = "Malalien";
 
         // Create mons
-        defaultMonRegistry.createMon(liftoggStats, moves, abilities, nameKey, liftoggName);
+        defaultMonRegistry.createMon(sofabbiStats, moves, abilities, nameKey, sofabbiName);
         defaultMonRegistry.createMon(ghouliathStats, moves, abilities, nameKey, ghouliathName);
         defaultMonRegistry.createMon(gorillaxStats, moves, abilities, nameKey, gorillaxName);
         defaultMonRegistry.createMon(inutiaStats, moves, abilities, nameKey, inutiaName);
@@ -158,7 +158,7 @@ contract dTeam is Script {
     }
 
     function createTeam() public {
-        DefaultTeamRegistry registry = DefaultTeamRegistry(vm.envAddress("DEFAULT_TEAM_REGISTRY"));
+        LazyTeamRegistry registry = LazyTeamRegistry(vm.envAddress("TEAM_REGISTRY"));
 
         // Set indices
         uint256[] memory monIndices = new uint256[](6);
@@ -169,7 +169,7 @@ contract dTeam is Script {
         // Set moves
         IMoveSet[][] memory moves = new IMoveSet[][](6);
 
-        // Moves for mon0 (liftogg)
+        // Moves for mon0 (sofabbi)
         // Moves: Blow/Philosophize/Allergies/Ineffable Blast
         moves[0] = new IMoveSet[](4);
         moves[0][0] = (IMoveSet(vm.envAddress("BLOW")));

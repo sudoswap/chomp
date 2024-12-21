@@ -7,9 +7,9 @@ import "../src/Constants.sol";
 import "../src/Enums.sol";
 import "../src/Structs.sol";
 
-import {CommitManager} from "../src/CommitManager.sol";
+import {CommitManager} from "../src/deprecated/CommitManager.sol";
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
-import {DefaultValidator} from "../src/DefaultValidator.sol";
+import {DefaultValidator} from "../src/deprecated/DefaultValidator.sol";
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
 import {IAbility} from "../src/abilities/IAbility.sol";

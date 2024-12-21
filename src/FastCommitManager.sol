@@ -5,14 +5,15 @@ import "./Constants.sol";
 import "./Enums.sol";
 import "./Structs.sol";
 
-import {ICommitManager} from "./ICommitManager.sol";
 import {IEngine} from "./IEngine.sol";
+import {IFastCommitManager} from "./IFastCommitManager.sol";
 
-contract FastCommitManager is ICommitManager {
+contract FastCommitManager is IFastCommitManager {
     // State variables
     IEngine private immutable ENGINE;
-    mapping(bytes32 battleKey => mapping(address player => Commitment)) private commitments;
+    mapping(bytes32 battleKey => mapping(address player => MoveCommitment)) private commitments;
     mapping(bytes32 battleKey => RevealedMove[][]) private moveHistory;
+    mapping(bytes32 battleKey => mapping(address player => uint256)) private lastMoveTimestamp;
 
     // Errors
     error NotEngine();
@@ -101,7 +102,8 @@ contract FastCommitManager is ICommitManager {
         }
 
         // 7) Store the commitment
-        commitments[battleKey][caller] = Commitment({moveHash: moveHash, turnId: turnId, timestamp: block.timestamp});
+        commitments[battleKey][caller] = MoveCommitment({moveHash: moveHash, turnId: turnId});
+        lastMoveTimestamp[battleKey][caller] = block.timestamp;
 
         // 8) Emit event
         emit MoveCommit(battleKey, caller);
@@ -172,7 +174,7 @@ contract FastCommitManager is ICommitManager {
         // - the other player has already *revealed*
         else {
             // - validate preimage
-            Commitment storage commitment = commitments[battleKey][msg.sender];
+            MoveCommitment storage commitment = commitments[battleKey][msg.sender];
             if (keccak256(abi.encodePacked(moveIndex, salt, extraData)) != commitment.moveHash) {
                 revert WrongPreimage();
             }
@@ -206,6 +208,7 @@ contract FastCommitManager is ICommitManager {
 
         // 6) Store revealed move and extra data for the current player
         playerMoveHistory.push(RevealedMove({moveIndex: moveIndex, salt: salt, extraData: extraData}));
+        lastMoveTimestamp[battleKey][msg.sender] = block.timestamp;
 
         // 7) Store empty move for other player if it's a turn where only a single player has to make a move
         if (playerSwitchForTurnFlag == 0 || playerSwitchForTurnFlag == 1) {
@@ -227,7 +230,7 @@ contract FastCommitManager is ICommitManager {
         }
     }
 
-    function getCommitment(bytes32 battleKey, address player) external view returns (Commitment memory) {
+    function getCommitment(bytes32 battleKey, address player) external view returns (MoveCommitment memory) {
         return commitments[battleKey][player];
     }
 
@@ -241,5 +244,9 @@ contract FastCommitManager is ICommitManager {
 
     function getMoveCountForBattleState(bytes32 battleKey, uint256 playerIndex) external view returns (uint256) {
         return moveHistory[battleKey][playerIndex].length;
+    }
+
+    function getLastMoveTimestampForPlayer(bytes32 battleKey, address player) external view returns (uint256) {
+        return lastMoveTimestamp[battleKey][player];
     }
 }

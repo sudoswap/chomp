@@ -1,6 +1,7 @@
 # TODO
 
 1) Change how DefaultValidator handles timeouts to account for this
+- change the `validateTimeout` function call
 
 2) Add Engine test case for where both mons get KO'ed but not a game over.
 - Ensure that both players have to swap to someone new

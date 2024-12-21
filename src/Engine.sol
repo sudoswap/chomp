@@ -7,20 +7,21 @@ import "./Enums.sol";
 import "./Structs.sol";
 import "./moves/IMoveSet.sol";
 
-import {ICommitManager} from "./ICommitManager.sol";
+import {IFastCommitManager} from "./IFastCommitManager.sol";
 import {IEngine} from "./IEngine.sol";
 
 contract Engine is IEngine {
+
     // Public state variables
-    uint256 transient currentStep; // not intended to be read anywhere else
     bytes32 public transient battleKeyForWrite; // intended to be used during call stack by other contracts
-    ICommitManager public commitManager; // technically immutable but circular dependency
+    IFastCommitManager public commitManager; // technically immutable but circular dependency
     mapping(bytes32 => uint256) public pairHashNonces; // intended to be read by anyone
 
     // Private state variables (battles and battleStates values are granularly accessible via getters)
     mapping(bytes32 battleKey => Battle) private battles;
     mapping(bytes32 battleKey => BattleState) private battleStates;
     mapping(bytes32 battleKey => mapping(bytes32 => bytes32)) private globalKV;
+    uint256 transient currentStep; // not intended to be read anywhere else
 
     // Errors
     error NoWriteAllowed();
@@ -835,6 +836,6 @@ contract Engine is IEngine {
         if (address(commitManager) != address(0)) {
             revert CommitManagerAlreadySet();
         }
-        commitManager = ICommitManager(a);
+        commitManager = IFastCommitManager(a);
     }
 }

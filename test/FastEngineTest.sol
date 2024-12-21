@@ -9,7 +9,7 @@ import "../src/Structs.sol";
 
 import {FastCommitManager} from "../src/FastCommitManager.sol";
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
-import {DefaultValidator} from "../src/DefaultValidator.sol";
+import {FastValidator} from "../src/FastValidator.sol";
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
 import {IAbility} from "../src/abilities/IAbility.sol";
@@ -88,8 +88,8 @@ contract FastEngineTest is Test {
         defaultRegistry.setTeam(BOB, dummyTeam);
 
         // Set up validator
-        DefaultValidator validator = new DefaultValidator(
-            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        FastValidator validator = new FastValidator(
+            engine, FastValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
         // Setup battle
@@ -184,8 +184,8 @@ contract FastEngineTest is Test {
         defaultRegistry.setTeam(BOB, dummyTeam);
 
         // Set up validator
-        DefaultValidator validator = new DefaultValidator(
-            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        FastValidator validator = new FastValidator(
+            engine, FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
         StartBattleArgs memory args = StartBattleArgs({
@@ -476,8 +476,8 @@ contract FastEngineTest is Test {
         defaultRegistry.setTeam(ALICE, teams[0]);
         defaultRegistry.setTeam(BOB, teams[1]);
 
-        IValidator validator = new DefaultValidator(
-            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        IValidator validator = new FastValidator(
+            engine, FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
         StartBattleArgs memory args = StartBattleArgs({
@@ -581,8 +581,8 @@ contract FastEngineTest is Test {
         defaultRegistry.setTeam(ALICE, teams[0]);
         defaultRegistry.setTeam(BOB, teams[1]);
 
-        IValidator validator = new DefaultValidator(
-            engine, DefaultValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        IValidator validator = new FastValidator(
+            engine, FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
         StartBattleArgs memory args = StartBattleArgs({
@@ -626,6 +626,166 @@ contract FastEngineTest is Test {
 
         // Assert that the staminaDelta was set correctly for Bob's mon
         assertEq(state.monStates[1][0].staminaDelta, -1);
+    }
+
+    function test_timeoutSucceedsCommitPlayerNoSwitchFlag() public {
+        bytes32 battleKey = _startDummyBattle();
+
+        // Wait for TIMEOUT_DURATION + 1
+        vm.warp(TIMEOUT_DURATION + 1);
+
+        // Call end on the battle
+        engine.end(battleKey);
+
+        // Assert that Bob wins bc Alice didn't commit to start
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, BOB);
+    }
+
+    function test_timeoutSucceedsRevealPlayerNoSwitchFlag() public {
+        bytes32 battleKey = _startDummyBattle();
+
+        // Let Alice commit to choosing switch
+        bytes32 salt = "";
+        bytes memory extraData = abi.encode(0);
+        bytes32 moveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, extraData));
+        vm.startPrank(ALICE);
+        commitManager.commitMove(battleKey, moveHash);
+
+        // Wait for TIMEOUT_DURATION + 1
+        vm.warp(TIMEOUT_DURATION + 1);
+
+        // Call end on the battle
+        engine.end(battleKey);
+
+        // Assert that Alice wins because Bob didn't reveal
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, ALICE);
+    }
+
+    function test_timeoutSucceedsCommitPlayerWitholdsRevealNoSwitchFlag() public {
+        bytes32 battleKey = _startDummyBattle();
+
+        // Let Alice commit to choosing switch
+        bytes32 salt = "";
+        bytes memory extraData = abi.encode(0);
+        bytes32 moveHash = keccak256(abi.encodePacked(SWITCH_MOVE_INDEX, salt, extraData));
+        vm.startPrank(ALICE);
+        commitManager.commitMove(battleKey, moveHash);
+
+        // Let Bob reveal to choosing switch as well
+        vm.startPrank(BOB);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, salt, extraData, true);
+
+        // Wait for TIMEOUT_DURATION + 1
+        vm.warp(TIMEOUT_DURATION + 1);
+
+        // Call end on the battle
+        engine.end(battleKey);
+
+        // Assert that Bob wins because Alice didn't reveal
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, BOB);
+    }
+
+    function test_timeoutScceedsRevealPlayerSwitchFlag() public {
+        // Initialize fast and slow mons
+        IMoveSet normalAttack = new CustomAttack(
+            engine,
+            typeCalc,
+            CustomAttack.Args({TYPE: Type.Fire, BASE_POWER: 10, ACCURACY: 100, STAMINA_COST: 1, PRIORITY: 0})
+        );
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = normalAttack;
+        Mon memory fastMon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 2,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon memory slowMon = Mon({
+            stats: MonStats({
+                hp: 10,
+                stamina: 2,
+                speed: 1,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon[] memory fastTeam = new Mon[](2);
+        fastTeam[0] = fastMon;
+        fastTeam[1] = fastMon;
+        Mon[] memory slowTeam = new Mon[](2);
+        slowTeam[0] = slowMon;
+        slowTeam[1] = slowMon;
+        // Register teams
+        defaultRegistry.setTeam(ALICE, fastTeam);
+        defaultRegistry.setTeam(BOB, slowTeam);
+
+        IValidator validator = new FastValidator(
+            engine, FastValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: defaultOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                args.p0TeamHash
+            )
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Let Alice and Bob commit and reveal to both choosing attack (move index 0)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Alice should knock out Bob, but let Bob do nothing
+        // Skip ahead TIMEOUT_DURATION + 1
+        vm.warp(TIMEOUT_DURATION + 1);
+
+        // Call end on the battle
+        engine.end(battleKey);
+
+        // Assert that Alice wins because Bob didn't reveal
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.winner, ALICE);
     }
 
 }

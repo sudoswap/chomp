@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 
 import {FastCommitManager} from "../src/FastCommitManager.sol";
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
-import {DefaultValidator} from "../src/DefaultValidator.sol";
+import {DefaultValidator} from "../src/deprecated/DefaultValidator.sol";
 import {Engine} from "../src/Engine.sol";
 import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
 

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import "./Constants.sol";
-import "./Structs.sol";
-import "./moves/IMoveSet.sol";
+import "../Constants.sol";
+import "../Structs.sol";
+import "../moves/IMoveSet.sol";
 
-import {IEngine} from "./IEngine.sol";
-import {IValidator} from "./IValidator.sol";
+import {IEngine} from "../IEngine.sol";
+import {IValidator} from "../IValidator.sol";
 
 import {ICommitManager} from "./ICommitManager.sol";
-import {IMonRegistry} from "./teams/IMonRegistry.sol";
-import {ITeamRegistry} from "./teams/ITeamRegistry.sol";
+import {IMonRegistry} from "../teams/IMonRegistry.sol";
+import {ITeamRegistry} from "../teams/ITeamRegistry.sol";
 
 contract DefaultValidator is IValidator {
     struct Args {
@@ -239,7 +239,7 @@ contract DefaultValidator is IValidator {
             presumedAFKPlayer = players[0];
         }
 
-        ICommitManager commitManager = ENGINE.commitManager();
+        ICommitManager commitManager = ICommitManager(address(ENGINE.commitManager()));
         Commitment memory presumedHonestPlayerCommitment = commitManager.getCommitment(battleKey, presumedHonestPlayer);
 
         // If it's been enough to check for a TIMEOUT (otherwise we don't bother at all):
@@ -284,7 +284,7 @@ contract DefaultValidator is IValidator {
 
     function computePriorityPlayerIndex(bytes32 battleKey, uint256 rng) external view returns (uint256) {
         uint256 turnId = ENGINE.getTurnIdForBattleState(battleKey);
-        ICommitManager commitManager = ENGINE.commitManager();
+        ICommitManager commitManager = ICommitManager(address(ENGINE.commitManager()));
         RevealedMove memory p0Move = commitManager.getMoveForBattleStateForTurn(battleKey, 0, turnId);
         RevealedMove memory p1Move = commitManager.getMoveForBattleStateForTurn(battleKey, 1, turnId);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);

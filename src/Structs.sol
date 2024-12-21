@@ -85,6 +85,11 @@ struct Commitment {
     uint256 timestamp;
 }
 
+struct MoveCommitment {
+    bytes32 moveHash;
+    uint256 turnId;
+}
+
 struct RevealedMove {
     uint256 moveIndex;
     bytes32 salt;

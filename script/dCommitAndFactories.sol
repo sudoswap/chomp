@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 
 import {FastCommitManager} from "../src/FastCommitManager.sol";
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
-import {DefaultValidator} from "../src/DefaultValidator.sol";
+import {FastValidator} from "../src/FastValidator.sol";
 import {Engine} from "../src/Engine.sol";
 import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
 
@@ -23,7 +23,7 @@ contract dCommitAndFactories is Script {
             FastCommitManager commitManager,
             DefaultStaminaRegen defaultStaminaRegen,
             DefaultRuleset defaultRuleset,
-            DefaultValidator defaultValidator,
+            FastValidator validator,
             DefaultMonRegistry defaultMonRegistry,
             LazyTeamRegistry teamRegistry,
             CustomEffectAttack customEffectAttack,
@@ -32,7 +32,14 @@ contract dCommitAndFactories is Script {
     {
         uint256 deployerPrivateKey = uint256(vm.envBytes32("PRIVATE_KEY"));
         vm.startBroadcast(deployerPrivateKey);
-
+        
+        // Create validator
+        validator = new FastValidator(Engine(vm.envAddress("ENGINE")), FastValidator.Args({
+            MONS_PER_TEAM: 6,
+            MOVES_PER_MON: 4,
+            TIMEOUT_DURATION: 150
+        }));
+        
         // Create Commit Manager and set it on the engine
         commitManager = new FastCommitManager(Engine(vm.envAddress("ENGINE")));
         Engine(vm.envAddress("ENGINE")).setCommitManager(address(commitManager));
@@ -40,11 +47,6 @@ contract dCommitAndFactories is Script {
         // Create default stamina regen/rulesets
         defaultStaminaRegen = new DefaultStaminaRegen(Engine(vm.envAddress("ENGINE")));
         defaultRuleset = new DefaultRuleset(Engine(vm.envAddress("ENGINE")), defaultStaminaRegen);
-        defaultValidator = new DefaultValidator(Engine(vm.envAddress("ENGINE")), DefaultValidator.Args({
-            MONS_PER_TEAM: 6,
-            MOVES_PER_MON: 4,
-            TIMEOUT_DURATION: 150
-        }));
 
         // Effect Attack factory
         customEffectAttack =

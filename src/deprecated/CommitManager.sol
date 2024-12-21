@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import "./Constants.sol";
-import "./Enums.sol";
-import "./Structs.sol";
+import "../Constants.sol";
+import "../Enums.sol";
+import "../Structs.sol";
 
 import {ICommitManager} from "./ICommitManager.sol";
-import {IEngine} from "./IEngine.sol";
+import {IEngine} from "../IEngine.sol";
 
 contract CommitManager is ICommitManager {
     // State variables

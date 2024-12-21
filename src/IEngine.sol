@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./Enums.sol";
 
-import "./ICommitManager.sol";
+import "./IFastCommitManager.sol";
 import "./IValidator.sol";
 import "./Structs.sol";
 import "./moves/IMoveSet.sol";
@@ -13,7 +13,7 @@ interface IEngine {
     function battleKeyForWrite() external view returns (bytes32);
 
     // Getters
-    function commitManager() external view returns (ICommitManager);
+    function commitManager() external view returns (IFastCommitManager);
     function getBattle(bytes32 battleKey) external view returns (Battle memory);
     function getBattleState(bytes32 battleKey) external view returns (BattleState memory);
 

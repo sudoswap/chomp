@@ -788,4 +788,12 @@ contract FastEngineTest is Test {
         assertEq(state.winner, ALICE);
     }
 
+    function test_secondBattleDifferentBattleKey() public {
+        bytes32 battleKey = _startDummyBattle();
+        vm.warp(TIMEOUT_DURATION + 1);
+        vm.prank(BOB);
+        engine.end(battleKey);
+        bytes32 newBattleKey = _startDummyBattle();
+        assertNotEq(battleKey, newBattleKey);
+    }
 }

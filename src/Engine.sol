@@ -90,8 +90,8 @@ contract Engine is IEngine {
         (bytes32 battleKey, bytes32 pairHash) = _computeBattleKey(args);
         Battle storage existingBattle = battles[battleKey];
 
-        // Update nonce if the previous battle was already started and update battle key
-        if (existingBattle.status == BattleProposalStatus.Started) {
+        // Update nonce if the previous battle was past being proposed (i.e. accepted/started/ended) and update battle key
+        if (existingBattle.status != BattleProposalStatus.Proposed) {
             pairHashNonces[pairHash] += 1;
             (battleKey,) = _computeBattleKey(args);
         }

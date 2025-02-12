@@ -18,7 +18,7 @@ contract SleepStatus is StatusEffect {
     }
 
     function shouldRunAtStep(EffectStep r) external pure override returns (bool) {
-        return r == EffectStep.RoundStart || r == EffectStep.RoundEnd || r == EffectStep.OnApply;
+        return r == EffectStep.RoundStart || r == EffectStep.RoundEnd || r == EffectStep.OnApply || r == EffectStep.OnRemove;
     }
 
     // At the start of the turn, check to see if we should apply sleep or end early
@@ -49,6 +49,11 @@ contract SleepStatus is StatusEffect {
     // Sleep just skips the turn
     function _applySleep(uint256, uint256 targetIndex, uint256 monIndex) internal {
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.ShouldSkipTurn, 1);
+    }
+
+    // Remove sleep flag
+    function _removeSleep(uint256 targetIndex, uint256 monIndex) internal {
+        ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.ShouldSkipTurn, 0);
     }
 
     function onRoundEnd(uint256, bytes memory extraData, uint256, uint256)
@@ -92,7 +97,10 @@ contract SleepStatus is StatusEffect {
     }
 
     function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) public override {
-        // Call the super onRemove and then remove the extra flag we set as well
+        // Remove any outstanding sleep flags (e.g. if turn X we got sleep, then turn X+1 we wake up, then we should remove the flag)
+        _removeSleep(targetIndex, monIndex);
+
+        // Call the super onRemove and then remove the extra flag sleep clause we set as well
         super.onRemove(extraData, targetIndex, monIndex);
         ENGINE.setGlobalKV(_globalSleepKey(targetIndex), bytes32(0));
     }

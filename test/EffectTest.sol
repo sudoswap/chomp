@@ -424,7 +424,7 @@ contract EngineTest is Test {
         // Set the oracle to report back 0 for the next turn (exit sleep early)
         mockOracle.setRNG(0);
 
-        // Alice and Bob both select attacks, Bob does a no-op
+        // Alice attacks, Bob does a no-op
         _commitRevealExecuteForAliceAndBob(battleKey, 0, NO_OP_MOVE_INDEX, "", "");
 
         // Alice should wake up early and inflict sleep on Bob
@@ -434,6 +434,16 @@ contract EngineTest is Test {
         assertEq(state.monStates[0][0].targetedEffects.length, 0);
         assertEq(state.monStates[1][0].targetedEffects.length, 1);
         assertEq(state.monStates[1][0].hpDelta, -1);
+
+        // Set the oracle to report back 0 for the next turn (exit sleep early for Bob)
+        mockOracle.setRNG(0);
+
+        // Bob tries again to inflict sleep, while Alice does NO_OP
+        // Bob should wake up, Alice should become asleep
+        _commitRevealExecuteForAliceAndBob(battleKey, NO_OP_MOVE_INDEX, 0, "", "");
+        state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][0].targetedEffects.length, 1);
+        assertEq(state.monStates[1][0].targetedEffects.length, 0);
     }
 
     /**

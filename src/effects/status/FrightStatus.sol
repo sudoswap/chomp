@@ -17,7 +17,7 @@ contract FrightStatus is StatusEffect {
     }
 
     function shouldRunAtStep(EffectStep r) external pure override returns (bool) {
-        return r == EffectStep.RoundStart || r == EffectStep.RoundEnd || r == EffectStep.OnApply;
+        return r == EffectStep.RoundStart || r == EffectStep.RoundEnd || r == EffectStep.OnApply || r == EffectStep.OnRemove;
     }
 
     // At the start of the turn, check to see if we should apply fright or end early
@@ -35,7 +35,7 @@ contract FrightStatus is StatusEffect {
         return (extraData, false);
     }
 
-    // On apply, checks to apply the sleep flag, and then sets the extraData to be the duration
+    // On apply, checks to apply the fright flag, and then sets the extraData to be the duration
     function onApply(uint256 rng, bytes memory, uint256 targetIndex, uint256 monIndex)
         external
         override
@@ -45,7 +45,7 @@ contract FrightStatus is StatusEffect {
         return (abi.encode(DURATION));
     }
 
-    // Sleep just skips the turn
+    // Fright reduces stamina by 1 if it is not already at 0
     function _applyFright(uint256, uint256 targetIndex, uint256 monIndex) internal {
         bytes32 battleKey = ENGINE.battleKeyForWrite();
 

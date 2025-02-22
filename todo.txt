@@ -1,10 +1,7 @@
 # TODO
 
-1) Change how DefaultValidator handles timeouts to account for this
-- change the `validateTimeout` function call
-
-2) Add Engine test case for where both mons get KO'ed but not a game over.
-- Ensure that both players have to swap to someone new
+Does switching out remove the skip for turn flag?
+It probably should
 
 ---------------------------------------------------------------------------------------------
 
@@ -17,6 +14,7 @@ Ways to mitigate:
 - avoid forcing opponent swap outs unless it's at low priority
 - have the engine set the skipTurn flag on newly swapped in mons (if they have yet to run their turn yet)
     - look into this later
+    - or do this w/ a custom condition that can set the flag, and then remove at end of turn
 
 2) If an effect calls dealDamage() and triggers AfterDamage, it can potentially cause an infinite loop!
 (either if it calls dealDamage() on the opposing mon who also has a damaging attack with an AfterDamage trigger)

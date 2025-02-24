@@ -23,15 +23,15 @@ contract StandardAttack is AttackCalculator, IMoveSet, Clone {
      *  16: ACCURACY
      *  24: PRIORITY
      *  32: TYPE
-     *  40: EFFECT
-     *  48: EFFECT_ACCURACY
-     *  56: MOVE_CLASS
-     *  64: CRIT_RATE
-     *  72: VOL
-     *  80: NAME (32 bytes from here)
+     *  40: EFFECT_ACCURACY
+     *  48: MOVE_CLASS
+     *  56: CRIT_RATE
+     *  64: VOL
+     *  72: NAME (32 bytes from here)
+     *  104: EFFECT (20 bytes from here)
      */
     function name() external pure returns (string memory) {
-        return _bytes32ToString(bytes32(_getArgUint256(244)));
+        return _bytes32ToString(bytes32(_getArgUint256(72)));
     }
 
     function _bytes32ToString(bytes32 _bytes32) internal pure returns (string memory) {
@@ -51,40 +51,46 @@ contract StandardAttack is AttackCalculator, IMoveSet, Clone {
         returns (bool)
     {
         // Deal the damage
-        uint32 basePowerValue = uint32(_getArgUint256(0));
-        uint32 accuracy = uint32(_getArgUint256(64));
-        uint256 staminaCost = _getArgUint256(32);
-        Type typeForMove = Type(_getArgUint256(128));
-        MoveClass classForMove = MoveClass(_getArgUint256(212));
+        uint32 basePowerValue = uint32(_getArgUint64(0));
+        uint32 accuracy = uint32(_getArgUint64(16));
+        Type typeForMove = Type(_getArgUint64(32));
+        MoveClass classForMove = MoveClass(_getArgUint64(48));
 
         if (basePowerValue > 0) {
             calculateDamage(
-                battleKey, attackerPlayerIndex, basePowerValue, accuracy, 0 /* volatility */, typeForMove, classForMove, rng
+                battleKey, 
+                attackerPlayerIndex, 
+                basePowerValue, 
+                accuracy, 
+                uint32(_getArgUint64(64)), // volatility
+                typeForMove, 
+                classForMove, 
+                rng
             );
         }
 
         // Apply the effect as well if the accuracy is valid
-        uint256 effectAccuracy = _getArgUint256(180);
+        uint256 effectAccuracy = _getArgUint64(40);
         if (rng % 100 < effectAccuracy) {
             uint256 defenderPlayerIndex = (attackerPlayerIndex + 1) % 2;
             uint256 defenderMonIndex =
                 ENGINE.getActiveMonIndexForBattleState(ENGINE.battleKeyForWrite())[defenderPlayerIndex];
-            ENGINE.addEffect(defenderPlayerIndex, defenderMonIndex, IEffect(_getArgAddress(160)), "");
+            ENGINE.addEffect(defenderPlayerIndex, defenderMonIndex, IEffect(_getArgAddress(104)), "");
         }
 
         return false;
     }
 
     function priority(bytes32) external pure returns (uint32) {
-        return uint32(_getArgUint256(96));
+        return uint32(_getArgUint64(24));
     }
 
     function stamina(bytes32) external pure returns (uint32) {
-        return uint32(_getArgUint256(32));
+        return uint32(_getArgUint64(8));
     }
 
     function moveType(bytes32) external pure returns (Type) {
-        return Type(_getArgUint256(128));
+        return Type(_getArgUint64(32));
     }
 
     function isValidTarget(bytes32) external pure returns (bool) {
@@ -97,10 +103,26 @@ contract StandardAttack is AttackCalculator, IMoveSet, Clone {
     }
 
     function moveClass(bytes32) external pure returns (MoveClass) {
-        return MoveClass(_getArgUint256(212));
+        return MoveClass(_getArgUint64(48));
     }
 
     function basePower(bytes32) external pure returns (uint32) {
-        return uint32(_getArgUint256(0));
+        return uint32(_getArgUint64(0));
+    }
+
+    function critRate(bytes32) external pure returns (uint32) {
+        return uint32(_getArgUint64(56));
+    }
+
+    function volatility(bytes32) external pure returns (uint32) {
+        return uint32(_getArgUint64(64));
+    }
+
+    function effect(bytes32) external pure returns (IEffect) {
+        return IEffect(_getArgAddress(104));
+    }
+
+    function effectAccuracy(bytes32) external pure returns (uint32) {
+        return uint32(_getArgUint64(40));
     }
 }

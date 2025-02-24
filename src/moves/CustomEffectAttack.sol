@@ -51,7 +51,6 @@ contract CustomEffectAttack is AttackCalculator, IMoveSet, Clone {
         // Deal the damage
         uint32 basePowerValue = uint32(_getArgUint256(0));
         uint32 accuracy = uint32(_getArgUint256(64));
-        uint256 staminaCost = _getArgUint256(32);
         Type typeForMove = Type(_getArgUint256(128));
         MoveClass classForMove = MoveClass(_getArgUint256(212));
 

@@ -8,8 +8,6 @@ import {IEngine} from "../IEngine.sol";
 import {ITypeCalculator} from "../types/ITypeCalculator.sol";
 
 abstract contract AttackCalculator {
-    uint256 constant MOVE_VARIANCE = 0;
-
     IEngine immutable ENGINE;
     ITypeCalculator immutable TYPE_CALCULATOR;
 
@@ -23,7 +21,7 @@ abstract contract AttackCalculator {
         uint256 attackerPlayerIndex,
         uint32 basePower,
         uint32 accuracy, // out of 100
-        uint256,
+        uint256 volatility,
         Type attackType,
         MoveClass attackSupertype,
         uint256 rng
@@ -106,11 +104,22 @@ abstract contract AttackCalculator {
             if (defenderType2 != Type.None) {
                 scaledBasePower = TYPE_CALCULATOR.getTypeEffectiveness(attackType, defenderType2, scaledBasePower);
             }
-            uint32 rngScaling = 0;
-            if (MOVE_VARIANCE > 0) {
-                rngScaling = uint32(rng % (MOVE_VARIANCE + 1));
+
+            // Calculate move volatility
+            // Check if rng flag is even or odd
+            // Either way, take half the value use it as the scaling factor
+            uint32 rngScaling = 100;
+            if (volatility > 0) {
+                if (rng % 2 == 0) {
+                    rngScaling = 100 + rngScaling / 2;
+                } else {
+                    rngScaling = 100 - (rngScaling + 1) / 2;
+                }
             }
-            damage = (scaledBasePower * attackStat * (100 - rngScaling)) / (defenceStat * 100);
+
+            // Calculate crit chance
+
+            damage = (scaledBasePower * attackStat * rngScaling) / (defenceStat * 100);
         }
         ENGINE.dealDamage(defenderPlayerIndex, monIndex[defenderPlayerIndex], damage);
     }

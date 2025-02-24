@@ -1,7 +1,9 @@
 # TODO
 
-Does switching out remove the skip for turn flag?
-It probably should
+1) Refactor switching to happen as a privileged top-level action, similar to updating mon state
+2) Allow restricting/enforcement of move selection
+3) Refactor the team registry flow (probably w/ some sort of approve/allow to allow privileged contracts to make battles)
+4) 
 
 ---------------------------------------------------------------------------------------------
 

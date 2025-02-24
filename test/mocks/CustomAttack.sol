@@ -45,7 +45,7 @@ contract CustomAttack is AttackCalculator, IMoveSet {
         returns (bool)
     {
         calculateDamage(
-            battleKey, attackerPlayerIndex, BASE_POWER, ACCURACY, STAMINA_COST, TYPE, MoveClass.Physical, rng
+            battleKey, attackerPlayerIndex, BASE_POWER, ACCURACY, 0 /* volatility */, TYPE, MoveClass.Physical, rng
         );
         return false;
     }

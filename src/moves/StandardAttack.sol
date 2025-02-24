@@ -13,20 +13,22 @@ import {ITypeCalculator} from "../types/ITypeCalculator.sol";
 import {AttackCalculator} from "./AttackCalculator.sol";
 import {IMoveSet} from "./IMoveSet.sol";
 
-contract CustomEffectAttack is AttackCalculator, IMoveSet, Clone {
+contract StandardAttack is AttackCalculator, IMoveSet, Clone {
     constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR) AttackCalculator(_ENGINE, _TYPE_CALCULATOR) {}
 
     /**
      * Args ordering (bytes):
      *  0: BASE_POWER
-     *  32: STAMINA_COST
-     *  64: ACCURACY
-     *  96: PRIORITY
-     *  128: TYPE
-     *  160: EFFECT
-     *  180: EFFECT_ACCURACY
-     *  212: MOVE_CLASS
-     *  244: NAME
+     *  8: STAMINA_COST
+     *  16: ACCURACY
+     *  24: PRIORITY
+     *  32: TYPE
+     *  40: EFFECT
+     *  48: EFFECT_ACCURACY
+     *  56: MOVE_CLASS
+     *  64: CRIT_RATE
+     *  72: VOL
+     *  80: NAME (32 bytes from here)
      */
     function name() external pure returns (string memory) {
         return _bytes32ToString(bytes32(_getArgUint256(244)));

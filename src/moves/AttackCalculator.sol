@@ -27,6 +27,8 @@ abstract contract AttackCalculator {
         uint256 rng
     ) public {
         // Do accuracy check first to decide whether or not to short circuit
+        // [0... accuracy] [accuracy + 1, ..., 100]
+        // [succeeds     ] [fails                 ]
         if ((rng % 100) >= accuracy) {
             return;
         }
@@ -117,8 +119,8 @@ abstract contract AttackCalculator {
                 }
             }
 
-            // Calculate crit chance
-
+            // Calculate crit chance (in order to avoid correlating effect chance w/ crit chance, we use a new rng scheme)
+            
             damage = (scaledBasePower * attackStat * rngScaling) / (defenceStat * 100);
         }
         ENGINE.dealDamage(defenderPlayerIndex, monIndex[defenderPlayerIndex], damage);

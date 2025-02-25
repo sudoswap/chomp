@@ -24,7 +24,8 @@ abstract contract AttackCalculator {
         uint256 volatility,
         Type attackType,
         MoveClass attackSupertype,
-        uint256 rng
+        uint256 rng,
+        uint256 critRate // out of 100
     ) public {
         // Do accuracy check first to decide whether or not to short circuit
         // [0... accuracy] [accuracy + 1, ..., 100]
@@ -119,9 +120,15 @@ abstract contract AttackCalculator {
                 }
             }
 
-            // Calculate crit chance (in order to avoid correlating effect chance w/ crit chance, we use a new rng scheme)
-            
-            damage = (scaledBasePower * attackStat * rngScaling) / (defenceStat * 100);
+            // Calculate crit chance (in order to avoid correlating effect chance w/ crit chance, we use a new rng)
+            // [0... crit rate] [crit rate + 1, ..., 100]
+            // [succeeds      ] [fails                  ]
+            uint256 rng2 = uint256(keccak256(abi.encode(rng)));
+            uint32 critMultiplier = 1;
+            if ((rng2 % 100) <= critRate) {
+                critMultiplier = 2;
+            }
+            damage = critMultiplier * (scaledBasePower * attackStat * rngScaling) / (defenceStat * 100);
         }
         ENGINE.dealDamage(defenderPlayerIndex, monIndex[defenderPlayerIndex], damage);
     }

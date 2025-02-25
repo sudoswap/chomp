@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import "forge-std/Test.sol";
+import "../src/Engine.sol";
+
+import "../src/Enums.sol";
+import "../src/effects/IEffect.sol";
 import "../src/moves/StandardAttack.sol";
 import "../src/moves/StandardAttackFactory.sol";
-import "../src/Engine.sol";
 import "../src/types/TypeCalculator.sol";
-import "../src/effects/IEffect.sol";
-import "../src/Enums.sol";
+import "forge-std/Test.sol";
 
 contract StandardAttackFactoryTest is Test {
     StandardAttack public template;
@@ -57,14 +58,15 @@ contract StandardAttackFactoryTest is Test {
         // Verify all parameters were set correctly using the actual function names
         assertEq(attack.basePower(TEST_BATTLE_KEY), basePower, "Base power mismatch");
         assertEq(attack.stamina(TEST_BATTLE_KEY), staminaCost, "Stamina cost mismatch");
-        assertEq(uint32(attack.moveType(TEST_BATTLE_KEY)), uint32(moveType), "Move type mismatch");
+        assertEq(attack.accuracy(TEST_BATTLE_KEY), accuracy, "Crit rate mismatch");
         assertEq(attack.priority(TEST_BATTLE_KEY), priority, "Priority mismatch");
+        assertEq(uint32(attack.moveType(TEST_BATTLE_KEY)), uint32(moveType), "Move type mismatch");
         assertEq(attack.effectAccuracy(TEST_BATTLE_KEY), effectAccuracy, "Effect accuracy mismatch");
         assertEq(uint32(attack.moveClass(TEST_BATTLE_KEY)), uint32(moveClass), "Move class mismatch");
         assertEq(attack.critRate(TEST_BATTLE_KEY), critRate, "Crit rate mismatch");
         assertEq(attack.volatility(TEST_BATTLE_KEY), volatility, "Volatility mismatch");
-        assertEq(address(attack.effect(TEST_BATTLE_KEY)), address(effect), "Effect address mismatch");
         assertEq(bytes32(abi.encodePacked(attack.name())), name, "Name mismatch");
+        assertEq(address(attack.effect(TEST_BATTLE_KEY)), address(effect), "Effect address mismatch");
     }
 
     function test_CreateAttackEmitsEvent() public {

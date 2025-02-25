@@ -56,7 +56,7 @@ contract CustomEffectAttack is AttackCalculator, IMoveSet, Clone {
 
         if (basePowerValue > 0) {
             calculateDamage(
-                battleKey, attackerPlayerIndex, basePowerValue, accuracy, 0 /* volatility */, typeForMove, classForMove, rng
+                battleKey, attackerPlayerIndex, basePowerValue, accuracy, 0 /* volatility */, typeForMove, classForMove, rng, 0 /* crit rate */
             );
         }
 

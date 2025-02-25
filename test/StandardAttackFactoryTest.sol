@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import "../src/Engine.sol";
-
-import "../src/Enums.sol";
-import "../src/effects/IEffect.sol";
-import "../src/moves/StandardAttack.sol";
-import "../src/moves/StandardAttackFactory.sol";
-import "../src/types/TypeCalculator.sol";
-import "forge-std/Test.sol";
+import {Engine} from "../src/Engine.sol";
+import {Type, MoveClass} from "../src/Enums.sol";
+import {IEffect} from "../src/effects/IEffect.sol";
+import {StandardAttack} from "../src/moves/StandardAttack.sol";
+import {StandardAttackFactory} from "../src/moves/StandardAttackFactory.sol";
+import {TypeCalculator} from "../src/types/TypeCalculator.sol";
+import {Test} from "forge-std/Test.sol";
 
 contract StandardAttackFactoryTest is Test {
     StandardAttack public template;

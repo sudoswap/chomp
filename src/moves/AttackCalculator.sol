@@ -10,6 +10,7 @@ import {ITypeCalculator} from "../types/ITypeCalculator.sol";
 abstract contract AttackCalculator {
     IEngine immutable ENGINE;
     ITypeCalculator immutable TYPE_CALCULATOR;
+    uint32 constant RNG_SCALING_DENOM  = 100;
 
     constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR) {
         ENGINE = _ENGINE;
@@ -27,11 +28,38 @@ abstract contract AttackCalculator {
         uint256 rng,
         uint256 critRate // out of 100
     ) public {
+        uint32 damage = calculateDamagePure(
+            battleKey,
+            attackerPlayerIndex,
+            basePower,
+            accuracy,
+            volatility,
+            attackType,
+            attackSupertype,
+            rng,
+            critRate
+        );
+        uint256 defenderPlayerIndex = (attackerPlayerIndex + 1) % 2;
+        uint256[] memory monIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
+        ENGINE.dealDamage(defenderPlayerIndex, monIndex[defenderPlayerIndex], damage);
+    }
+
+    function calculateDamagePure(
+        bytes32 battleKey,
+        uint256 attackerPlayerIndex,
+        uint32 basePower,
+        uint32 accuracy, // out of 100
+        uint256 volatility,
+        Type attackType,
+        MoveClass attackSupertype,
+        uint256 rng,
+        uint256 critRate // out of 100
+    ) public view returns (uint32) {
         // Do accuracy check first to decide whether or not to short circuit
         // [0... accuracy] [accuracy + 1, ..., 100]
         // [succeeds     ] [fails                 ]
         if ((rng % 100) >= accuracy) {
-            return;
+            return 0;
         }
         uint256[] memory monIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
         uint32 damage;
@@ -111,25 +139,29 @@ abstract contract AttackCalculator {
             // Calculate move volatility
             // Check if rng flag is even or odd
             // Either way, take half the value use it as the scaling factor
+            uint256 rng2 = uint256(keccak256(abi.encode(rng)));
             uint32 rngScaling = 100;
             if (volatility > 0) {
-                if (rng % 2 == 0) {
-                    rngScaling = 100 + rngScaling / 2;
-                } else {
-                    rngScaling = 100 - (rngScaling + 1) / 2;
+                // We scale up
+                if (rng2 % 100 > 50) {
+                    rngScaling = 100 + uint32(rng2 % (volatility + 1));
+                }
+                // We scale down
+                else {
+                    rngScaling = 100 - uint32(rng2 % (volatility + 1));
                 }
             }
 
             // Calculate crit chance (in order to avoid correlating effect chance w/ crit chance, we use a new rng)
             // [0... crit rate] [crit rate + 1, ..., 100]
             // [succeeds      ] [fails                  ]
-            uint256 rng2 = uint256(keccak256(abi.encode(rng)));
+            uint256 rng3 = uint256(keccak256(abi.encode(rng2)));
             uint32 critMultiplier = 1;
-            if ((rng2 % 100) <= critRate) {
+            if ((rng3 % 100) <= critRate) {
                 critMultiplier = 2;
             }
-            damage = critMultiplier * (scaledBasePower * attackStat * rngScaling) / (defenceStat * 100);
+            damage = critMultiplier * (scaledBasePower * attackStat * rngScaling) / (defenceStat * RNG_SCALING_DENOM);
         }
-        ENGINE.dealDamage(defenderPlayerIndex, monIndex[defenderPlayerIndex], damage);
+        return damage;
     }
 }

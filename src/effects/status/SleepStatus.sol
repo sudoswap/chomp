@@ -51,11 +51,6 @@ contract SleepStatus is StatusEffect {
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.ShouldSkipTurn, 1);
     }
 
-    // Remove sleep flag
-    function _removeSleep(uint256 targetIndex, uint256 monIndex) internal {
-        ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.ShouldSkipTurn, 0);
-    }
-
     function onRoundEnd(uint256, bytes memory extraData, uint256, uint256)
         external
         pure
@@ -96,6 +91,11 @@ contract SleepStatus is StatusEffect {
         }
     }
 
+    // Remove sleep flag
+    function _removeSleep(uint256 targetIndex, uint256 monIndex) internal {
+        ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.ShouldSkipTurn, 0);
+    }
+    
     function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) public override {
         // Remove any outstanding sleep flags (e.g. if turn X we got sleep, then turn X+1 we wake up, then we should remove the flag)
         _removeSleep(targetIndex, monIndex);

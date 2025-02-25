@@ -552,13 +552,19 @@ contract EngineTest is Test {
         // Get newest state
         BattleState memory state = engine.getBattleState(battleKey);
 
-        // Check that both Bob's mon has an effect length of 1 and Alice's mon has no targeted effects
-        assertEq(state.monStates[0][0].targetedEffects.length, 0);
+        // Both mons have inflicted fright
+        assertEq(state.monStates[0][0].targetedEffects.length, 1);
         assertEq(state.monStates[1][0].targetedEffects.length, 1);
 
-        // Assert that Alice's mon dealt damage, and that Bob's mon did not (Alice outspeeds and inflicts fright so Bob's turn is skipped)
+        // Assert that both mons took 1 damage
         assertEq(state.monStates[1][0].hpDelta, -1);
-        assertEq(state.monStates[0][0].hpDelta, 0);
+        assertEq(state.monStates[0][0].hpDelta, -1);
+
+        // Assert that Alice's mon has a stamina delta of -2 (max stamina of 5)
+        assertEq(state.monStates[0][0].staminaDelta, -2);
+        
+        // Assert that Bob's mon has a stamina delta of -1 (max stamina of 1)
+        assertEq(state.monStates[1][0].staminaDelta, -1);
 
         // Set the oracle to report back 1 for the next turn (we do not exit fright early)
         mockOracle.setRNG(1);

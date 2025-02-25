@@ -21,27 +21,26 @@ contract FrightStatus is StatusEffect {
     }
 
     // At the start of the turn, check to see if we should apply fright or end early
-    function onRoundStart(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+    function onRoundStart(uint256 rng, bytes memory extraData, uint256, uint256)
         external
+        pure
         override
         returns (bytes memory, bool)
     {
         bool wakeEarly = rng % 3 == 0;
         if (wakeEarly) {
             return (extraData, true);
-        } else {
-            _applyFright(rng, targetIndex, monIndex);
         }
         return (extraData, false);
     }
 
     // On apply, checks to apply the fright flag, and then sets the extraData to be the duration
-    function onApply(uint256 rng, bytes memory, uint256 targetIndex, uint256 monIndex)
+    function onApply(uint256, bytes memory, uint256, uint256)
         external
+        pure
         override
         returns (bytes memory updatedExtraData)
     {
-        _applyFright(rng, targetIndex, monIndex);
         return (abi.encode(DURATION));
     }
 
@@ -59,12 +58,13 @@ contract FrightStatus is StatusEffect {
         }
     }
 
-    function onRoundEnd(uint256, bytes memory extraData, uint256, uint256)
+    // Apply fright on end of turn, and then check how many turns are left
+    function onRoundEnd(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
-        pure
         override
         returns (bytes memory, bool removeAfterRun)
     {
+        _applyFright(rng, targetIndex, monIndex);
         uint256 turnsLeft = abi.decode(extraData, (uint256));
         if (turnsLeft == 1) {
             return (extraData, true);

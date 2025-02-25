@@ -141,7 +141,7 @@ contract AttackCalculatorTest is Test {
         return battleKey;
     }
 
-    function test_physicalAttackDamageCalculation() public {
+    function test_physicalAttackDamageCalculation() public view {
         // Parameters for a physical attack
         uint32 basePower = 100;
         uint32 accuracy = 100; // Always hit
@@ -171,7 +171,7 @@ contract AttackCalculatorTest is Test {
         assertEq(damage, 100, "Physical attack damage calculation incorrect");
     }
 
-    function test_specialAttackDamageCalculation() public {
+    function test_specialAttackDamageCalculation() public view {
         // Parameters for a special attack
         uint32 basePower = 100;
         uint32 accuracy = 100; // Always hit
@@ -201,7 +201,7 @@ contract AttackCalculatorTest is Test {
         assertEq(damage, 400, "Special attack damage calculation incorrect");
     }
 
-    function test_accuracyCheck() public {
+    function test_accuracyCheck() public view {
         // Test that attacks miss when accuracy check fails
         uint32 basePower = 100;
         uint32 accuracy = 50; // 50% chance to hit
@@ -224,7 +224,7 @@ contract AttackCalculatorTest is Test {
         assertEq(damage2, 0, "Attack should miss with rng >= accuracy");
     }
 
-    function test_criticalHit() public {
+    function test_criticalHit() public view {
         // Test critical hit calculation
         uint32 basePower = 100;
         uint32 accuracy = 100;
@@ -269,7 +269,7 @@ contract AttackCalculatorTest is Test {
         assertEq(critDamage, normalDamage * 2, "Critical hit should double the damage");
     }
 
-    function test_volatility() public {
+    function test_volatility() public view {
         // Test that volatility affects damage
         uint32 basePower = 100;
         uint32 accuracy = 100;

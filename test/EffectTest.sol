@@ -332,8 +332,9 @@ contract EngineTest is Test {
             moves: moves,
             ability: IAbility(address(0))
         });
-        Mon[] memory slowTeam = new Mon[](1);
+        Mon[] memory slowTeam = new Mon[](2);
         slowTeam[0] = slowMon;
+        slowTeam[1] = slowMon;
         Mon memory fastMon = Mon({
             stats: MonStats({
                 hp: 10,
@@ -349,17 +350,23 @@ contract EngineTest is Test {
             moves: moves,
             ability: IAbility(address(0))
         });
-        Mon[] memory fastTeam = new Mon[](1);
+        Mon[] memory fastTeam = new Mon[](2);
         fastTeam[0] = fastMon;
+        fastTeam[1] = fastMon;
 
         // Register both teams
         defaultRegistry.setTeam(ALICE, slowTeam);
         defaultRegistry.setTeam(BOB, fastTeam);
 
+        // Two Mon Validator
+        DefaultValidator twoMonValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
         StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
-            validator: oneMonOneMoveValidator,
+            validator: twoMonValidator,
             rngOracle: mockOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
@@ -444,6 +451,17 @@ contract EngineTest is Test {
         state = engine.getBattleState(battleKey);
         assertEq(state.monStates[0][0].targetedEffects.length, 1);
         assertEq(state.monStates[1][0].targetedEffects.length, 0);
+
+        // Set oracle to report back 1 (no early sleep awake)
+        mockOracle.setRNG(1);
+
+        // Alice is asleep but tries to swap, swap should succeed, and the flag should be cleared
+        _commitRevealExecuteForAliceAndBob(battleKey, SWITCH_MOVE_INDEX, NO_OP_MOVE_INDEX, abi.encode(1), "");
+        state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][1].shouldSkipTurn, false);
+
+        // But sleep effect should still persist
+        assertEq(state.monStates[0][0].targetedEffects.length, 1);
     }
 
     /**

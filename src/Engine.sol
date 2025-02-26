@@ -602,7 +602,11 @@ contract Engine is IEngine {
         MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
         if (currentMonState.shouldSkipTurn) {
             currentMonState.shouldSkipTurn = false;
-            return;
+
+            // If the move is NOT a switch, then we just return early
+            if (move.moveIndex != SWITCH_MOVE_INDEX) {
+                return;
+            }
         }
 
         // Emit event

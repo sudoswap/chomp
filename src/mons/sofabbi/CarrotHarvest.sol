@@ -58,7 +58,7 @@ contract CarrotHarvest is IAbility, IEffect {
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
-        if (rng % CHANCE == 0) {
+        if (rng % CHANCE == 1) {
             // Update the stamina of the mon
             ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Stamina, 1);
         }

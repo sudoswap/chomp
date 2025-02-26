@@ -31,7 +31,7 @@ contract TestTeamRegistry is ITeamRegistry {
         indices = _indices;
     }
 
-    function getMonRegistryIndicesForTeam(address, uint256) external returns (uint256[] memory) {
+    function getMonRegistryIndicesForTeam(address, uint256) external view returns (uint256[] memory) {
         return indices;
     }
 }

@@ -6,11 +6,11 @@ import {Type, MoveClass} from "../src/Enums.sol";
 import {IEffect} from "../src/effects/IEffect.sol";
 import {StandardAttack} from "../src/moves/StandardAttack.sol";
 import {StandardAttackFactory} from "../src/moves/StandardAttackFactory.sol";
+import {ATTACK_PARAMS} from "../src/moves/StandardAttackStructs.sol";
 import {TypeCalculator} from "../src/types/TypeCalculator.sol";
 import {Test} from "forge-std/Test.sol";
 
 contract StandardAttackFactoryTest is Test {
-    StandardAttack public template;
     StandardAttackFactory public factory;
     Engine public engine;
     TypeCalculator public typeCalc;
@@ -19,27 +19,26 @@ contract StandardAttackFactoryTest is Test {
     function setUp() public {
         engine = new Engine();
         typeCalc = new TypeCalculator();
-        template = new StandardAttack(engine, typeCalc);
-        factory = new StandardAttackFactory(template);
+        factory = new StandardAttackFactory(engine, typeCalc);
     }
 
     function test_CreateAttackWithAllParameters() public {
         // Define test parameters
-        uint64 basePower = 80;
-        uint64 staminaCost = 2;
-        uint64 accuracy = 95;
-        uint64 priority = 3;
+        uint32 basePower = 80;
+        uint32 staminaCost = 2;
+        uint32 accuracy = 95;
+        uint32 priority = 3;
         Type moveType = Type.Fire;
-        uint64 effectAccuracy = 100;
+        uint32 effectAccuracy = 100;
         MoveClass moveClass = MoveClass.Physical;
-        uint64 critRate = 10;
-        uint64 volatility = 5;
-        bytes32 name = bytes32("Flame Strike");
+        uint32 critRate = 10;
+        uint32 volatility = 5;
+        string memory name = "Flame strike";
         IEffect effect = IEffect(address(0x123)); // Mock effect address
 
         // Create attack using factory
         StandardAttack attack = factory.createAttack(
-            StandardAttackFactory.ATTACK_PARAMS({
+            ATTACK_PARAMS({
                 BASE_POWER: basePower,
                 STAMINA_COST: staminaCost,
                 ACCURACY: accuracy,
@@ -64,13 +63,13 @@ contract StandardAttackFactoryTest is Test {
         assertEq(uint32(attack.moveClass(TEST_BATTLE_KEY)), uint32(moveClass), "Move class mismatch");
         assertEq(attack.critRate(TEST_BATTLE_KEY), critRate, "Crit rate mismatch");
         assertEq(attack.volatility(TEST_BATTLE_KEY), volatility, "Volatility mismatch");
-        assertEq(bytes32(abi.encodePacked(attack.name())), name, "Name mismatch");
+        assertEq(sha256(bytes(attack.name())), sha256(bytes(name)), "Name mismatch");
         assertEq(address(attack.effect(TEST_BATTLE_KEY)), address(effect), "Effect address mismatch");
     }
 
     function test_CreateAttackEmitsEvent() public {
         // Create basic attack parameters
-        StandardAttackFactory.ATTACK_PARAMS memory params = StandardAttackFactory.ATTACK_PARAMS({
+        ATTACK_PARAMS memory params = ATTACK_PARAMS({
             BASE_POWER: 1,
             STAMINA_COST: 1,
             ACCURACY: 100,
@@ -80,7 +79,7 @@ contract StandardAttackFactoryTest is Test {
             MOVE_CLASS: MoveClass.Physical,
             CRIT_RATE: 0,
             VOLATILITY: 0,
-            NAME: bytes32("Test Attack"),
+            NAME: "Test Attack",
             EFFECT: IEffect(address(0))
         });
 
@@ -95,7 +94,7 @@ contract StandardAttackFactoryTest is Test {
     function test_CreateMultipleAttacks() public {
         // Create first attack
         StandardAttack attack1 = factory.createAttack(
-            StandardAttackFactory.ATTACK_PARAMS({
+            ATTACK_PARAMS({
                 BASE_POWER: 80,
                 STAMINA_COST: 2,
                 ACCURACY: 95,
@@ -105,14 +104,14 @@ contract StandardAttackFactoryTest is Test {
                 MOVE_CLASS: MoveClass.Physical,
                 CRIT_RATE: 10,
                 VOLATILITY: 5,
-                NAME: bytes32("Fire Attack"),
+                NAME: "Fire Attack",
                 EFFECT: IEffect(address(0))
             })
         );
 
         // Create second attack with different parameters
         StandardAttack attack2 = factory.createAttack(
-            StandardAttackFactory.ATTACK_PARAMS({
+            ATTACK_PARAMS({
                 BASE_POWER: 60,
                 STAMINA_COST: 1,
                 ACCURACY: 100,
@@ -122,7 +121,7 @@ contract StandardAttackFactoryTest is Test {
                 MOVE_CLASS: MoveClass.Special,
                 CRIT_RATE: 15,
                 VOLATILITY: 3,
-                NAME: bytes32("Water Attack"),
+                NAME: "Water Attack",
                 EFFECT: IEffect(address(0))
             })
         );
@@ -133,5 +132,63 @@ contract StandardAttackFactoryTest is Test {
         assertEq(attack2.basePower(TEST_BATTLE_KEY), 60, "Attack2 base power mismatch");
         assertEq(uint32(attack1.moveType(TEST_BATTLE_KEY)), uint32(Type.Fire), "Attack1 type mismatch");
         assertEq(uint32(attack2.moveType(TEST_BATTLE_KEY)), uint32(Type.Water), "Attack2 type mismatch");
+    }
+
+    function test_onlyOwnerCanSetEngineAndCalcOnFactory() public {
+        vm.startPrank(address(0x123));
+        vm.expectRevert();
+        factory.setEngine(Engine(address(0)));
+        vm.expectRevert();
+        factory.setTypeCalculator(TypeCalculator(address(0)));
+
+        // Now set the owner to the current caller (calls should succeed)
+        vm.startPrank(address(this));
+        factory.setEngine(Engine(address(0)));
+        factory.setTypeCalculator(TypeCalculator(address(0)));
+    }
+
+    function test_onlyOwnerCanSetAttackVars() public {
+        StandardAttack attack = factory.createAttack(
+            ATTACK_PARAMS({
+                BASE_POWER: 80,
+                STAMINA_COST: 2,
+                ACCURACY: 95,
+                PRIORITY: 3,
+                MOVE_TYPE: Type.Fire,
+                EFFECT_ACCURACY: 100,
+                MOVE_CLASS: MoveClass.Physical,
+                CRIT_RATE: 10,
+                VOLATILITY: 5,
+                NAME: "Fire Attack",
+                EFFECT: IEffect(address(0))
+            })
+        );
+
+        vm.startPrank(address(0x123));
+        vm.expectRevert();
+        attack.changeVar(0, 100); // Try to change base power
+
+        // Now set the owner to the current caller (calls should succeed)
+        vm.startPrank(address(this));
+        attack.changeVar(0, 100); // Change base power
+        assertEq(attack.basePower(TEST_BATTLE_KEY), 100, "Base power mismatch");
+        attack.changeVar(1, 2); // Change stamina cost
+        assertEq(attack.stamina(TEST_BATTLE_KEY), 2, "Stamina cost mismatch");
+        attack.changeVar(2, 90); // Change accuracy
+        assertEq(attack.accuracy(TEST_BATTLE_KEY), 90, "Accuracy mismatch");
+        attack.changeVar(3, 4); // Change priority
+        assertEq(attack.priority(TEST_BATTLE_KEY), 4, "Priority mismatch");
+        attack.changeVar(4, uint256(Type.Water)); // Change move type
+        assertEq(uint32(attack.moveType(TEST_BATTLE_KEY)), uint32(Type.Water), "Move type mismatch");
+        attack.changeVar(5, 90); // Change effect accuracy
+        assertEq(attack.effectAccuracy(TEST_BATTLE_KEY), 90, "Effect accuracy mismatch");
+        attack.changeVar(6, uint256(MoveClass.Special)); // Change move class
+        assertEq(uint32(attack.moveClass(TEST_BATTLE_KEY)), uint32(MoveClass.Special), "Move class mismatch");
+        attack.changeVar(7, 15); // Change crit rate
+        assertEq(attack.critRate(TEST_BATTLE_KEY), 15, "Crit rate mismatch");
+        attack.changeVar(8, 3); // Change volatility
+        assertEq(attack.volatility(TEST_BATTLE_KEY), 3, "Volatility mismatch");
+        attack.changeVar(9, uint256(uint160(address(0x456)))); // Change effect address
+        assertEq(address(attack.effect(TEST_BATTLE_KEY)), address(0x456), "Effect address mismatch");
     }
 }

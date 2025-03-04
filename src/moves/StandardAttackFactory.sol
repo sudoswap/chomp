@@ -7,61 +7,33 @@ import "../Structs.sol";
 import {IEffect} from "../effects/IEffect.sol";
 import {ClonesWithImmutableArgs} from "../lib/ClonesWithImmutableArgs.sol";
 import {StandardAttack} from "./StandardAttack.sol";
+import {ATTACK_PARAMS} from "./StandardAttackStructs.sol";
+import {IEngine} from "../IEngine.sol";
+import {ITypeCalculator} from "../types/ITypeCalculator.sol";
+import {Ownable} from "../lib/Ownable.sol";
 
-contract StandardAttackFactory {
-    using ClonesWithImmutableArgs for address;
-
-    StandardAttack public immutable TEMPLATE;
+contract StandardAttackFactory is Ownable {
+    IEngine public ENGINE;
+    ITypeCalculator public TYPE_CALCULATOR;
 
     event StandardAttackCreated(address a);
 
-    constructor(StandardAttack template) {
-        TEMPLATE = template;
+    constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR) {
+        ENGINE = _ENGINE;
+        TYPE_CALCULATOR = _TYPE_CALCULATOR;
+        _initializeOwner(msg.sender);
+    }
+    
+    function createAttack(ATTACK_PARAMS memory params) external returns (StandardAttack attack) {
+        attack = new StandardAttack(msg.sender, ENGINE, TYPE_CALCULATOR, params);
+        emit StandardAttackCreated(address(attack));
     }
 
-    /**
-     * Args ordering:
-     *  0: BASE_POWER
-     *  8: STAMINA_COST
-     *  16: ACCURACY
-     *  24: PRIORITY
-     *  32: TYPE
-     *  40: EFFECT_ACCURACY
-     *  48: MOVE_CLASS
-     *  56: CRIT_RATE
-     *  64: VOL
-     *  72: NAME (32 bytes from here)
-     *  104: EFFECT (20 bytes from here)
-     */
-    struct ATTACK_PARAMS {
-        uint64 BASE_POWER;
-        uint64 STAMINA_COST;
-        uint64 ACCURACY;
-        uint64 PRIORITY;
-        Type MOVE_TYPE;
-        uint64 EFFECT_ACCURACY;
-        MoveClass MOVE_CLASS;
-        uint64 CRIT_RATE;
-        uint64 VOLATILITY;
-        bytes32 NAME;
-        IEffect EFFECT;
+    function setEngine(IEngine _ENGINE) external onlyOwner {
+        ENGINE = _ENGINE;
     }
 
-    function createAttack(ATTACK_PARAMS memory params) external returns (StandardAttack clone) {
-        bytes memory data = abi.encodePacked(
-            params.BASE_POWER,
-            params.STAMINA_COST,
-            params.ACCURACY,
-            params.PRIORITY,
-            uint64(params.MOVE_TYPE),
-            params.EFFECT_ACCURACY,
-            uint64(params.MOVE_CLASS),
-            params.CRIT_RATE,
-            params.VOLATILITY,
-            params.NAME,
-            address(params.EFFECT)
-        );
-        clone = StandardAttack(address(TEMPLATE).clone(data));
-        emit StandardAttackCreated(address(clone));
+    function setTypeCalculator(ITypeCalculator _TYPE_CALCULATOR) external onlyOwner {
+        TYPE_CALCULATOR = _TYPE_CALCULATOR;
     }
 }

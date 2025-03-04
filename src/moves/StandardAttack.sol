@@ -6,44 +6,41 @@ import "../Enums.sol";
 import "../Structs.sol";
 
 import {IEngine} from "../IEngine.sol";
-
 import {IEffect} from "../effects/IEffect.sol";
-import {Clone} from "../lib/Clone.sol";
 import {ITypeCalculator} from "../types/ITypeCalculator.sol";
 import {AttackCalculator} from "./AttackCalculator.sol";
 import {IMoveSet} from "./IMoveSet.sol";
+import {ATTACK_PARAMS} from "./StandardAttackStructs.sol";
+import {Ownable} from "../lib/Ownable.sol";
 
-contract StandardAttack is AttackCalculator, IMoveSet, Clone {
-    constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR) AttackCalculator(_ENGINE, _TYPE_CALCULATOR) {}
+contract StandardAttack is AttackCalculator, IMoveSet, Ownable {
 
-    /**
-     * Args ordering (bytes):
-     *  0: BASE_POWER
-     *  8: STAMINA_COST
-     *  16: ACCURACY
-     *  24: PRIORITY
-     *  32: TYPE
-     *  40: EFFECT_ACCURACY
-     *  48: MOVE_CLASS
-     *  56: CRIT_RATE
-     *  64: VOL
-     *  72: NAME (32 bytes from here)
-     *  104: EFFECT (20 bytes from here)
-     */
-    function name() public pure returns (string memory) {
-        return _bytes32ToString(bytes32(_getArgUint256(72)));
-    }
+    uint32 private _basePower;
+    uint32 private _stamina;
+    uint32 private _accuracy;
+    uint32 private _priority;
+    Type private _moveType;
+    uint32 private _effectAccuracy;
+    MoveClass private _moveClass;
+    uint32 private _critRate;
+    uint32 private _volatility;
+    IEffect private _effect;
+    
+    string public name;
 
-    function _bytes32ToString(bytes32 _bytes32) internal pure returns (string memory) {
-        uint8 i = 0;
-        while (i < 32 && _bytes32[i] != 0) {
-            i++;
-        }
-        bytes memory bytesArray = new bytes(i);
-        for (i = 0; i < 32 && _bytes32[i] != 0; i++) {
-            bytesArray[i] = _bytes32[i];
-        }
-        return string(bytesArray);
+    constructor(address owner, IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR, ATTACK_PARAMS memory params) AttackCalculator(_ENGINE, _TYPE_CALCULATOR) {
+        _basePower = params.BASE_POWER;
+        _stamina = params.STAMINA_COST;
+        _accuracy = params.ACCURACY;
+        _priority = params.PRIORITY;
+        _moveType = params.MOVE_TYPE;
+        _effectAccuracy = params.EFFECT_ACCURACY;
+        _moveClass = params.MOVE_CLASS;
+        _critRate = params.CRIT_RATE;
+        _volatility = params.VOLATILITY;
+        _effect = params.EFFECT;
+        name = params.NAME;
+        _initializeOwner(owner);
     }
 
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng)
@@ -65,26 +62,13 @@ contract StandardAttack is AttackCalculator, IMoveSet, Clone {
         }
 
         // Apply the effect as well if the accuracy is valid
-        if (rng % 100 < effectAccuracy(battleKey)) {
+        if (rng % 100 < _effectAccuracy) {
             uint256 defenderPlayerIndex = (attackerPlayerIndex + 1) % 2;
             uint256 defenderMonIndex =
                 ENGINE.getActiveMonIndexForBattleState(ENGINE.battleKeyForWrite())[defenderPlayerIndex];
-            ENGINE.addEffect(defenderPlayerIndex, defenderMonIndex, IEffect(_getArgAddress(104)), "");
+            ENGINE.addEffect(defenderPlayerIndex, defenderMonIndex, _effect, "");
         }
-
         return false;
-    }
-
-    function priority(bytes32) public pure returns (uint32) {
-        return uint32(_getArgUint64(24));
-    }
-
-    function stamina(bytes32) public pure returns (uint32) {
-        return uint32(_getArgUint64(8));
-    }
-
-    function moveType(bytes32) public pure returns (Type) {
-        return Type(_getArgUint64(32));
     }
 
     function isValidTarget(bytes32) public pure returns (bool) {
@@ -96,31 +80,67 @@ contract StandardAttack is AttackCalculator, IMoveSet, Clone {
         return (NO_SWITCH_FLAG, NO_SWITCH_FLAG);
     }
 
-    function moveClass(bytes32) public pure returns (MoveClass) {
-        return MoveClass(_getArgUint64(48));
+    function priority(bytes32) public view returns (uint32) {
+        return _priority;
     }
 
-    function basePower(bytes32) public pure returns (uint32) {
-        return uint32(_getArgUint64(0));
+    function stamina(bytes32) public view returns (uint32) {
+        return _stamina;
     }
 
-    function critRate(bytes32) public pure returns (uint32) {
-        return uint32(_getArgUint64(56));
+    function moveType(bytes32) public view returns (Type) {
+        return _moveType;
     }
 
-    function volatility(bytes32) public pure returns (uint32) {
-        return uint32(_getArgUint64(64));
+    function moveClass(bytes32) public view returns (MoveClass) {
+        return _moveClass;
     }
 
-    function effect(bytes32) public pure returns (IEffect) {
-        return IEffect(_getArgAddress(104));
+    function critRate(bytes32) public view returns (uint32) {
+        return _critRate;
     }
 
-    function effectAccuracy(bytes32) public pure returns (uint32) {
-        return uint32(_getArgUint64(40));
+    function volatility(bytes32) public view returns (uint32) {
+        return _volatility;
     }
 
-    function accuracy(bytes32) public pure returns (uint32) {
-        return uint32(_getArgUint64(16));
+    function basePower(bytes32) public view returns (uint32) {
+        return _basePower;
+    }
+
+    function accuracy(bytes32) public view returns (uint32) {
+        return _accuracy;
+    }
+
+    function effect(bytes32) public view returns (IEffect) {
+        return _effect;
+    }
+
+    function effectAccuracy(bytes32) public view returns (uint32) {
+        return _effectAccuracy;
+    }
+
+    function changeVar(uint256 varToChange, uint256 newValue) external onlyOwner {
+        if (varToChange == 0) {
+            _basePower = uint32(newValue);
+        } else if (varToChange == 1) {
+            _stamina = uint32(newValue);
+        } else if (varToChange == 2) {
+            _accuracy = uint32(newValue);
+        } else if (varToChange == 3) {
+            _priority = uint32(newValue);
+        } else if (varToChange == 4) {
+            _moveType = Type(newValue);
+        } else if (varToChange == 5) {
+            _effectAccuracy = uint32(newValue);
+        } else if (varToChange == 6) {
+            _moveClass = MoveClass(newValue);
+        } else if (varToChange == 7) {
+            _critRate = uint32(newValue);
+        } else if (varToChange == 8) {
+            _volatility = uint32(newValue);
+        } else if (varToChange == 9) {
+            _effect = IEffect(address(uint160(newValue)));
+        }
     }
 }

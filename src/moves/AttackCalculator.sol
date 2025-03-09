@@ -28,7 +28,7 @@ abstract contract AttackCalculator {
         uint256 rng,
         uint256 critRate // out of 100
     ) public {
-        uint32 damage = calculateDamagePure(
+        int32 damage = calculateDamagePure(
             battleKey,
             attackerPlayerIndex,
             basePower,
@@ -54,7 +54,7 @@ abstract contract AttackCalculator {
         MoveClass attackSupertype,
         uint256 rng,
         uint256 critRate // out of 100
-    ) public view returns (uint32) {
+    ) public view returns (int32) {
         // Do accuracy check first to decide whether or not to short circuit
         // [0... accuracy] [accuracy + 1, ..., 100]
         // [succeeds     ] [fails                 ]
@@ -62,7 +62,7 @@ abstract contract AttackCalculator {
             return 0;
         }
         uint256[] memory monIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
-        uint32 damage;
+        int32 damage;
         uint256 defenderPlayerIndex = (attackerPlayerIndex + 1) % 2;
         {
             uint32 attackStat;
@@ -160,7 +160,7 @@ abstract contract AttackCalculator {
             if ((rng3 % 100) <= critRate) {
                 critMultiplier = 2;
             }
-            damage = critMultiplier * (scaledBasePower * attackStat * rngScaling) / (defenceStat * RNG_SCALING_DENOM);
+            damage = int32(critMultiplier * (scaledBasePower * attackStat * rngScaling) / (defenceStat * RNG_SCALING_DENOM));
         }
         return damage;
     }

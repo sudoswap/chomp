@@ -8,7 +8,7 @@ import {IEffect} from "../IEffect.sol";
 import {StatusEffect} from "./StatusEffect.sol";
 
 contract FrostbiteStatus is StatusEffect {
-    uint32 constant DAMAGE_DENOMINATOR = 16;
+    int32 constant DAMAGE_DENOMINATOR = 16;
     uint32 constant SP_ATTACK_DENOMINATOR = 2;
 
     constructor(IEngine engine) StatusEffect(engine) {}
@@ -68,7 +68,7 @@ contract FrostbiteStatus is StatusEffect {
             ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.Hp);
 
         // Calculate damage
-        uint32 damage = maxHealth / DAMAGE_DENOMINATOR;
+        int32 damage = int32(maxHealth) / DAMAGE_DENOMINATOR;
 
         // Deal the damage
         ENGINE.dealDamage(targetIndex, monIndex, damage);

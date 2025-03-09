@@ -34,7 +34,7 @@ interface IEffect {
         returns (bytes memory updatedExtraData, bool removeAfterRun);
 
     // NOTE: CURRENTLY ONLY RUN LOCALLY ON MONS (global effects do not have this hook)
-    function onAfterDamage(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+    function onAfterDamage(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex, int32 damage)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);
 

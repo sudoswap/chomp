@@ -35,7 +35,7 @@ contract TestAttackCalculator is AttackCalculator {
         MoveClass attackSupertype,
         uint256 rng,
         uint256 critRate
-    ) external view returns (uint32) {
+    ) external view returns (int32) {
         return calculateDamagePure(
             battleKey, attackerPlayerIndex, basePower, accuracy, volatility, attackType, attackSupertype, rng, critRate
         );
@@ -152,7 +152,7 @@ contract AttackCalculatorTest is Test {
         uint256 critRate = 0; // No crits
 
         // Calculate damage (Alice attacking Bob)
-        uint32 damage = attackCalc.testCalculateDamage(
+        int32 damage = attackCalc.testCalculateDamage(
             battleKey,
             0, // Alice's index
             basePower,
@@ -182,7 +182,7 @@ contract AttackCalculatorTest is Test {
         uint256 critRate = 0; // No crits
 
         // Calculate damage (Bob attacking Alice)
-        uint32 damage = attackCalc.testCalculateDamage(
+        int32 damage = attackCalc.testCalculateDamage(
             battleKey,
             1, // Bob's index
             basePower,
@@ -211,12 +211,12 @@ contract AttackCalculatorTest is Test {
         uint256 critRate = 0;
 
         // With rng = 49, attack should hit (rng < accuracy)
-        uint32 damage1 = attackCalc.testCalculateDamage(
+        int32 damage1 = attackCalc.testCalculateDamage(
             battleKey, 0, basePower, accuracy, volatility, attackType, attackSupertype, 49, critRate
         );
 
         // With rng = 50, attack should miss (rng >= accuracy)
-        uint32 damage2 = attackCalc.testCalculateDamage(
+        int32 damage2 = attackCalc.testCalculateDamage(
             battleKey, 0, basePower, accuracy, volatility, attackType, attackSupertype, 50, critRate
         );
 
@@ -240,7 +240,7 @@ contract AttackCalculatorTest is Test {
         // For simplicity, we'll test both scenarios
 
         // First, force a non-crit by setting critRate to 0
-        uint32 normalDamage = attackCalc.testCalculateDamage(
+        int32 normalDamage = attackCalc.testCalculateDamage(
             battleKey,
             0,
             basePower,
@@ -253,7 +253,7 @@ contract AttackCalculatorTest is Test {
         );
 
         // Then, force a crit by setting critRate to 100
-        uint32 critDamage = attackCalc.testCalculateDamage(
+        int32 critDamage = attackCalc.testCalculateDamage(
             battleKey,
             0,
             basePower,
@@ -279,7 +279,7 @@ contract AttackCalculatorTest is Test {
         uint256 critRate = 0;
 
         // With even RNG, damage should increase
-        uint32 damageScaledUp = attackCalc.testCalculateDamage(
+        int32 damageScaledUp = attackCalc.testCalculateDamage(
             battleKey,
             0,
             basePower,
@@ -292,7 +292,7 @@ contract AttackCalculatorTest is Test {
         );
 
         // With odd RNG, damage should decrease
-        uint32 damageScaledDown = attackCalc.testCalculateDamage(
+        int32 damageScaledDown = attackCalc.testCalculateDamage(
             battleKey,
             0,
             basePower,
@@ -305,7 +305,7 @@ contract AttackCalculatorTest is Test {
         );
 
         // Reset volatility and get base damage
-        uint32 baseDamage = attackCalc.testCalculateDamage(
+        int32 baseDamage = attackCalc.testCalculateDamage(
             battleKey,
             0,
             basePower,

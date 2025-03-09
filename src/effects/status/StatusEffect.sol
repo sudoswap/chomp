@@ -82,7 +82,7 @@ abstract contract StatusEffect is IEffect {
     }
 
     // NOTE: CURRENTLY ONLY RUN LOCALLY ON MONS (global effects do not have this hook)
-    function onAfterDamage(uint256, bytes memory extraData, uint256, uint256)
+    function onAfterDamage(uint256, bytes memory extraData, uint256, uint256, int32)
         external
         virtual
         returns (bytes memory updatedExtraData, bool removeAfterRun)

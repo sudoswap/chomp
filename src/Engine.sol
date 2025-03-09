@@ -21,7 +21,8 @@ contract Engine is IEngine {
     mapping(bytes32 battleKey => Battle) private battles;
     mapping(bytes32 battleKey => BattleState) private battleStates;
     mapping(bytes32 battleKey => mapping(bytes32 => bytes32)) private globalKV;
-    uint256 transient currentStep; // not intended to be read anywhere else
+    uint256 transient private currentStep; // Used to bubble up step data for events
+    int32 transient private damageDealt; // Used to provide access to onAfterDamage hook for effects
 
     // Errors
     error NoWriteAllowed();
@@ -54,7 +55,7 @@ contract Engine is IEngine {
         bytes32 indexed battleKey,
         uint256 playerIndex,
         uint256 monIndex,
-        uint256 damageDealt,
+        int32 damageDealt,
         address source,
         uint256 step
     );
@@ -486,22 +487,22 @@ contract Engine is IEngine {
         globalKV[battleKey][key] = value;
     }
 
-    function dealDamage(uint256 playerIndex, uint256 monIndex, uint32 damage) external {
+    function dealDamage(uint256 playerIndex, uint256 monIndex, int32 damage) external {
         bytes32 battleKey = battleKeyForWrite;
         if (battleKey == bytes32(0)) {
             revert NoWriteAllowed();
         }
         MonState storage monState = battleStates[battleKey].monStates[playerIndex][monIndex];
-        monState.hpDelta -= int32(damage);
+        monState.hpDelta -= damage;
+        damageDealt = damage;
         // Set KO flag if the total hpDelta is greater than the original mon HP
         uint32 baseHp = battles[battleKey].teams[playerIndex][monIndex].stats.hp;
         if (monState.hpDelta + int32(baseHp) <= 0) {
             monState.isKnockedOut = true;
-        } else {
-            uint256[] storage rngValues = battleStates[battleKey].pRNGStream;
-            uint256 rngValue = rngValues[rngValues.length - 1];
-            _runEffects(battleKey, rngValue, playerIndex, playerIndex, EffectStep.AfterDamage);
         }
+        uint256[] storage rngValues = battleStates[battleKey].pRNGStream;
+        uint256 rngValue = rngValues[rngValues.length - 1];
+        _runEffects(battleKey, rngValue, playerIndex, playerIndex, EffectStep.AfterDamage);
         emit DamageDeal(battleKey, playerIndex, monIndex, damage, msg.sender, currentStep);
     }
 
@@ -699,7 +700,7 @@ contract Engine is IEngine {
                         effects[i].onMonSwitchOut(rng, extraData[i], playerIndex, monIndex);
                 } else if (round == EffectStep.AfterDamage) {
                     (updatedExtraData, removeAfterRun) =
-                        effects[i].onAfterDamage(rng, extraData[i], playerIndex, monIndex);
+                        effects[i].onAfterDamage(rng, extraData[i], playerIndex, monIndex, damageDealt);
                 }
 
                 // If we remove the effect after doing it, then we clear and update the array/extra data

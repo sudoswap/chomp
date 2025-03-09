@@ -30,7 +30,6 @@ import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 
 contract SofabbiTest is Test, BattleHelper {
-    // Contracts
     Engine engine;
     FastCommitManager commitManager;
     TestTypeCalculator typeCalc;
@@ -40,7 +39,6 @@ contract SofabbiTest is Test, BattleHelper {
     CarrotHarvest carrotHarvest;
 
     function setUp() public {
-        // Initialize contracts
         typeCalc = new TestTypeCalculator();
         mockOracle = new MockRandomnessOracle();
         defaultRegistry = new TestTeamRegistry();

@@ -3,7 +3,7 @@
 1) Refactor switching to happen as a privileged top-level action, similar to updating mon state
 2) Allow restricting/enforcement of move selection
 3) Refactor the team registry flow (probably w/ some sort of approve/allow to allow privileged contracts to make battles)
-4) 
+4) Refactor the CustomEffectAttackFactory to just use the StandardAttackFactory under the hood to keep logic centralized (just with 0 set for all the values like variance etc) and avoid testing against a diff logic suite
 
 ---------------------------------------------------------------------------------------------
 

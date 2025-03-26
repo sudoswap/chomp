@@ -8,7 +8,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {Engine} from "../../src/Engine.sol";
 
-import {MonStateIndexName, Type} from "../../src/Enums.sol";
+import {MonStateIndexName, Type, MoveClass} from "../../src/Enums.sol";
 import {FastCommitManager} from "../../src/FastCommitManager.sol";
 
 import {FastValidator} from "../../src/FastValidator.sol";

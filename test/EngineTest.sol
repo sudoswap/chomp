@@ -2344,7 +2344,7 @@ contract EngineTest is Test {
         assertEq(state.monStates[0][1].hpDelta, -5);
     }
 
-    function test_forceSwitchMoveRevertsWhenInvalidSwitchTargetPriorityPlayerAfterAttacking() public {
+    function test_forceSwitchMoveIgnoresInvalidSwitchTargetPriorityPlayerAfterAttacking() public {
         // Initialize mons and moves
         // Attack to force a switch for user (should be higher priority than the other move)
         IMoveSet switchAttack =
@@ -2453,13 +2453,19 @@ contract EngineTest is Test {
         // Ensure Bob can reveal
         commitManager.revealMove(battleKey, moveIndex, salt, extraData, false);
 
-        // Expect revert if Alice tries to reveal (should be marked as invalid switch)
+        // Alice can now reveal, but the switchActiveMon call inside ForceSwitchMove will revert
         vm.startPrank(ALICE);
-        vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
         commitManager.revealMove(battleKey, moveIndex, salt, abi.encode(0, 0), false);
+
+        // Execute the battle - the invalid switch should be ignored
+        engine.execute(battleKey);
+
+        // Check that the active mon index for Alice is still 0 (no switch happened)
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.activeMonIndex[0], 0);
     }
 
-    function test_forceSwitchMoveRevertsWhenInvalidSwitchTargetNonPriorityPlayerAfterAttacking() public {
+    function test_forceSwitchMoveIgnoresInvalidSwitchTargetNonPriorityPlayerAfterAttacking() public {
         // Initialize mons and moves
         // Attack to force a switch for user (should be higher priority than the other move)
         IMoveSet switchAttack =
@@ -2568,10 +2574,16 @@ contract EngineTest is Test {
         // Ensure Bob can reveal
         commitManager.revealMove(battleKey, moveIndex, salt, extraData, false);
 
-        // Expect revert if Alice tries to reveal (should be marked as invalid switch)
+        // Alice can now reveal, but the switchActiveMon call inside ForceSwitchMove will revert
         vm.startPrank(ALICE);
-        vm.expectRevert(abi.encodeWithSignature("InvalidMove(address)", ALICE));
         commitManager.revealMove(battleKey, moveIndex, salt, abi.encode(1, 0), false);
+
+        // Execute the battle - the invalid switch should be ignored
+        engine.execute(battleKey);
+
+        // Check that the active mon index for Alice is still 0 (no switch happened)
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.activeMonIndex[0], 0);
     }
 
     // environmental effect kills mon after switch in from player move and forces switch

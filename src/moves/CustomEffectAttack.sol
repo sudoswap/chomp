@@ -46,7 +46,6 @@ contract CustomEffectAttack is AttackCalculator, IMoveSet, Clone {
 
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng)
         external
-        returns (bool)
     {
         // Deal the damage
         uint32 basePowerValue = uint32(_getArgUint256(0));
@@ -68,8 +67,6 @@ contract CustomEffectAttack is AttackCalculator, IMoveSet, Clone {
                 ENGINE.getActiveMonIndexForBattleState(ENGINE.battleKeyForWrite())[defenderPlayerIndex];
             ENGINE.addEffect(defenderPlayerIndex, defenderMonIndex, IEffect(_getArgAddress(160)), "");
         }
-
-        return false;
     }
 
     function priority(bytes32) external pure returns (uint32) {
@@ -84,14 +81,10 @@ contract CustomEffectAttack is AttackCalculator, IMoveSet, Clone {
         return Type(_getArgUint256(128));
     }
 
-    function isValidTarget(bytes32) external pure returns (bool) {
+    function isValidTarget(bytes32, bytes calldata) external pure returns (bool) {
         return true;
     }
 
-    function postMoveSwitch(bytes32, uint256, bytes calldata) external pure returns (uint256, uint256) {
-        // No-op
-        return (NO_SWITCH_FLAG, NO_SWITCH_FLAG);
-    }
 
     function moveClass(bytes32) external pure returns (MoveClass) {
         return MoveClass(_getArgUint256(212));

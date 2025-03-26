@@ -32,14 +32,12 @@ contract ForceSwitchMove is IMoveSet {
         return "Force Switch";
     }
 
-    function move(bytes32, uint256, bytes memory, uint256) external pure returns (bool) {
-        return true;
-    }
-
-    function postMoveSwitch(bytes32, uint256, bytes calldata extraData) external pure returns (uint256, uint256) {
+    function move(bytes32 battleKey, uint256, bytes memory extraData, uint256) external {
         // Decode data as (uint256 playerIndex, uint256 monToSwitchIndex)
         (uint256 playerIndex, uint256 monToSwitchIndex) = abi.decode(extraData, (uint256, uint256));
-        return (playerIndex, monToSwitchIndex);
+
+        // Use the new switchActiveMon function
+        ENGINE.switchActiveMon(playerIndex, monToSwitchIndex);
     }
 
     function priority(bytes32) external view returns (uint32) {
@@ -54,7 +52,7 @@ contract ForceSwitchMove is IMoveSet {
         return TYPE;
     }
 
-    function isValidTarget(bytes32) external pure returns (bool) {
+    function isValidTarget(bytes32, bytes calldata) external pure returns (bool) {
         return true;
     }
 

@@ -25,7 +25,7 @@ contract StandardAttack is AttackCalculator, IMoveSet, Ownable {
     uint32 private _critRate;
     uint32 private _volatility;
     IEffect private _effect;
-    
+
     string public name;
 
     constructor(address owner, IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR, ATTACK_PARAMS memory params) AttackCalculator(_ENGINE, _TYPE_CALCULATOR) {
@@ -45,17 +45,16 @@ contract StandardAttack is AttackCalculator, IMoveSet, Ownable {
 
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng)
         public
-        returns (bool)
     {
         if (basePower(battleKey) > 0) {
             calculateDamage(
-                battleKey, 
-                attackerPlayerIndex, 
-                basePower(battleKey), 
-                accuracy(battleKey), 
+                battleKey,
+                attackerPlayerIndex,
+                basePower(battleKey),
+                accuracy(battleKey),
                 volatility(battleKey),
-                moveType(battleKey), 
-                moveClass(battleKey), 
+                moveType(battleKey),
+                moveClass(battleKey),
                 rng,
                 critRate(battleKey)
             );
@@ -68,17 +67,12 @@ contract StandardAttack is AttackCalculator, IMoveSet, Ownable {
                 ENGINE.getActiveMonIndexForBattleState(ENGINE.battleKeyForWrite())[defenderPlayerIndex];
             ENGINE.addEffect(defenderPlayerIndex, defenderMonIndex, _effect, "");
         }
-        return false;
     }
 
-    function isValidTarget(bytes32) public pure returns (bool) {
+    function isValidTarget(bytes32, bytes calldata) public pure returns (bool) {
         return true;
     }
 
-    function postMoveSwitch(bytes32, uint256, bytes calldata) public pure returns (uint256, uint256) {
-        // No-op
-        return (NO_SWITCH_FLAG, NO_SWITCH_FLAG);
-    }
 
     function priority(bytes32) public view returns (uint32) {
         return _priority;

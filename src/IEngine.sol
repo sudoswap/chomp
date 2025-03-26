@@ -48,5 +48,6 @@ interface IEngine {
     function removeEffect(uint256 targetIndex, uint256 monIndex, uint256 effectIndex) external;
     function setGlobalKV(bytes32 key, bytes32 value) external;
     function dealDamage(uint256 playerIndex, uint256 monIndex, int32 damage) external;
+    function switchActiveMon(uint256 playerIndex, uint256 monToSwitchIndex) external;
     function execute(bytes32 battleKey) external;
 }

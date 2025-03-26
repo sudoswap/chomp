@@ -122,21 +122,10 @@ contract FastValidator is IValidator {
             return false;
         } else {
             // Then, we check the move itself to see if it enforces any other specific conditions
-            if (!moveSet.isValidTarget(battleKey)) {
+            if (!moveSet.isValidTarget(battleKey, extraData)) {
                 return false;
             }
         }
-
-        // If the move triggers a swap, we need to check to see if it's a valid swap
-        (uint256 forceSwitchPlayerIndex, uint256 monIndexToSwitchTo) =
-            moveSet.postMoveSwitch(battleKey, playerIndex, extraData);
-        if (forceSwitchPlayerIndex != NO_SWITCH_FLAG) {
-            bool isValidSwitch = validateSwitch(battleKey, forceSwitchPlayerIndex, monIndexToSwitchTo);
-            if (!isValidSwitch) {
-                return false;
-            }
-        }
-
         return true;
     }
 

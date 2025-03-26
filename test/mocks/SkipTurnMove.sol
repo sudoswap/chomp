@@ -32,11 +32,10 @@ contract SkipTurnMove is IMoveSet {
         return "Skip Turn";
     }
 
-    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes memory, uint256) external returns (bool) {
+    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes memory, uint256) external {
         uint256 targetIndex = (attackerPlayerIndex + 1) % 2;
         uint256 activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey)[targetIndex];
         ENGINE.updateMonState(targetIndex, activeMonIndex, MonStateIndexName.ShouldSkipTurn, 1);
-        return false;
     }
 
     function priority(bytes32) external view returns (uint32) {
@@ -51,14 +50,10 @@ contract SkipTurnMove is IMoveSet {
         return TYPE;
     }
 
-    function isValidTarget(bytes32) external pure returns (bool) {
+    function isValidTarget(bytes32, bytes calldata) external pure returns (bool) {
         return true;
     }
 
-    function postMoveSwitch(bytes32, uint256, bytes calldata) external pure returns (uint256, uint256) {
-        // No-op
-        return (NO_SWITCH_FLAG, NO_SWITCH_FLAG);
-    }
 
     function moveClass(bytes32) external pure returns (MoveClass) {
         return MoveClass.Physical;

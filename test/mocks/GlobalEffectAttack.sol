@@ -35,9 +35,8 @@ contract GlobalEffectAttack is IMoveSet {
         return "Effect Attack";
     }
 
-    function move(bytes32, uint256, bytes memory extraData, uint256) external returns (bool) {
+    function move(bytes32, uint256, bytes memory extraData, uint256) external {
         ENGINE.addEffect(2, 0, EFFECT, extraData);
-        return false;
     }
 
     function priority(bytes32) external view returns (uint32) {
@@ -52,14 +51,10 @@ contract GlobalEffectAttack is IMoveSet {
         return TYPE;
     }
 
-    function isValidTarget(bytes32) external pure returns (bool) {
+    function isValidTarget(bytes32, bytes calldata) external pure returns (bool) {
         return true;
     }
 
-    function postMoveSwitch(bytes32, uint256, bytes calldata) external pure returns (uint256, uint256) {
-        // No-op
-        return (NO_SWITCH_FLAG, NO_SWITCH_FLAG);
-    }
 
     function moveClass(bytes32) external pure returns (MoveClass) {
         return MoveClass.Physical;

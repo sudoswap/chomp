@@ -7,8 +7,7 @@ import "../../src/Structs.sol";
 import {Test} from "forge-std/Test.sol";
 
 import {Engine} from "../../src/Engine.sol";
-
-import {MonStateIndexName, Type} from "../../src/Enums.sol";
+import {MonStateIndexName, Type, MoveClass} from "../../src/Enums.sol";
 import {FastCommitManager} from "../../src/FastCommitManager.sol";
 
 import {FastValidator} from "../../src/FastValidator.sol";
@@ -21,6 +20,7 @@ import {IEffect} from "../../src/effects/IEffect.sol";
 import {Angery} from "../../src/mons/gorillax/Angery.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
+import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
 
 import {BattleHelper} from "../abstract/BattleHelper.sol";
 import {CustomAttack} from "../mocks/CustomAttack.sol";
@@ -75,7 +75,7 @@ contract GorillaxTest is Test, BattleHelper {
         // Strong attack is exactly max hp / threshold
         moves[0] = attackFactory.createAttack(
             CustomEffectAttackFactory.ATTACK_PARAMS({
-                BASE_POWER: angery.MAX_HP_DENOM * hpScale,
+                BASE_POWER: uint32(int32(angery.MAX_HP_DENOM()) * int32(uint32(hpScale))),
                 STAMINA_COST: 1,
                 ACCURACY: 100,
                 PRIORITY: 1,
@@ -88,7 +88,7 @@ contract GorillaxTest is Test, BattleHelper {
         );
         moves[1] = attackFactory.createAttack(
             CustomEffectAttackFactory.ATTACK_PARAMS({
-                BASE_POWER: angery.MAX_HP_DENOM * hpScale / 2,
+                BASE_POWER: uint32(int32(angery.MAX_HP_DENOM()) * int32(uint32(hpScale)) / 2),
                 STAMINA_COST: 1,
                 ACCURACY: 100,
                 PRIORITY: 1,
@@ -101,7 +101,7 @@ contract GorillaxTest is Test, BattleHelper {
         );
         Mon memory angeryMon = Mon({
             stats: MonStats({
-                hp: angery.MAX_HP_DENOM * angery.HP_THRESHOLD_DENOM * hpScale,
+                hp: uint32(int32(angery.MAX_HP_DENOM()) * int32(angery.HP_THRESHOLD_DENOM()) * int32(uint32(hpScale))),
                 stamina: 5,
                 speed: 5,
                 attack: 5,

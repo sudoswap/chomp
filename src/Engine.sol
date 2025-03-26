@@ -506,6 +506,30 @@ contract Engine is IEngine {
         emit DamageDeal(battleKey, playerIndex, monIndex, damage, msg.sender, currentStep);
     }
 
+    function switchActiveMon(uint256 playerIndex, uint256 monToSwitchIndex) external {
+        bytes32 battleKey = battleKeyForWrite;
+        if (battleKey == bytes32(0)) {
+            revert NoWriteAllowed();
+        }
+
+        // Use the validator to check if the switch is valid
+        if (battles[battleKey].validator.validateSwitch(battleKey, playerIndex, monToSwitchIndex)) {
+            // Only call the internal switch function if the switch is valid
+            _handleSwitch(battleKey, playerIndex, monToSwitchIndex, msg.sender);
+
+            // Check for game over and/or KOs for the switching player
+            (uint256 playerSwitchForTurnFlag,,, bool isGameOver) =
+                _checkForGameOverOrKO(battleKey, playerIndex);
+            if (isGameOver) return;
+
+            // Set the player switch for turn flag
+            battleStates[battleKey].playerSwitchForTurnFlag = playerSwitchForTurnFlag;
+
+            // TODO: consider also checking game over / setting flag for other player
+        }
+        // If the switch is invalid, we simply do nothing and continue execution
+    }
+
     /**
      * - Internal helper functions
      */
@@ -638,15 +662,8 @@ contract Engine is IEngine {
             state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta -=
                 int32(moveSet.stamina(battleKey));
 
-            // Run the move and see if we need to handle a switch
-            bool doSwitch = moveSet.move(battleKey, playerIndex, move.extraData, rng);
-
-            // If we need to a switch, check to see what we switch
-            if (doSwitch) {
-                (uint256 switchFlag, uint256 monToSwitchIndex) =
-                    moveSet.postMoveSwitch(battleKey, playerIndex, move.extraData);
-                _handleSwitch(battleKey, switchFlag, monToSwitchIndex, address(moveSet));
-            }
+            // Run the move (no longer checking for a return value)
+            moveSet.move(battleKey, playerIndex, move.extraData, rng);
         }
     }
 

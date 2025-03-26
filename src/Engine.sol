@@ -36,7 +36,7 @@ contract Engine is IEngine {
     // Events
     event BattleProposal(address indexed p1, address p0, bytes32 battleKey);
     event BattleAcceptance(bytes32 indexed battleKey, uint256 p1TeamIndex);
-    event BattleStart(bytes32 indexed battleKey, uint256 p0TeamIndex);
+    event BattleStart(bytes32 indexed battleKey, uint256 p0TeamIndex, address p0, address p1);
     event EngineExecute(
         bytes32 indexed battleKey, uint256 turnId, uint256 playerSwitchForTurnFlag, uint256 priorityPlayerIndex
     );
@@ -206,7 +206,7 @@ contract Engine is IEngine {
         // Set flag to be 2 which means both players act
         battleStates[battleKey].playerSwitchForTurnFlag = 2;
 
-        emit BattleStart(battleKey, p0TeamIndex);
+        emit BattleStart(battleKey, p0TeamIndex, battle.p0, battle.p1);
     }
 
     function execute(bytes32 battleKey) external {
@@ -493,8 +493,8 @@ contract Engine is IEngine {
             revert NoWriteAllowed();
         }
         MonState storage monState = battleStates[battleKey].monStates[playerIndex][monIndex];
-        monState.hpDelta -= damage;
         damageDealt = damage;
+        monState.hpDelta -= damage;
         // Set KO flag if the total hpDelta is greater than the original mon HP
         uint32 baseHp = battles[battleKey].teams[playerIndex][monIndex].stats.hp;
         if (monState.hpDelta + int32(baseHp) <= 0) {

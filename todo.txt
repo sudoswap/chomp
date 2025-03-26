@@ -2,8 +2,10 @@
 
 1) Refactor switching to happen as a privileged top-level action, similar to updating mon state
 2) Allow restricting/enforcement of move selection
-3) Refactor the team registry flow (probably w/ some sort of approve/allow to allow privileged contracts to make battles)
-4) Refactor the CustomEffectAttackFactory to just use the StandardAttackFactory under the hood to keep logic centralized (just with 0 set for all the values like variance etc) and avoid testing against a diff logic suite
+3) Add a OnBeforeDamage hook to the Engine, add tests for it as well, allow editing of damage on the stack, also put the damage source on the stack
+
+4) Refactor the team registry flow (probably w/ some sort of approve/allow to allow privileged contracts to make battles)
+5) Refactor the CustomEffectAttackFactory to just use the StandardAttackFactory under the hood to keep logic centralized (just with 0 set for all the values like variance etc) and avoid testing against a diff logic suite
 
 ---------------------------------------------------------------------------------------------
 

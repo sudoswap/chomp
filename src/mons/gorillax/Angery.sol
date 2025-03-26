@@ -10,8 +10,7 @@ import {MonStateIndexName} from "../../Enums.sol";
 
 contract Angery is IAbility, IEffect {
     uint256 constant public CHARGE_COUNT = 3; // After 3 charges, consume all charges to heal
-    int32 constant public HP_THRESHOLD_DENOM = 3; // If more than 1/3 damage dealt in 1 hit, gain 2 charges
-    int32 constant public MAX_HP_DENOM = 8; // Heal for 1/8 of HP
+    int32 constant public MAX_HP_DENOM = 6; // Heal for 1/6 of HP
 
     IEngine immutable ENGINE;
 
@@ -54,10 +53,10 @@ contract Angery is IAbility, IEffect {
     {
         uint256 numCharges = abi.decode(extraData, (uint256));
         if (numCharges == CHARGE_COUNT) {
-            // Heal for 1/8 of max HP
+            // Heal
             int32 healAmount = int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.Hp)) / MAX_HP_DENOM;
             ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Hp, healAmount);
-            // Reset the damage counter
+            // Reset the charges
             return (abi.encode(numCharges - CHARGE_COUNT), false);
         }
         else {
@@ -70,15 +69,7 @@ contract Angery is IAbility, IEffect {
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         uint256 numCharges = abi.decode(extraData, (uint256));
-        uint32 maxHp = ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.Hp);
-        // Damage is negative, so we invert to compare magnitude
-        damageDealt = damageDealt * -1;
-        if (damageDealt >= (int32(maxHp) / HP_THRESHOLD_DENOM)) {
-            return (abi.encode(numCharges + 2), false);
-        }
-        else {
-            return (abi.encode(numCharges + 1), false);
-        }
+        return (abi.encode(numCharges + 1), false);
     }
 
     function onRoundStart(uint256, bytes memory extraData, uint256, uint256)

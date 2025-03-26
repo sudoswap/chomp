@@ -9,7 +9,8 @@ import {IEngine} from "../../IEngine.sol";
 import {MonStateIndexName} from "../../Enums.sol";
 
 contract CarrotHarvest is IAbility, IEffect {
-    uint256 constant CHANCE = 3;
+    
+    uint256 constant CHANCE = 2;
 
     IEngine immutable ENGINE;
 

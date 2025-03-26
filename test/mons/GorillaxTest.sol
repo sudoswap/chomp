@@ -49,7 +49,7 @@ contract GorillaxTest is Test, BattleHelper {
         defaultRegistry = new TestTeamRegistry();
         engine = new Engine();
         validator = new FastValidator(
-            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 2, TIMEOUT_DURATION: 10})
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: 10})
         );
         commitManager = new FastCommitManager(IEngine(address(engine)));
         engine.setCommitManager(address(commitManager));
@@ -69,13 +69,13 @@ contract GorillaxTest is Test, BattleHelper {
 
     function test_angery() public {
         // Create a team with a mon that has Angery ability
-        IMoveSet[] memory moves = new IMoveSet[](2);
+        IMoveSet[] memory moves = new IMoveSet[](1);
         uint256 hpScale = 100;
 
         // Strong attack is exactly max hp / threshold
         moves[0] = attackFactory.createAttack(
             CustomEffectAttackFactory.ATTACK_PARAMS({
-                BASE_POWER: uint32(int32(angery.MAX_HP_DENOM()) * int32(uint32(hpScale))),
+                BASE_POWER: uint32(hpScale),
                 STAMINA_COST: 1,
                 ACCURACY: 100,
                 PRIORITY: 1,
@@ -86,22 +86,9 @@ contract GorillaxTest is Test, BattleHelper {
                 NAME: "Strong"
             })
         );
-        moves[1] = attackFactory.createAttack(
-            CustomEffectAttackFactory.ATTACK_PARAMS({
-                BASE_POWER: uint32(int32(angery.MAX_HP_DENOM()) * int32(uint32(hpScale)) / 2),
-                STAMINA_COST: 1,
-                ACCURACY: 100,
-                PRIORITY: 1,
-                MOVE_TYPE: Type.Fire,
-                EFFECT: IEffect(address(0)),
-                EFFECT_ACCURACY: 0,
-                MOVE_CLASS: MoveClass.Physical,
-                NAME: "Weak"
-            })
-        );
         Mon memory angeryMon = Mon({
             stats: MonStats({
-                hp: uint32(int32(angery.MAX_HP_DENOM()) * int32(angery.HP_THRESHOLD_DENOM()) * int32(uint32(hpScale))),
+                hp: uint32(int32(angery.MAX_HP_DENOM()) * int32(uint32(hpScale))),
                 stamina: 5,
                 speed: 5,
                 attack: 5,
@@ -114,5 +101,57 @@ contract GorillaxTest is Test, BattleHelper {
             moves: moves,
             ability: IAbility(address(angery))
         });
+
+        Mon[] memory team = new Mon[](1);
+        team[0] = angeryMon;
+
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        // Start a battle
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: mockOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                args.p0TeamHash
+            )
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move: Both players select their first mon (index 0)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice chooses to attack, Bob chooses to do nothing for CHARGE_COUNT rounds
+        for (uint i; i < angery.CHARGE_COUNT(); i++) {
+            _commitRevealExecuteForAliceAndBob(
+                engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+            );
+        }
+
+        // Bobs's mon started with  HP = MAX_HP_DENOM * hpScale, it took 3 * hpScale damage
+        // And it heals for hpScale
+        // So it should have taken 2 * hpScale damage
+        int32 bobMonHPDelta = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
+        assertEq(bobMonHPDelta, int32(-2 * int32(uint32(hpScale))));
     }
 }

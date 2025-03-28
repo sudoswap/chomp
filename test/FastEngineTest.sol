@@ -27,7 +27,6 @@ import {EffectAbility} from "./mocks/EffectAbility.sol";
 import {EffectAttack} from "./mocks/EffectAttack.sol";
 import {ForceSwitchMove} from "./mocks/ForceSwitchMove.sol";
 import {GlobalEffectAttack} from "./mocks/GlobalEffectAttack.sol";
-import {InstantDeathEffect} from "./mocks/InstantDeathEffect.sol";
 import {InstantDeathOnSwitchInEffect} from "./mocks/InstantDeathOnSwitchInEffect.sol";
 import {InvalidMove} from "./mocks/InvalidMove.sol";
 import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";

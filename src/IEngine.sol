@@ -40,6 +40,7 @@ interface IEngine {
     function getGlobalKV(bytes32 battleKey, bytes32 key) external view returns (bytes32);
     function getBattleStatus(bytes32 battleKey) external view returns (BattleProposalStatus);
     function getBattleValidator(bytes32 battleKey) external view returns (IValidator);
+    function getEffects(bytes32 battleKey, uint256 targetIndex, uint256 monIndex) external view returns (IEffect[] memory, bytes[] memory);
 
     // State mutating effects
     function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int32 valueToAdd)

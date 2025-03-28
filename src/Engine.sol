@@ -502,6 +502,8 @@ contract Engine is IEngine {
         }
         uint256[] storage rngValues = battleStates[battleKey].pRNGStream;
         uint256 rngValue = rngValues[rngValues.length - 1];
+
+        // Note: We pass playerIndex in twice because `runEffects will look up active mon index
         _runEffects(battleKey, rngValue, playerIndex, playerIndex, EffectStep.AfterDamage);
         emit DamageDeal(battleKey, playerIndex, monIndex, damage, msg.sender, currentStep);
     }
@@ -851,6 +853,18 @@ contract Engine is IEngine {
 
     function getGlobalKV(bytes32 battleKey, bytes32 key) external view returns (bytes32) {
         return globalKV[battleKey][key];
+    }
+
+    function getEffects(bytes32 battleKey, uint256 targetIndex, uint256 monIndex) external view returns (IEffect[] memory, bytes[] memory) {
+        BattleState storage state = battleStates[battleKey];
+        if (targetIndex == 2) {
+            return (state.globalEffects, state.extraDataForGlobalEffects);
+        } else {
+            return (
+                state.monStates[targetIndex][monIndex].targetedEffects,
+                state.monStates[targetIndex][monIndex].extraDataForTargetedEffects
+            );
+        }
     }
 
     // To be called once (after CommitManager is deployed and set to the Engine)

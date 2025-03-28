@@ -11,6 +11,7 @@ import {MonStateIndexName} from "../../Enums.sol";
 contract RiseFromTheGrave is IAbility, IEffect {
     
     uint256 constant public REVIVAL_DELAY = 3;
+    uint256 constant MON_EFFECT_IDENTIFIER = 17;
 
     IEngine immutable ENGINE;
 
@@ -29,11 +30,11 @@ contract RiseFromTheGrave is IAbility, IEffect {
         if (ENGINE.getGlobalKV(battleKey, monEffectId) != bytes32(0)) {
             return;
         }
-        // Otherwise, add this effect to the mon *AND* the battlefield when it switches in
+        // Otherwise, add this effect to the mon when it switches in
         else {
             uint256 value = 1;
             ENGINE.setGlobalKV(monEffectId, bytes32(value));
-            ENGINE.addEffect(playerIndex, monIndex, IEffect(address(this)), "");
+            ENGINE.addEffect(playerIndex, monIndex, IEffect(address(this)), abi.encode(MON_EFFECT_IDENTIFIER));
         }
     }
 
@@ -46,7 +47,7 @@ contract RiseFromTheGrave is IAbility, IEffect {
         return true;
     }
 
-    function onAfterDamage(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex, int32 damageDealt)
+    function onAfterDamage(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex, int32)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
@@ -54,12 +55,10 @@ contract RiseFromTheGrave is IAbility, IEffect {
         On damage, if the mon is KO'd, add this effect to the global effects list (so we can hook into onRoundEnd)
         and remove this effect (so we stop hooking into it on future applications)
         */
-        if (damageDealt < 0) {
-            // If the mon is KO'd, add this effect to the global effects list and remove the mon effect
-            if (ENGINE.getMonStateForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.IsKnockedOut) == 1) {
-                ENGINE.addEffect(targetIndex, monIndex, IEffect(address(this)), abi.encode(REVIVAL_DELAY));
-                return (extraData, true);
-            }
+        // If the mon is KO'd, add this effect to the global effects list and remove the mon effect
+        if (ENGINE.getMonStateForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.IsKnockedOut) == 1) {
+            ENGINE.addEffect(2, 0, IEffect(address(this)), abi.encode(REVIVAL_DELAY));
+            return (extraData, true);
         }
         return (extraData, false);
     }
@@ -70,7 +69,12 @@ contract RiseFromTheGrave is IAbility, IEffect {
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         uint256 turnsLeft = abi.decode(extraData, (uint256));
-        if (turnsLeft == 1) {
+        // If the effect is applied to the mon (and not globally), then we just end early
+        if (turnsLeft == MON_EFFECT_IDENTIFIER) {
+            return (extraData, true);
+        }
+        // Otherwise, we are applied as a global effect and we should check if we should revive the mon
+        else if (turnsLeft == 1) {
             // Revive the mon and remove the effect
             ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.IsKnockedOut, 0);
             return (extraData, true);

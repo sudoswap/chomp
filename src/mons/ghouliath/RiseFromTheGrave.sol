@@ -9,9 +9,9 @@ import {IEngine} from "../../IEngine.sol";
 import {MonStateIndexName} from "../../Enums.sol";
 
 contract RiseFromTheGrave is IAbility, IEffect {
-    
-    uint256 constant public REVIVAL_DELAY = 3;
-    uint256 constant MON_EFFECT_IDENTIFIER = 17;
+
+    uint64 constant public REVIVAL_DELAY = 3;
+    uint64 constant MON_EFFECT_IDENTIFIER = 17;
 
     IEngine immutable ENGINE;
 
@@ -34,7 +34,11 @@ contract RiseFromTheGrave is IAbility, IEffect {
         else {
             uint256 value = 1;
             ENGINE.setGlobalKV(monEffectId, bytes32(value));
-            ENGINE.addEffect(playerIndex, monIndex, IEffect(address(this)), abi.encode(MON_EFFECT_IDENTIFIER));
+            uint64 v1 = MON_EFFECT_IDENTIFIER; // turns left, or sentinel value
+            uint64 v2 = uint64(playerIndex) & 0x3F; // player index (masked to 6 bits)
+            uint64 v3 = uint64(monIndex) & 0x3F; // mon index (masked to 6 bits)
+            uint256 packedValue = (v1 << 12) | (v2 << 6) | v3;
+            ENGINE.addEffect(playerIndex, monIndex, IEffect(address(this)), abi.encode(packedValue));
         }
     }
 
@@ -57,30 +61,40 @@ contract RiseFromTheGrave is IAbility, IEffect {
         */
         // If the mon is KO'd, add this effect to the global effects list and remove the mon effect
         if (ENGINE.getMonStateForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.IsKnockedOut) == 1) {
-            ENGINE.addEffect(2, 0, IEffect(address(this)), abi.encode(REVIVAL_DELAY));
+            uint64 v1 = REVIVAL_DELAY;
+            uint64 v2 = uint64(targetIndex) & 0x3F; // player index (masked to 6 bits)
+            uint64 v3 = uint64(monIndex) & 0x3F; // mon index (masked to 6 bits)
+            uint256 packedValue = (v1 << 12) | (v2 << 6) | v3;
+            ENGINE.addEffect(2, 0, IEffect(address(this)), abi.encode(packedValue));
             return (extraData, true);
         }
         return (extraData, false);
     }
 
     // Regain stamina on round end, this can overheal stamina
-    function onRoundEnd(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+    function onRoundEnd(uint256, bytes memory extraData, uint256, uint256)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
-        uint256 turnsLeft = abi.decode(extraData, (uint256));
+        // Decode the packed magic value
+        uint256 packedValue = abi.decode(extraData, (uint256));
+        uint64 turnsLeft = uint64(packedValue >> 12);
+        uint64 playerIndex = uint64((packedValue >> 6) & 0x3F); // Extract 6 bits for player index
+        uint64 monIndex = uint64(packedValue & 0x3F); // Extract 6 bits for mon index
+
         // If the effect is applied to the mon (and not globally), then we just end early
         if (turnsLeft == MON_EFFECT_IDENTIFIER) {
-            return (extraData, true);
+            return (extraData, false);
         }
         // Otherwise, we are applied as a global effect and we should check if we should revive the mon
         else if (turnsLeft == 1) {
             // Revive the mon and remove the effect
-            ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.IsKnockedOut, 0);
+            ENGINE.updateMonState(playerIndex, monIndex, MonStateIndexName.IsKnockedOut, 0);
             return (extraData, true);
         }
         else {
-            return (abi.encode(turnsLeft - 1), false);
+            uint256 newPackedValue = ((turnsLeft - 1) << 12) | ((playerIndex & 0x3F) << 6) | (monIndex & 0x3F);
+            return (abi.encode(newPackedValue), false);
         }
     }
 

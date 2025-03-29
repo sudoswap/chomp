@@ -178,12 +178,12 @@ contract GhouliathTest is Test, BattleHelper {
 
         // Verify Alice's mon is KO'd
         int32 isKnockedOut = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut);
-        assertEq(isKnockedOut, 1, "Alice's mon should be KO'd");
+        assertEq(isKnockedOut, 1);
 
         // Verify the effect was added to the global effects
-        (IEffect[] memory effects, bytes[] memory extraData) = engine.getEffects(battleKey, 2, 0);
+        (IEffect[] memory effects,) = engine.getEffects(battleKey, 2, 0);
 
-        /*
+        assertEq(address(effects[0]), address(riseFromTheGrave), "RiseFromTheGrave effect should be added to global effects");
 
         // Alice swaps in mon index 1
         vm.startPrank(ALICE);
@@ -199,7 +199,6 @@ contract GhouliathTest is Test, BattleHelper {
         // Verify mon is revived
         isKnockedOut = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut);
         assertEq(isKnockedOut, 0, "Alice's mon should be revived");
-        */
 
     }
 }

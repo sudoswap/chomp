@@ -10,7 +10,7 @@ import {ITypeCalculator} from "../types/ITypeCalculator.sol";
 abstract contract AttackCalculator {
     IEngine immutable ENGINE;
     ITypeCalculator immutable TYPE_CALCULATOR;
-    uint32 constant RNG_SCALING_DENOM  = 100;
+    uint32 constant RNG_SCALING_DENOM = 100;
 
     constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR) {
         ENGINE = _ENGINE;
@@ -29,15 +29,7 @@ abstract contract AttackCalculator {
         uint256 critRate // out of 100
     ) public {
         int32 damage = calculateDamagePure(
-            battleKey,
-            attackerPlayerIndex,
-            basePower,
-            accuracy,
-            volatility,
-            attackType,
-            attackSupertype,
-            rng,
-            critRate
+            battleKey, attackerPlayerIndex, basePower, accuracy, volatility, attackType, attackSupertype, rng, critRate
         );
         uint256 defenderPlayerIndex = (attackerPlayerIndex + 1) % 2;
         uint256[] memory monIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
@@ -160,7 +152,8 @@ abstract contract AttackCalculator {
             if ((rng3 % 100) <= critRate) {
                 critMultiplier = 2;
             }
-            damage = int32(critMultiplier * (scaledBasePower * attackStat * rngScaling) / (defenceStat * RNG_SCALING_DENOM));
+            damage =
+                int32(critMultiplier * (scaledBasePower * attackStat * rngScaling) / (defenceStat * RNG_SCALING_DENOM));
         }
         return damage;
     }

@@ -5,8 +5,8 @@ import "../Constants.sol";
 import "../Enums.sol";
 import "../Structs.sol";
 
-import {ICommitManager} from "./ICommitManager.sol";
 import {IEngine} from "../IEngine.sol";
+import {ICommitManager} from "./ICommitManager.sol";
 
 contract CommitManager is ICommitManager {
     // State variables

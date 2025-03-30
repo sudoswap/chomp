@@ -180,6 +180,8 @@ contract GhouliathTest is Test, BattleHelper {
         int32 isKnockedOut = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut);
         assertEq(isKnockedOut, 1);
 
+        // Verify the effect is added to the global effects list
+        (IEffect[] memory effects,) = engine.getEffects(battleKey, 2, 0);
         assertEq(address(effects[0]), address(riseFromTheGrave), "RiseFromTheGrave effect should be added to global effects");
 
         // Alice swaps in mon index 1

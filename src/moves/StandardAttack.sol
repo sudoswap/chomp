@@ -7,14 +7,14 @@ import "../Structs.sol";
 
 import {IEngine} from "../IEngine.sol";
 import {IEffect} from "../effects/IEffect.sol";
+
+import {Ownable} from "../lib/Ownable.sol";
 import {ITypeCalculator} from "../types/ITypeCalculator.sol";
 import {AttackCalculator} from "./AttackCalculator.sol";
 import {IMoveSet} from "./IMoveSet.sol";
 import {ATTACK_PARAMS} from "./StandardAttackStructs.sol";
-import {Ownable} from "../lib/Ownable.sol";
 
 contract StandardAttack is AttackCalculator, IMoveSet, Ownable {
-
     uint32 private _basePower;
     uint32 private _stamina;
     uint32 private _accuracy;
@@ -28,7 +28,9 @@ contract StandardAttack is AttackCalculator, IMoveSet, Ownable {
 
     string public name;
 
-    constructor(address owner, IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR, ATTACK_PARAMS memory params) AttackCalculator(_ENGINE, _TYPE_CALCULATOR) {
+    constructor(address owner, IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR, ATTACK_PARAMS memory params)
+        AttackCalculator(_ENGINE, _TYPE_CALCULATOR)
+    {
         _basePower = params.BASE_POWER;
         _stamina = params.STAMINA_COST;
         _accuracy = params.ACCURACY;
@@ -43,9 +45,7 @@ contract StandardAttack is AttackCalculator, IMoveSet, Ownable {
         _initializeOwner(owner);
     }
 
-    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng)
-        public
-    {
+    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng) public {
         if (basePower(battleKey) > 0) {
             calculateDamage(
                 battleKey,
@@ -72,7 +72,6 @@ contract StandardAttack is AttackCalculator, IMoveSet, Ownable {
     function isValidTarget(bytes32, bytes calldata) public pure returns (bool) {
         return true;
     }
-
 
     function priority(bytes32) public view returns (uint32) {
         return _priority;

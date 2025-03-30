@@ -8,9 +8,9 @@ import "../moves/IMoveSet.sol";
 import {IEngine} from "../IEngine.sol";
 import {IValidator} from "../IValidator.sol";
 
-import {ICommitManager} from "./ICommitManager.sol";
 import {IMonRegistry} from "../teams/IMonRegistry.sol";
 import {ITeamRegistry} from "../teams/ITeamRegistry.sol";
+import {ICommitManager} from "./ICommitManager.sol";
 
 contract DefaultValidator is IValidator {
     struct Args {

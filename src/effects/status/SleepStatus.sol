@@ -18,7 +18,8 @@ contract SleepStatus is StatusEffect {
     }
 
     function shouldRunAtStep(EffectStep r) external pure override returns (bool) {
-        return r == EffectStep.RoundStart || r == EffectStep.RoundEnd || r == EffectStep.OnApply || r == EffectStep.OnRemove;
+        return r == EffectStep.RoundStart || r == EffectStep.RoundEnd || r == EffectStep.OnApply
+            || r == EffectStep.OnRemove;
     }
 
     // At the start of the turn, check to see if we should apply sleep or end early
@@ -95,7 +96,7 @@ contract SleepStatus is StatusEffect {
     function _removeSleep(uint256 targetIndex, uint256 monIndex) internal {
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.ShouldSkipTurn, 0);
     }
-    
+
     function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) public override {
         // Remove any outstanding sleep flags (e.g. if turn X we got sleep, then turn X+1 we wake up, then we should remove the flag)
         _removeSleep(targetIndex, monIndex);

@@ -38,6 +38,10 @@ interface IEffect {
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);
 
+    function onAfterMove(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex, IMoveSet move)
+        external
+        returns (bytes memory updatedExtraData, bool removeAfterRun);
+
     // Lifecycle hooks when being applied or removed
     function onApply(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external

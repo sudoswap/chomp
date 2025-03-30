@@ -4,13 +4,14 @@ pragma solidity ^0.8.0;
 import "../Enums.sol";
 import "../Structs.sol";
 
+import {IEngine} from "../IEngine.sol";
 import {IEffect} from "../effects/IEffect.sol";
 import {ClonesWithImmutableArgs} from "../lib/ClonesWithImmutableArgs.sol";
+
+import {Ownable} from "../lib/Ownable.sol";
+import {ITypeCalculator} from "../types/ITypeCalculator.sol";
 import {StandardAttack} from "./StandardAttack.sol";
 import {ATTACK_PARAMS} from "./StandardAttackStructs.sol";
-import {IEngine} from "../IEngine.sol";
-import {ITypeCalculator} from "../types/ITypeCalculator.sol";
-import {Ownable} from "../lib/Ownable.sol";
 
 contract StandardAttackFactory is Ownable {
     IEngine public ENGINE;
@@ -23,7 +24,7 @@ contract StandardAttackFactory is Ownable {
         TYPE_CALCULATOR = _TYPE_CALCULATOR;
         _initializeOwner(msg.sender);
     }
-    
+
     function createAttack(ATTACK_PARAMS memory params) external returns (StandardAttack attack) {
         attack = new StandardAttack(msg.sender, ENGINE, TYPE_CALCULATOR, params);
         emit StandardAttackCreated(address(attack));

@@ -316,9 +316,29 @@ contract Engine is IEngine {
             (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
                 _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
             if (isGameOver) return;
+            
+            // If priority mons is not KO'ed, then run the priority player's mon's afterMove hook(s)
+            if (!isPriorityPlayerMonKOed) {
+                _runEffects(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.AfterMove);
+            }
+
+            // Check for game over and/or KOs
+            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
+                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
+            if (isGameOver) return;
+
+            // Always run the global effect's afterMove hook(s)
+            if (!isNonPriorityPlayerMonKOed && !isPriorityPlayerMonKOed) {
+                _runEffects(battleKey, rng, 2, 2, EffectStep.AfterMove);
+            }
+
+            // Check for game over and/or KOs
+            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
+                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
+            if (isGameOver) return;
 
             // If both mons are not KO'ed, then run the non priority player's move
-            if (!isNonPriorityPlayerMonKOed && !isPriorityPlayerMonKOed) {
+            if (!isNonPriorityPlayerMonKOed) {
                 _handlePlayerMove(battleKey, rng, otherPlayerIndex);
             }
 
@@ -326,6 +346,27 @@ contract Engine is IEngine {
             (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
                 _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
             if (isGameOver) return;
+
+            // If non priority mon is not KOed, then run the non priority player's mon's afterMove hook(s)
+            if (!isNonPriorityPlayerMonKOed) {
+                _runEffects(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.AfterMove);
+            }
+
+            // Check for game over and/or KOs
+            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
+                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
+            if (isGameOver) return;
+
+            // Always run the global effect's afterMove hook(s)
+            if (!isNonPriorityPlayerMonKOed && !isPriorityPlayerMonKOed) {
+                _runEffects(battleKey, rng, 2, 2, EffectStep.AfterMove);
+            }
+
+            // Check for game over and/or KOs
+            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
+                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
+            if (isGameOver) return;
+
 
             // Always run global effects at the end of the round
             _runEffects(battleKey, rng, 2, 2, EffectStep.RoundEnd);
@@ -335,7 +376,7 @@ contract Engine is IEngine {
                 _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
             if (isGameOver) return;
 
-            // If priority mon is not KOed, run effects for the priority mon
+            // If priority mon is not KOed, run roundEnd effects for the priority mon
             if (!isPriorityPlayerMonKOed) {
                 _runEffects(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.RoundEnd);
             }
@@ -345,7 +386,7 @@ contract Engine is IEngine {
                 _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
             if (isGameOver) return;
 
-            // If non priority mon is not KOed, run effects for the non priority mon
+            // If non priority mon is not KOed, run roundEnd effects for the non priority mon
             if (!isNonPriorityPlayerMonKOed) {
                 _runEffects(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.RoundEnd);
             }

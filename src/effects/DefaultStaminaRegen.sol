@@ -5,25 +5,25 @@ import "../Enums.sol";
 import "../Structs.sol";
 
 import {IEngine} from "../IEngine.sol";
-import {IEffect} from "./IEffect.sol";
+import {BasicEffect} from "./BasicEffect.sol";
 
-contract DefaultStaminaRegen is IEffect {
+contract DefaultStaminaRegen is BasicEffect {
     IEngine immutable ENGINE;
 
     constructor(IEngine _ENGINE) {
         ENGINE = _ENGINE;
     }
 
-    function name() external pure returns (string memory) {
+    function name() external pure override returns (string memory) {
         return "Default Stamina Regen";
     }
 
     // Should run at end of round
-    function shouldRunAtStep(EffectStep r) external pure returns (bool roundEnd) {
+    function shouldRunAtStep(EffectStep r) external pure override returns (bool roundEnd) {
         roundEnd = r == EffectStep.RoundEnd;
     }
 
-    function onRoundEnd(uint256, bytes memory, uint256, uint256) external returns (bytes memory, bool) {
+    function onRoundEnd(uint256, bytes memory, uint256, uint256) external override returns (bytes memory, bool) {
         bytes32 battleKey = ENGINE.battleKeyForWrite();
         uint256 playerSwitchForTurnFlag = ENGINE.getPlayerSwitchForTurnFlagForBattleState(battleKey);
         uint256[] memory activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
@@ -44,40 +44,4 @@ contract DefaultStaminaRegen is IEffect {
         // We don't need to store data
         return ("", false);
     }
-
-    function shouldApply(bytes memory, uint256, uint256) external pure returns (bool) {
-        return true;
-    }
-
-    // Everything below is an NoOp
-    // Lifecycle hooks during normal battle flow
-    function onRoundStart(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external
-        returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {}
-
-    // NOTE: ONLY RUN ON GLOBAL EFFECTS (mons have their Ability as their own hook to apply an effect on switch in)
-    function onMonSwitchIn(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external
-        returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {}
-
-    // NOTE: CURRENTLY ONLY RUN LOCALLY ON MONS (global effects do not have this hook)
-    function onMonSwitchOut(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external
-        returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {}
-
-    // NOTE: CURRENTLY ONLY RUN LOCALLY ON MONS (global effects do not have this hook)
-    function onAfterDamage(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex, int32 damage)
-        external
-        returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {}
-
-    // Lifecycle hooks when being applied or removed
-    function onApply(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external
-        returns (bytes memory updatedExtraData)
-    {}
-    function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) external {}
 }

@@ -3,14 +3,15 @@
 pragma solidity ^0.8.0;
 
 import {EffectStep} from "../../Enums.sol";
-import {IAbility} from "../../abilities/IAbility.sol";
-import {IEffect} from "../../effects/IEffect.sol";
-import {IEngine} from "../../IEngine.sol";
+
 import {MonStateIndexName} from "../../Enums.sol";
+import {IEngine} from "../../IEngine.sol";
+import {IAbility} from "../../abilities/IAbility.sol";
+import {BasicEffect} from "../../effects/BasicEffect.sol";
+import {IEffect} from "../../effects/IEffect.sol";
 
-contract RiseFromTheGrave is IAbility, IEffect {
-
-    uint64 constant public REVIVAL_DELAY = 3;
+contract RiseFromTheGrave is IAbility, BasicEffect {
+    uint64 public constant REVIVAL_DELAY = 3;
     uint64 constant MON_EFFECT_IDENTIFIER = 17;
 
     IEngine immutable ENGINE;
@@ -20,7 +21,7 @@ contract RiseFromTheGrave is IAbility, IEffect {
     }
 
     // IAbility implementation
-    function name() public pure override(IAbility, IEffect) returns (string memory)  {
+    function name() public pure override(IAbility, BasicEffect) returns (string memory) {
         return "Rise From The Grave";
     }
 
@@ -43,16 +44,13 @@ contract RiseFromTheGrave is IAbility, IEffect {
     }
 
     // IEffect implementation
-    function shouldRunAtStep(EffectStep step) external pure returns (bool) {
+    function shouldRunAtStep(EffectStep step) external pure override returns (bool) {
         return (step == EffectStep.RoundEnd || step == EffectStep.AfterDamage);
-    }
-
-    function shouldApply(bytes memory, uint256, uint256) external pure returns (bool) {
-        return true;
     }
 
     function onAfterDamage(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex, int32)
         external
+        override
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         /*
@@ -60,7 +58,11 @@ contract RiseFromTheGrave is IAbility, IEffect {
         and remove this effect (so we stop hooking into it on future applications)
         */
         // If the mon is KO'd, add this effect to the global effects list and remove the mon effect
-        if (ENGINE.getMonStateForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.IsKnockedOut) == 1) {
+        if (
+            ENGINE.getMonStateForBattle(
+                ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.IsKnockedOut
+            ) == 1
+        ) {
             uint64 v1 = REVIVAL_DELAY;
             uint64 v2 = uint64(targetIndex) & 0x3F; // player index (masked to 6 bits)
             uint64 v3 = uint64(monIndex) & 0x3F; // mon index (masked to 6 bits)
@@ -74,6 +76,7 @@ contract RiseFromTheGrave is IAbility, IEffect {
     // Regain stamina on round end, this can overheal stamina
     function onRoundEnd(uint256, bytes memory extraData, uint256, uint256)
         external
+        override
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         // Decode the packed magic value
@@ -91,51 +94,9 @@ contract RiseFromTheGrave is IAbility, IEffect {
             // Revive the mon and remove the effect
             ENGINE.updateMonState(playerIndex, monIndex, MonStateIndexName.IsKnockedOut, 0);
             return (extraData, true);
-        }
-        else {
+        } else {
             uint256 newPackedValue = ((turnsLeft - 1) << 12) | ((playerIndex & 0x3F) << 6) | (monIndex & 0x3F);
             return (abi.encode(newPackedValue), false);
         }
-    }
-
-
-    function onRoundStart(uint256, bytes memory extraData, uint256, uint256)
-        external
-        pure
-        returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {
-        // Logic for round start
-        return (extraData, false);
-    }
-
-    function onMonSwitchIn(uint256, bytes memory extraData, uint256, uint256)
-        external
-        pure
-        returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {
-        // Logic for when a mon switches in
-        return (extraData, false);
-    }
-
-    function onMonSwitchOut(uint256, bytes memory extraData, uint256, uint256)
-        external
-        pure
-        returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {
-        // Logic for when a mon switches out
-        return (extraData, false);
-    }
-
-    function onApply(uint256, bytes memory extraData, uint256, uint256)
-        external
-        pure
-        returns (bytes memory updatedExtraData)
-    {
-        // Logic for when the effect is applied
-        return extraData;
-    }
-
-    function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) external pure {
-        // Logic for when the effect is removed
     }
 }

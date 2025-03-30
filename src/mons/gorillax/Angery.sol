@@ -3,14 +3,17 @@
 pragma solidity ^0.8.0;
 
 import {EffectStep} from "../../Enums.sol";
-import {IAbility} from "../../abilities/IAbility.sol";
-import {IEffect} from "../../effects/IEffect.sol";
-import {IEngine} from "../../IEngine.sol";
-import {MonStateIndexName} from "../../Enums.sol";
 
-contract Angery is IAbility, IEffect {
-    uint256 constant public CHARGE_COUNT = 3; // After 3 charges, consume all charges to heal
-    int32 constant public MAX_HP_DENOM = 6; // Heal for 1/6 of HP
+import {MonStateIndexName} from "../../Enums.sol";
+import {IEngine} from "../../IEngine.sol";
+import {IAbility} from "../../abilities/IAbility.sol";
+
+import {BasicEffect} from "../../effects/BasicEffect.sol";
+import {IEffect} from "../../effects/IEffect.sol";
+
+contract Angery is IAbility, BasicEffect {
+    uint256 public constant CHARGE_COUNT = 3; // After 3 charges, consume all charges to heal
+    int32 public constant MAX_HP_DENOM = 6; // Heal for 1/6 of HP
 
     IEngine immutable ENGINE;
 
@@ -19,7 +22,7 @@ contract Angery is IAbility, IEffect {
     }
 
     // IAbility implementation
-    function name() public pure override(IAbility, IEffect) returns (string memory)  {
+    function name() public pure override(IAbility, BasicEffect) returns (string memory) {
         return "Angery";
     }
 
@@ -38,77 +41,37 @@ contract Angery is IAbility, IEffect {
     }
 
     // IEffect implementation
-    function shouldRunAtStep(EffectStep step) external pure returns (bool) {
+    function shouldRunAtStep(EffectStep step) external pure override returns (bool) {
         return (step == EffectStep.RoundEnd || step == EffectStep.AfterDamage);
-    }
-
-    function shouldApply(bytes memory, uint256, uint256) external pure returns (bool) {
-        return true;
     }
 
     // Regain stamina on round end, this can overheal stamina
     function onRoundEnd(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
+        override
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         uint256 numCharges = abi.decode(extraData, (uint256));
         if (numCharges == CHARGE_COUNT) {
             // Heal
-            int32 healAmount = int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.Hp)) / MAX_HP_DENOM;
+            int32 healAmount = int32(
+                ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.Hp)
+            ) / MAX_HP_DENOM;
             ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Hp, healAmount);
             // Reset the charges
             return (abi.encode(numCharges - CHARGE_COUNT), false);
-        }
-        else {
+        } else {
             return (extraData, false);
         }
     }
 
-    function onAfterDamage(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex, int32 damageDealt)
+    function onAfterDamage(uint256, bytes memory extraData, uint256 , uint256 , int32 )
         external
+        override
+        pure
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         uint256 numCharges = abi.decode(extraData, (uint256));
         return (abi.encode(numCharges + 1), false);
-    }
-
-    function onRoundStart(uint256, bytes memory extraData, uint256, uint256)
-        external
-        pure
-        returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {
-        // Logic for round start
-        return (extraData, false);
-    }
-
-    function onMonSwitchIn(uint256, bytes memory extraData, uint256, uint256)
-        external
-        pure
-        returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {
-        // Logic for when a mon switches in
-        return (extraData, false);
-    }
-
-    function onMonSwitchOut(uint256, bytes memory extraData, uint256, uint256)
-        external
-        pure
-        returns (bytes memory updatedExtraData, bool removeAfterRun)
-    {
-        // Logic for when a mon switches out
-        return (extraData, false);
-    }
-
-    function onApply(uint256, bytes memory extraData, uint256, uint256)
-        external
-        pure
-        returns (bytes memory updatedExtraData)
-    {
-        // Logic for when the effect is applied
-        return extraData;
-    }
-
-    function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) external pure {
-        // Logic for when the effect is removed
     }
 }

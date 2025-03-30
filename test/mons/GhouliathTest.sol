@@ -166,12 +166,12 @@ contract GhouliathTest is Test, BattleHelper {
             engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
         );
 
-        // Verify that the RiseFromTheGrave effect is applied to Alice's mon
+        // Verify that the RiseFromTheGrave effect applies its global effect and KV
         bytes32 monEffectId = keccak256(abi.encode(0, 0, riseFromTheGrave.name()));
         bytes32 effectValue = engine.getGlobalKV(battleKey, monEffectId);
         assertEq(uint256(effectValue), 1, "RiseFromTheGrave effect should be applied on switch in");
 
-        // Bob uses the instant death attack on Alice's mon
+        // Bob uses the attack (which KOs) on Alice's mon
         _commitRevealExecuteForAliceAndBob(
             engine, commitManager, battleKey, NO_OP_MOVE_INDEX, 0, "", ""
         );
@@ -179,9 +179,6 @@ contract GhouliathTest is Test, BattleHelper {
         // Verify Alice's mon is KO'd
         int32 isKnockedOut = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut);
         assertEq(isKnockedOut, 1);
-
-        // Verify the effect was added to the global effects
-        (IEffect[] memory effects,) = engine.getEffects(battleKey, 2, 0);
 
         assertEq(address(effects[0]), address(riseFromTheGrave), "RiseFromTheGrave effect should be added to global effects");
 
@@ -200,5 +197,23 @@ contract GhouliathTest is Test, BattleHelper {
         isKnockedOut = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut);
         assertEq(isKnockedOut, 0, "Alice's mon should be revived");
 
+        // Alice swaps in mon index 0, Bob does attack again, which KOs Alice's mon
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, 0, abi.encode(0), ""
+        );
+        
+        // Verify the mon is not revived after REVIVAL_DELAY turns
+        // (First we swap in mon index 1)
+        vm.startPrank(ALICE);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, "", abi.encode(1), true);
+        for (uint i = 0; i < riseFromTheGrave.REVIVAL_DELAY() - 1; i++) {
+            _commitRevealExecuteForAliceAndBob(
+                engine, commitManager, battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, "", ""
+            );
+        }
+
+        // Verify mon is not revived
+        isKnockedOut = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut);
+        assertEq(isKnockedOut, 1, "Alice's mon should be revived");
     }
 }

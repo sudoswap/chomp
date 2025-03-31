@@ -27,10 +27,10 @@ contract TempStatBoostEffect is BasicEffect {
     function onApply(uint256, bytes memory, uint256 targetIndex, uint256 monIndex)
         external
         override
-        returns (bytes memory updatedExtraData)
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Attack, 1);
-        return "";
+        return ("", false);
     }
 
     function onMonSwitchOut(bytes32, uint256, bytes memory, uint256 targetIndex, uint256 monIndex)

@@ -39,9 +39,9 @@ contract FrightStatus is StatusEffect {
         external
         pure
         override
-        returns (bytes memory updatedExtraData)
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
-        return (abi.encode(DURATION));
+        return (abi.encode(DURATION), false);
     }
 
     // Fright reduces stamina by 1 if it is not already at 0

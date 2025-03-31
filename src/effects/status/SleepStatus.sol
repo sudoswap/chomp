@@ -41,10 +41,10 @@ contract SleepStatus is StatusEffect {
     function onApply(uint256 rng, bytes memory, uint256 targetIndex, uint256 monIndex)
         external
         override
-        returns (bytes memory updatedExtraData)
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         _applySleep(rng, targetIndex, monIndex);
-        return (abi.encode(DURATION));
+        return (abi.encode(DURATION), false);
     }
 
     // Sleep just skips the turn

@@ -465,23 +465,23 @@ contract Engine is IEngine {
         if (effect.shouldApply(extraData, targetIndex, monIndex)) {
             BattleState storage state = battleStates[battleKey];
             bytes[] storage effectsExtraData;
-            if (targetIndex == 2) {
-                state.globalEffects.push(effect);
-                state.extraDataForGlobalEffects.push(extraData);
-                effectsExtraData = state.extraDataForGlobalEffects;
-            } else {
-                state.monStates[targetIndex][monIndex].targetedEffects.push(effect);
-                state.monStates[targetIndex][monIndex].extraDataForTargetedEffects.push(extraData);
-                effectsExtraData = state.monStates[targetIndex][monIndex].extraDataForTargetedEffects;
-            }
+            bytes memory extraDataToUse = extraData;
+            bool removeAfterRun = false;
+
             // Check if we have to run an onApply state update
             if (effect.shouldRunAtStep(EffectStep.OnApply)) {
                 uint256 rng = state.pRNGStream[state.pRNGStream.length - 1];
                 // If so, we run the effect first, and get updated extraData if necessary
-                extraData = effect.onApply(rng, extraData, targetIndex, monIndex);
-
-                // Set the extraData so be the returned value from onApply
-                effectsExtraData[effectsExtraData.length - 1] = extraData;
+                (extraDataToUse, removeAfterRun) = effect.onApply(rng, extraData, targetIndex, monIndex);
+            }
+            if (! removeAfterRun) {
+                if (targetIndex == 2) {
+                    state.globalEffects.push(effect);
+                    state.extraDataForGlobalEffects.push(extraDataToUse);
+                } else {
+                    state.monStates[targetIndex][monIndex].targetedEffects.push(effect);
+                    state.monStates[targetIndex][monIndex].extraDataForTargetedEffects.push(extraDataToUse);
+                }
             }
             emit EffectAdd(battleKey, targetIndex, monIndex, address(effect), extraData, msg.sender, currentStep);
         }
@@ -630,6 +630,12 @@ contract Engine is IEngine {
     }
 
     function _handleSwitch(bytes32 battleKey, uint256 playerIndex, uint256 monToSwitchIndex, address source) internal {
+
+        // NOTE: We will check for game over after the switch in the engine for two player turns, so we don't do it here
+        // But this also means that the current flow of OnMonSwitchOut effects -> OnMonSwitchIn effects -> ability activateOnSwitch
+        // will all resolve before checking for KOs or winners
+        // (could break this up even more, but that's for a later version / PR)
+
         BattleState storage state = battleStates[battleKey];
         MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
         uint256 rng = state.pRNGStream[state.pRNGStream.length - 1];
@@ -654,11 +660,6 @@ contract Engine is IEngine {
         }
 
         emit MonSwitch(battleKey, playerIndex, monToSwitchIndex, source);
-
-        // NOTE: We will check for game over after the switch in the engine for two player turns, so we don't do it here
-        // But this also means that the current flow of OnMonSwitchOut effects -> OnMonSwitchIn effects -> ability activateOnSwitch
-        // will all resolve before checking for KOs or winners
-        // (could break this up even more, but that's for a later version / PR)
     }
 
     function _handlePlayerMove(bytes32 battleKey, uint256 rng, uint256 playerIndex) internal {

@@ -23,10 +23,10 @@ contract SingleInstanceEffect is BasicEffect {
         return r == EffectStep.OnApply;
     }
 
-    function onApply(uint256, bytes memory, uint256 targetIndex, uint256 monIndex) external override returns (bytes memory) {
+    function onApply(uint256, bytes memory, uint256 targetIndex, uint256 monIndex) external override returns (bytes memory, bool removeAfterRun) {
         bytes32 indexHash = keccak256(abi.encode(targetIndex, monIndex));
         ENGINE.setGlobalKV(indexHash, bytes32("true"));
-        return "";
+        return ("", false);
     }
 
     function shouldApply(bytes memory, uint256 targetIndex, uint256 monIndex) external override view returns (bool) {

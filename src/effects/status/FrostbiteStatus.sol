@@ -24,7 +24,7 @@ contract FrostbiteStatus is StatusEffect {
     function onApply(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         override
-        returns (bytes memory updatedExtraData)
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         // Get the special attack of the affected mon
         uint32 baseSpecialAttack = ENGINE.getMonValueForBattle(
@@ -38,7 +38,7 @@ contract FrostbiteStatus is StatusEffect {
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.SpecialAttack, specialAttackAmountToReduce);
 
         // Do not update data
-        return (extraData);
+        return (extraData, false);
     }
 
     function onRemove(bytes memory data, uint256 targetIndex, uint256 monIndex) public override {

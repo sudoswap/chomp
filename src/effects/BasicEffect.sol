@@ -78,9 +78,9 @@ abstract contract BasicEffect is IEffect {
     function onApply(uint256 , bytes memory , uint256 , uint256 )
         external
         virtual
-        returns (bytes memory updatedExtraData)
+        returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
-        return (updatedExtraData);
+        return (updatedExtraData, removeAfterRun);
     }
 
     function onRemove(bytes memory extraData, uint256 targetIndex, uint256 monIndex) external virtual {}

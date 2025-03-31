@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import {DefaultRuleset} from "../src/DefaultRuleset.sol";
-import {Engine} from "../src/Engine.sol";
-import {MoveClass, Type} from "../src/Enums.sol";
-import "../src/Structs.sol";
+import {DefaultRuleset} from "../../src/DefaultRuleset.sol";
+import {Engine} from "../../src/Engine.sol";
+import {MoveClass, Type} from "../../src/Enums.sol";
+import "../../src/Structs.sol";
 
-import {IAbility} from "../src/abilities/IAbility.sol";
-import {CommitManager} from "../src/deprecated/CommitManager.sol";
-import {CommitManager} from "../src/deprecated/CommitManager.sol";
-import {DefaultValidator} from "../src/deprecated/DefaultValidator.sol";
-import {DefaultValidator} from "../src/deprecated/DefaultValidator.sol";
-import {AttackCalculator} from "../src/moves/AttackCalculator.sol";
+import {IAbility} from "../../src/abilities/IAbility.sol";
+import {CommitManager} from "../../src/deprecated/CommitManager.sol";
+import {CommitManager} from "../../src/deprecated/CommitManager.sol";
+import {DefaultValidator} from "../../src/deprecated/DefaultValidator.sol";
+import {DefaultValidator} from "../../src/deprecated/DefaultValidator.sol";
+import {AttackCalculator} from "../../src/moves/AttackCalculator.sol";
 
-import {IMoveSet} from "../src/moves/IMoveSet.sol";
-import {ITypeCalculator} from "../src/types/ITypeCalculator.sol";
-import {TypeCalculator} from "../src/types/TypeCalculator.sol";
-import {CustomAttack} from "./mocks/CustomAttack.sol";
-import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
-import {TestTeamRegistry} from "./mocks/TestTeamRegistry.sol";
+import {IMoveSet} from "../../src/moves/IMoveSet.sol";
+import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
+import {TypeCalculator} from "../../src/types/TypeCalculator.sol";
+import {CustomAttack} from "../mocks/CustomAttack.sol";
+import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
+import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {Test} from "forge-std/Test.sol";
 
 contract TestAttackCalculator is AttackCalculator {

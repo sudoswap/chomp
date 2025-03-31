@@ -7,10 +7,8 @@ import "../../src/Structs.sol";
 import {Test} from "forge-std/Test.sol";
 
 import {Engine} from "../../src/Engine.sol";
-
 import {MonStateIndexName, MoveClass, Type} from "../../src/Enums.sol";
 import {FastCommitManager} from "../../src/FastCommitManager.sol";
-
 import {FastValidator} from "../../src/FastValidator.sol";
 import {IEngine} from "../../src/IEngine.sol";
 import {IFastCommitManager} from "../../src/IFastCommitManager.sol";
@@ -18,16 +16,15 @@ import {IRuleset} from "../../src/IRuleset.sol";
 import {IValidator} from "../../src/IValidator.sol";
 import {IAbility} from "../../src/abilities/IAbility.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
-import {CarrotHarvest} from "../../src/mons/sofabbi/CarrotHarvest.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
-
-import {BattleHelper} from "../abstract/BattleHelper.sol";
-import {CustomAttack} from "../mocks/CustomAttack.sol";
-
 import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
+
+import {BattleHelper} from "../abstract/BattleHelper.sol";
+
+import {CarrotHarvest} from "../../src/mons/sofabbi/CarrotHarvest.sol";
 
 contract SofabbiTest is Test, BattleHelper {
     Engine engine;

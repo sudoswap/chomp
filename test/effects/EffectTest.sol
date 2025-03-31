@@ -1,37 +1,37 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import "../lib/forge-std/src/Test.sol";
+import "../../lib/forge-std/src/Test.sol";
 
-import "../src/Constants.sol";
-import "../src/Enums.sol";
-import "../src/Structs.sol";
+import "../../src/Constants.sol";
+import "../../src/Enums.sol";
+import "../../src/Structs.sol";
 
-import {DefaultRuleset} from "../src/DefaultRuleset.sol";
+import {DefaultRuleset} from "../../src/DefaultRuleset.sol";
 
-import {Engine} from "../src/Engine.sol";
-import {IValidator} from "../src/IValidator.sol";
-import {IAbility} from "../src/abilities/IAbility.sol";
-import {CommitManager} from "../src/deprecated/CommitManager.sol";
-import {DefaultValidator} from "../src/deprecated/DefaultValidator.sol";
-import {IEffect} from "../src/effects/IEffect.sol";
+import {Engine} from "../../src/Engine.sol";
+import {IValidator} from "../../src/IValidator.sol";
+import {IAbility} from "../../src/abilities/IAbility.sol";
+import {CommitManager} from "../../src/deprecated/CommitManager.sol";
+import {DefaultValidator} from "../../src/deprecated/DefaultValidator.sol";
+import {IEffect} from "../../src/effects/IEffect.sol";
 
-import {IMoveSet} from "../src/moves/IMoveSet.sol";
-import {ITypeCalculator} from "../src/types/ITypeCalculator.sol";
-import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
-import {TestTeamRegistry} from "./mocks/TestTeamRegistry.sol";
-import {TestTypeCalculator} from "./mocks/TestTypeCalculator.sol";
+import {IMoveSet} from "../../src/moves/IMoveSet.sol";
+import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
+import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
+import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
+import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 
 // Import effects
 
-import {FrightStatus} from "../src/effects/status/FrightStatus.sol";
-import {FrostbiteStatus} from "../src/effects/status/FrostbiteStatus.sol";
-import {SleepStatus} from "../src/effects/status/SleepStatus.sol";
+import {FrightStatus} from "../../src/effects/status/FrightStatus.sol";
+import {FrostbiteStatus} from "../../src/effects/status/FrostbiteStatus.sol";
+import {SleepStatus} from "../../src/effects/status/SleepStatus.sol";
 
 // Import custom effect attack factory and template
 
-import {CustomEffectAttack} from "../src/moves/CustomEffectAttack.sol";
-import {CustomEffectAttackFactory} from "../src/moves/CustomEffectAttackFactory.sol";
+import {CustomEffectAttack} from "../../src/moves/CustomEffectAttack.sol";
+import {CustomEffectAttackFactory} from "../../src/moves/CustomEffectAttackFactory.sol";
 
 contract EngineTest is Test {
     CommitManager commitManager;

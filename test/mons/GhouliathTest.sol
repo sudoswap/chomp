@@ -17,24 +17,19 @@ import {IRuleset} from "../../src/IRuleset.sol";
 import {IValidator} from "../../src/IValidator.sol";
 import {IAbility} from "../../src/abilities/IAbility.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
-import {RiseFromTheGrave} from "../../src/mons/ghouliath/RiseFromTheGrave.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
-
 import {StandardAttack} from "../../src/moves/StandardAttack.sol";
 import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
 import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
-import {BattleHelper} from "../abstract/BattleHelper.sol";
-import {CustomAttack} from "../mocks/CustomAttack.sol";
-import {InstantDeathEffect} from "../mocks/InstantDeathEffect.sol";
-
 import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 
-import {CustomEffectAttack} from "../../src/moves/CustomEffectAttack.sol";
-import {CustomEffectAttackFactory} from "../../src/moves/CustomEffectAttackFactory.sol";
+import {BattleHelper} from "../abstract/BattleHelper.sol";
+
+import {RiseFromTheGrave} from "../../src/mons/ghouliath/RiseFromTheGrave.sol";
 
 contract GhouliathTest is Test, BattleHelper {
     Engine engine;

@@ -15,21 +15,25 @@ contract SingleInstanceEffect is BasicEffect {
         ENGINE = _ENGINE;
     }
 
-    function name() external override pure returns (string memory) {
+    function name() external pure override returns (string memory) {
         return "Instant Death";
     }
 
-    function shouldRunAtStep(EffectStep r) external override pure returns (bool) {
+    function shouldRunAtStep(EffectStep r) external pure override returns (bool) {
         return r == EffectStep.OnApply;
     }
 
-    function onApply(uint256, bytes memory, uint256 targetIndex, uint256 monIndex) external override returns (bytes memory, bool removeAfterRun) {
+    function onApply(uint256, bytes memory, uint256 targetIndex, uint256 monIndex)
+        external
+        override
+        returns (bytes memory, bool removeAfterRun)
+    {
         bytes32 indexHash = keccak256(abi.encode(targetIndex, monIndex));
         ENGINE.setGlobalKV(indexHash, bytes32("true"));
         return ("", false);
     }
 
-    function shouldApply(bytes memory, uint256 targetIndex, uint256 monIndex) external override view returns (bool) {
+    function shouldApply(bytes memory, uint256 targetIndex, uint256 monIndex) external view override returns (bool) {
         bytes32 indexHash = keccak256(abi.encode(targetIndex, monIndex));
         bytes32 value = ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), indexHash);
         return value == bytes32(0);

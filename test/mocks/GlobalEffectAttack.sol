@@ -55,7 +55,6 @@ contract GlobalEffectAttack is IMoveSet {
         return true;
     }
 
-
     function moveClass(bytes32) external pure returns (MoveClass) {
         return MoveClass.Physical;
     }

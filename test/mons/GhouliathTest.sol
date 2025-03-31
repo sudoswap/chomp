@@ -7,7 +7,7 @@ import "../../src/Structs.sol";
 import {Test} from "forge-std/Test.sol";
 
 import {Engine} from "../../src/Engine.sol";
-import {MonStateIndexName, Type, MoveClass, EffectStep} from "../../src/Enums.sol";
+import {EffectStep, MonStateIndexName, MoveClass, Type} from "../../src/Enums.sol";
 import {FastCommitManager} from "../../src/FastCommitManager.sol";
 
 import {FastValidator} from "../../src/FastValidator.sol";
@@ -22,22 +22,21 @@ import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
 
-import {BattleHelper} from "../abstract/BattleHelper.sol";
-import {CustomAttack} from "../mocks/CustomAttack.sol";
-import {InstantDeathEffect} from "../mocks/InstantDeathEffect.sol";
 import {StandardAttack} from "../../src/moves/StandardAttack.sol";
 import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
 import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
+import {BattleHelper} from "../abstract/BattleHelper.sol";
+import {CustomAttack} from "../mocks/CustomAttack.sol";
+import {InstantDeathEffect} from "../mocks/InstantDeathEffect.sol";
 
 import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 
-import {CustomEffectAttackFactory} from "../../src/moves/CustomEffectAttackFactory.sol";
 import {CustomEffectAttack} from "../../src/moves/CustomEffectAttack.sol";
+import {CustomEffectAttackFactory} from "../../src/moves/CustomEffectAttackFactory.sol";
 
 contract GhouliathTest is Test, BattleHelper {
-
     Engine engine;
     FastCommitManager commitManager;
     TestTypeCalculator typeCalc;
@@ -148,13 +147,7 @@ contract GhouliathTest is Test, BattleHelper {
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
         bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(
-                args.validator,
-                args.rngOracle,
-                args.ruleset,
-                args.teamRegistry,
-                args.p0TeamHash
-            )
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
         );
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
@@ -172,9 +165,7 @@ contract GhouliathTest is Test, BattleHelper {
         assertEq(uint256(effectValue), 1, "RiseFromTheGrave effect should be applied on switch in");
 
         // Bob uses the attack (which KOs) on Alice's mon
-        _commitRevealExecuteForAliceAndBob(
-            engine, commitManager, battleKey, NO_OP_MOVE_INDEX, 0, "", ""
-        );
+        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, NO_OP_MOVE_INDEX, 0, "", "");
 
         // Verify Alice's mon is KO'd
         int32 isKnockedOut = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut);
@@ -182,14 +173,16 @@ contract GhouliathTest is Test, BattleHelper {
 
         // Verify the effect is added to the global effects list
         (IEffect[] memory effects,) = engine.getEffects(battleKey, 2, 0);
-        assertEq(address(effects[0]), address(riseFromTheGrave), "RiseFromTheGrave effect should be added to global effects");
+        assertEq(
+            address(effects[0]), address(riseFromTheGrave), "RiseFromTheGrave effect should be added to global effects"
+        );
 
         // Alice swaps in mon index 1
         vm.startPrank(ALICE);
         commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, "", abi.encode(1), true);
 
         // We wait for the REVIVAL_DELAY - 1 turns to pass
-        for (uint i = 0; i < riseFromTheGrave.REVIVAL_DELAY() - 1; i++) {
+        for (uint256 i = 0; i < riseFromTheGrave.REVIVAL_DELAY() - 1; i++) {
             _commitRevealExecuteForAliceAndBob(
                 engine, commitManager, battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, "", ""
             );
@@ -200,15 +193,13 @@ contract GhouliathTest is Test, BattleHelper {
         assertEq(isKnockedOut, 0, "Alice's mon should be revived");
 
         // Alice swaps in mon index 0, Bob does attack again, which KOs Alice's mon
-        _commitRevealExecuteForAliceAndBob(
-            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, 0, abi.encode(0), ""
-        );
-        
+        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, SWITCH_MOVE_INDEX, 0, abi.encode(0), "");
+
         // Verify the mon is not revived after REVIVAL_DELAY turns
         // (First we swap in mon index 1)
         vm.startPrank(ALICE);
         commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, "", abi.encode(1), true);
-        for (uint i = 0; i < riseFromTheGrave.REVIVAL_DELAY() - 1; i++) {
+        for (uint256 i = 0; i < riseFromTheGrave.REVIVAL_DELAY() - 1; i++) {
             _commitRevealExecuteForAliceAndBob(
                 engine, commitManager, battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, "", ""
             );

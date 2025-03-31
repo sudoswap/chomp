@@ -41,7 +41,6 @@ contract InvalidMove is IMoveSet {
         return false;
     }
 
-
     function moveClass(bytes32) external pure returns (MoveClass) {
         return MoveClass.Physical;
     }

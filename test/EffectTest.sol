@@ -7,12 +7,13 @@ import "../src/Constants.sol";
 import "../src/Enums.sol";
 import "../src/Structs.sol";
 
-import {CommitManager} from "../src/deprecated/CommitManager.sol";
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
-import {DefaultValidator} from "../src/deprecated/DefaultValidator.sol";
+
 import {Engine} from "../src/Engine.sol";
 import {IValidator} from "../src/IValidator.sol";
 import {IAbility} from "../src/abilities/IAbility.sol";
+import {CommitManager} from "../src/deprecated/CommitManager.sol";
+import {DefaultValidator} from "../src/deprecated/DefaultValidator.sol";
 import {IEffect} from "../src/effects/IEffect.sol";
 
 import {IMoveSet} from "../src/moves/IMoveSet.sol";
@@ -273,13 +274,7 @@ contract EngineTest is Test {
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
         bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(
-                args.validator,
-                args.rngOracle,
-                args.ruleset,
-                args.teamRegistry,
-                args.p0TeamHash
-            )
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
         );
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
@@ -580,7 +575,7 @@ contract EngineTest is Test {
 
         // Assert that Alice's mon has a stamina delta of -2 (max stamina of 5)
         assertEq(state.monStates[0][0].staminaDelta, -2);
-        
+
         // Assert that Bob's mon has a stamina delta of -1 (max stamina of 1)
         assertEq(state.monStates[1][0].staminaDelta, -1);
 

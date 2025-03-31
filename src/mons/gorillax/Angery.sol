@@ -65,10 +65,10 @@ contract Angery is IAbility, BasicEffect {
         }
     }
 
-    function onAfterDamage(uint256, bytes memory extraData, uint256 , uint256 , int32 )
+    function onAfterDamage(uint256, bytes memory extraData, uint256, uint256, int32)
         external
-        override
         pure
+        override
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
         uint256 numCharges = abi.decode(extraData, (uint256));

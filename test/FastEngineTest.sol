@@ -7,10 +7,11 @@ import "../src/Constants.sol";
 import "../src/Enums.sol";
 import "../src/Structs.sol";
 
-import {FastCommitManager} from "../src/FastCommitManager.sol";
 import {DefaultRuleset} from "../src/DefaultRuleset.sol";
-import {FastValidator} from "../src/FastValidator.sol";
+
 import {Engine} from "../src/Engine.sol";
+import {FastCommitManager} from "../src/FastCommitManager.sol";
+import {FastValidator} from "../src/FastValidator.sol";
 import {IValidator} from "../src/IValidator.sol";
 import {IAbility} from "../src/abilities/IAbility.sol";
 
@@ -30,10 +31,11 @@ import {GlobalEffectAttack} from "./mocks/GlobalEffectAttack.sol";
 import {InstantDeathOnSwitchInEffect} from "./mocks/InstantDeathOnSwitchInEffect.sol";
 import {InvalidMove} from "./mocks/InvalidMove.sol";
 import {MockRandomnessOracle} from "./mocks/MockRandomnessOracle.sol";
+
+import {OneTurnStatBoost} from "./mocks/OneTurnStatBoost.sol";
 import {SingleInstanceEffect} from "./mocks/SingleInstanceEffect.sol";
 import {SkipTurnMove} from "./mocks/SkipTurnMove.sol";
 import {TempStatBoostEffect} from "./mocks/TempStatBoostEffect.sol";
-import {OneTurnStatBoost} from "./mocks/OneTurnStatBoost.sol";
 import {TestTeamRegistry} from "./mocks/TestTeamRegistry.sol";
 
 import {TestTypeCalculator} from "./mocks/TestTypeCalculator.sol";
@@ -106,13 +108,7 @@ contract FastEngineTest is Test {
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
         bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(
-                args.validator,
-                args.rngOracle,
-                args.ruleset,
-                args.teamRegistry,
-                args.p0TeamHash
-            )
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
         );
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
@@ -152,7 +148,6 @@ contract FastEngineTest is Test {
     }
 
     function test_commitBattleWithoutAcceptReverts() public {
-
         /*
         - both players can propose (without accepting) and nonce will not increase (i.e. battle key does not change)
         - accepting a battle increments the nonce for the next propose (i.e. battle key changes)
@@ -232,13 +227,7 @@ contract FastEngineTest is Test {
         // Have Alice accept the battle bob proposed
         vm.startPrank(ALICE);
         bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(
-                args.validator,
-                args.rngOracle,
-                args.ruleset,
-                args.teamRegistry,
-                bobArgs.p0TeamHash
-            )
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, bobArgs.p0TeamHash)
         );
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
 
@@ -493,13 +482,7 @@ contract FastEngineTest is Test {
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
         bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(
-                args.validator,
-                args.rngOracle,
-                args.ruleset,
-                args.teamRegistry,
-                args.p0TeamHash
-            )
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
         );
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
@@ -598,13 +581,7 @@ contract FastEngineTest is Test {
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
         bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(
-                args.validator,
-                args.rngOracle,
-                args.ruleset,
-                args.teamRegistry,
-                args.p0TeamHash
-            )
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
         );
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
@@ -754,13 +731,7 @@ contract FastEngineTest is Test {
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
         bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(
-                args.validator,
-                args.rngOracle,
-                args.ruleset,
-                args.teamRegistry,
-                args.p0TeamHash
-            )
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
         );
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);

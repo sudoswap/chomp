@@ -7,8 +7,8 @@ import "../src/Constants.sol";
 import "../src/Enums.sol";
 import "../src/Structs.sol";
 
-import {FastCommitManager} from "../src/FastCommitManager.sol";
 import {Engine} from "../src/Engine.sol";
+import {FastCommitManager} from "../src/FastCommitManager.sol";
 
 contract FastCommitManagerTest is Test {
     FastCommitManager commitManager;

@@ -7,8 +7,8 @@ import "../src/Constants.sol";
 import "../src/Enums.sol";
 import "../src/Structs.sol";
 
-import {CommitManager} from "../src/deprecated/CommitManager.sol";
 import {Engine} from "../src/Engine.sol";
+import {CommitManager} from "../src/deprecated/CommitManager.sol";
 
 contract CommitManagerTest is Test {
     CommitManager commitManager;

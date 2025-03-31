@@ -7,7 +7,7 @@ import "../../src/Structs.sol";
 import {Test} from "forge-std/Test.sol";
 
 import {Engine} from "../../src/Engine.sol";
-import {MonStateIndexName, Type, MoveClass} from "../../src/Enums.sol";
+import {MonStateIndexName, MoveClass, Type} from "../../src/Enums.sol";
 import {FastCommitManager} from "../../src/FastCommitManager.sol";
 
 import {FastValidator} from "../../src/FastValidator.sol";
@@ -29,11 +29,10 @@ import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 
-import {CustomEffectAttackFactory} from "../../src/moves/CustomEffectAttackFactory.sol";
 import {CustomEffectAttack} from "../../src/moves/CustomEffectAttack.sol";
+import {CustomEffectAttackFactory} from "../../src/moves/CustomEffectAttackFactory.sol";
 
 contract GorillaxTest is Test, BattleHelper {
-
     Engine engine;
     FastCommitManager commitManager;
     TestTypeCalculator typeCalc;
@@ -123,13 +122,7 @@ contract GorillaxTest is Test, BattleHelper {
         vm.prank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
         bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(
-                args.validator,
-                args.rngOracle,
-                args.ruleset,
-                args.teamRegistry,
-                args.p0TeamHash
-            )
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
         );
         vm.prank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
@@ -142,10 +135,8 @@ contract GorillaxTest is Test, BattleHelper {
         );
 
         // Alice chooses to attack, Bob chooses to do nothing for CHARGE_COUNT rounds
-        for (uint i; i < angery.CHARGE_COUNT(); i++) {
-            _commitRevealExecuteForAliceAndBob(
-                engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
-            );
+        for (uint256 i; i < angery.CHARGE_COUNT(); i++) {
+            _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", "");
         }
 
         // Bobs's mon started with  HP = MAX_HP_DENOM * hpScale, it took 3 * hpScale damage

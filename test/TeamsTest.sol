@@ -36,9 +36,8 @@ contract TeamsTest is Test {
         teamRegistry = new DefaultTeamRegistry(
             DefaultTeamRegistry.Args({REGISTRY: monRegistry, MONS_PER_TEAM: 1, MOVES_PER_MON: 1})
         );
-        lazyTeamRegistry = new LazyTeamRegistry(
-            LazyTeamRegistry.Args({REGISTRY: monRegistry, MONS_PER_TEAM: 1, MOVES_PER_MON: 1})
-        );
+        lazyTeamRegistry =
+            new LazyTeamRegistry(LazyTeamRegistry.Args({REGISTRY: monRegistry, MONS_PER_TEAM: 1, MOVES_PER_MON: 1}));
 
         // Make Alice the mon registry owner
         monRegistry.transferOwnership(ALICE);

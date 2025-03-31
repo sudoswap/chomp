@@ -464,10 +464,8 @@ contract Engine is IEngine {
         }
         if (effect.shouldApply(extraData, targetIndex, monIndex)) {
             BattleState storage state = battleStates[battleKey];
-            bytes[] storage effectsExtraData;
             bytes memory extraDataToUse = extraData;
             bool removeAfterRun = false;
-
             // Check if we have to run an onApply state update
             if (effect.shouldRunAtStep(EffectStep.OnApply)) {
                 uint256 rng = state.pRNGStream[state.pRNGStream.length - 1];

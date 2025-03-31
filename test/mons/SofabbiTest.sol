@@ -8,7 +8,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {Engine} from "../../src/Engine.sol";
 
-import {MonStateIndexName, Type, MoveClass} from "../../src/Enums.sol";
+import {MonStateIndexName, MoveClass, Type} from "../../src/Enums.sol";
 import {FastCommitManager} from "../../src/FastCommitManager.sol";
 
 import {FastValidator} from "../../src/FastValidator.sol";
@@ -142,10 +142,14 @@ contract SofabbiTest is Test, BattleHelper {
         assertEq(state.monStates[0][0].targetedEffects.length, 1);
 
         // Now have Alice switch to her second mon
-        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, SWITCH_MOVE_INDEX, NO_OP_MOVE_INDEX, abi.encode(1), "");
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, NO_OP_MOVE_INDEX, abi.encode(1), ""
+        );
 
         // Now have Alice switch back to her first mon
-        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, SWITCH_MOVE_INDEX, NO_OP_MOVE_INDEX, abi.encode(0), "");
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, NO_OP_MOVE_INDEX, abi.encode(0), ""
+        );
 
         // Verify that the CarrotHarvest effect is still only applied once
         // (should still have only one targeted effect)
@@ -158,7 +162,6 @@ contract SofabbiTest is Test, BattleHelper {
     }
 
     function test_carrotHarvestTriggersAtEndOfRoundWhenRNGReturnsTrue() public {
-
         // Create move arrays
         IMoveSet[] memory moves = new IMoveSet[](0);
 
@@ -211,9 +214,7 @@ contract SofabbiTest is Test, BattleHelper {
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,
             p0TeamHash: keccak256(
-                abi.encodePacked(
-                    bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0)
-                )
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
             )
         });
 

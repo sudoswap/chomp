@@ -16,7 +16,7 @@ contract AfterDamageReboundEffect is BasicEffect {
     }
 
     // Should run at end of round
-    function shouldRunAtStep(EffectStep r) external override pure returns (bool) {
+    function shouldRunAtStep(EffectStep r) external pure override returns (bool) {
         return r == EffectStep.AfterDamage;
     }
 
@@ -27,7 +27,8 @@ contract AfterDamageReboundEffect is BasicEffect {
         returns (bytes memory, bool)
     {
         // Heals for all damage done
-        int32 currentDamage = ENGINE.getMonStateForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.Hp);
+        int32 currentDamage =
+            ENGINE.getMonStateForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.Hp);
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Hp, currentDamage * -1);
         return (extraData, false);
     }

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Engine} from "../src/Engine.sol";
-import {Type, MoveClass} from "../src/Enums.sol";
+import {MoveClass, Type} from "../src/Enums.sol";
 import {IEffect} from "../src/effects/IEffect.sol";
 import {StandardAttack} from "../src/moves/StandardAttack.sol";
 import {StandardAttackFactory} from "../src/moves/StandardAttackFactory.sol";

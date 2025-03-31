@@ -2,15 +2,14 @@
 
 pragma solidity ^0.8.0;
 
-import {Test} from "forge-std/Test.sol";
-import {FastCommitManager} from "../../src/FastCommitManager.sol";
 import {Engine} from "../../src/Engine.sol";
+import {FastCommitManager} from "../../src/FastCommitManager.sol";
+import {Test} from "forge-std/Test.sol";
 
 abstract contract BattleHelper is Test {
     address constant ALICE = address(0x1);
     address constant BOB = address(0x2);
 
-        
     // Helper function to commit, reveal, and execute moves for both players
     function _commitRevealExecuteForAliceAndBob(
         Engine engine,

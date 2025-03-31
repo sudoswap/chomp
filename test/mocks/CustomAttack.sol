@@ -40,11 +40,17 @@ contract CustomAttack is AttackCalculator, IMoveSet {
         return "CustomAttack";
     }
 
-    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng)
-        external
-    {
+    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng) external {
         calculateDamage(
-            battleKey, attackerPlayerIndex, BASE_POWER, ACCURACY, 0 /* volatility */, TYPE, MoveClass.Physical, rng, 0 /* crit rate */
+            battleKey,
+            attackerPlayerIndex,
+            BASE_POWER,
+            ACCURACY,
+            0, /* volatility */
+            TYPE,
+            MoveClass.Physical,
+            rng,
+            0 /* crit rate */
         );
     }
 
@@ -63,7 +69,6 @@ contract CustomAttack is AttackCalculator, IMoveSet {
     function isValidTarget(bytes32, bytes calldata) external pure returns (bool) {
         return true;
     }
-
 
     function moveClass(bytes32) external pure returns (MoveClass) {
         return MoveClass.Physical;

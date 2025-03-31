@@ -15,12 +15,12 @@ contract TempStatBoostEffect is BasicEffect {
         ENGINE = _ENGINE;
     }
 
-    function name() external override pure returns (string memory) {
+    function name() external pure override returns (string memory) {
         return "";
     }
 
     // Should run at end of round and on apply
-    function shouldRunAtStep(EffectStep r) external override pure returns (bool) {
+    function shouldRunAtStep(EffectStep r) external pure override returns (bool) {
         return (r == EffectStep.OnMonSwitchOut || r == EffectStep.OnApply);
     }
 

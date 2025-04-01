@@ -367,7 +367,6 @@ contract Engine is IEngine {
                 _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
             if (isGameOver) return;
 
-
             // Always run global effects at the end of the round
             _runEffects(battleKey, rng, 2, 2, EffectStep.RoundEnd);
 
@@ -615,12 +614,12 @@ contract Engine is IEngine {
             isNonPriorityPlayerActiveMonKnockedOut =
                 state.monStates[otherPlayerIndex][state.activeMonIndex[otherPlayerIndex]].isKnockedOut;
 
-            // If the priority player mon is KO'ed, then next turn we tenatively set it to be just the other player
+            // If the priority player mon is KO'ed (and the other player isn't), then next turn we tenatively set it to be just the other player
             if (isPriorityPlayerActiveMonKnockedOut && !isNonPriorityPlayerActiveMonKnockedOut) {
                 playerSwitchForTurnFlag = priorityPlayerIndex;
             }
 
-            // If the non priority player mon is KO'ed, then next turn we tenatively set it to be just the priority player
+            // If the non priority player mon is KO'ed (and the other player isn't), then next turn we tenatively set it to be just the priority player
             if (!isPriorityPlayerActiveMonKnockedOut && isNonPriorityPlayerActiveMonKnockedOut) {
                 playerSwitchForTurnFlag = otherPlayerIndex;
             }
@@ -775,6 +774,15 @@ contract Engine is IEngine {
                 ++i;
             }
         }
+    }
+
+    function _runEffectsAndCheckForGameOver(bytes32 battleKey, uint256 rng, uint256 effectIndex, uint256 playerIndex, EffectStep round, EffectRunCondition condition) {
+        // Check for KO
+        // Check flags to see if effect should be run
+        // Run the effect
+        _runEffects()
+        // Check for KO
+        // Set values as needed
     }
 
     /**

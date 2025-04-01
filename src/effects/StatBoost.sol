@@ -53,7 +53,7 @@ contract StatBoost is BasicEffect {
         ENGINE.setGlobalKV(keyForMon, bytes32(uint256(int256(totalBoostAmount))));
 
         // Update the stat boost
-        ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName(statIndex), totalBoostAmount);
+        ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName(statIndex), newBoostAmount);
 
         return (extraData, removeAfterRun);
     }
@@ -70,7 +70,7 @@ contract StatBoost is BasicEffect {
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName(statIndex), existingBoostAmount * -1);
     }
 
-    function onMonSwitchOut(bytes32, uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+    function onMonSwitchOut(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         override
         returns (bytes memory updatedExtraData, bool removeAfterRun)

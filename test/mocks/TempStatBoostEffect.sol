@@ -33,7 +33,7 @@ contract TempStatBoostEffect is BasicEffect {
         return ("", false);
     }
 
-    function onMonSwitchOut(bytes32, uint256, bytes memory, uint256 targetIndex, uint256 monIndex)
+    function onMonSwitchOut(uint256, bytes memory, uint256 targetIndex, uint256 monIndex)
         external
         override
         returns (bytes memory updatedExtraData, bool removeAfterRun)

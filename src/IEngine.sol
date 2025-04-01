@@ -44,6 +44,7 @@ interface IEngine {
         external
         view
         returns (IEffect[] memory, bytes[] memory);
+    function getMonKOCount(bytes32 battleKey, uint256 playerIndex) external view returns (uint256);
 
     // State mutating effects
     function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int32 valueToAdd)

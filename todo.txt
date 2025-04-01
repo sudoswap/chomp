@@ -1,6 +1,17 @@
 # TODO
 
-1) Refactor switching to happen as a privileged top-level action, similar to updating mon state
+1) make `runEffects` no-op if the conditions aren't met (eg if someone is KOed) and set the appropriate game over / switchForTurn flags
+
+e.g.
+
+```
+_runEffects(state, lifecycle hook)
+_runEffects(state, lifecycle hook)
+...
+// do final check for switch for turn / game over here
+```
+
+
 2) Allow restricting/enforcement of move selection
 3) Add a OnBeforeDamage hook to the Engine, add tests for it as well, allow editing of damage on the stack, also put the damage source on the stack
 

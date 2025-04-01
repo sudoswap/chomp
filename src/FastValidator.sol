@@ -20,6 +20,7 @@ contract FastValidator is IValidator {
     }
 
     uint256 immutable MONS_PER_TEAM;
+    uint256 immutable BITMAP_VALUE_FOR_MONS_PER_TEAM;
     uint256 immutable MOVES_PER_MON;
     uint256 public immutable TIMEOUT_DURATION;
     IEngine immutable ENGINE;
@@ -29,6 +30,7 @@ contract FastValidator is IValidator {
     constructor(IEngine _ENGINE, Args memory args) {
         ENGINE = _ENGINE;
         MONS_PER_TEAM = args.MONS_PER_TEAM;
+        BITMAP_VALUE_FOR_MONS_PER_TEAM = (uint256(1) << args.MONS_PER_TEAM) - 1;
         MOVES_PER_MON = args.MOVES_PER_MON;
         TIMEOUT_DURATION = args.TIMEOUT_DURATION;
     }
@@ -187,13 +189,8 @@ contract FastValidator is IValidator {
             playerIndex = [uint256(1), uint256(0)];
         }
         for (uint256 i; i < playerIndex.length; ++i) {
-            uint256 numMonsKnockedOut;
-            for (uint256 j; j < MONS_PER_TEAM; ++j) {
-                int32 isKnockedOut =
-                    ENGINE.getMonStateForBattle(battleKey, playerIndex[i], j, MonStateIndexName.IsKnockedOut);
-                numMonsKnockedOut += uint32(isKnockedOut);
-            }
-            if (numMonsKnockedOut == MONS_PER_TEAM) {
+            uint256 monsKOedBitmapValue = ENGINE.getMonKOCount(battleKey, playerIndex[i]);
+            if (monsKOedBitmapValue == BITMAP_VALUE_FOR_MONS_PER_TEAM) {
                 if (playerIndex[i] == 0) {
                     return players[1];
                 } else {

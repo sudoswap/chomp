@@ -58,3 +58,8 @@ enum MonStateIndexName {
     Type1,
     Type2
 }
+
+enum EffectRunCondition {
+    SkipIfGameOver, // Default to always run
+    SkipIfGameOverOrMonKO // Skips if mon is KO'ed
+}

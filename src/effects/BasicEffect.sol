@@ -62,7 +62,7 @@ abstract contract BasicEffect is IEffect {
         return (extraData, false);
     }
 
-    function onAfterMove(uint256, bytes memory extraData, uint256, uint256, IMoveSet)
+    function onAfterMove(uint256, bytes memory extraData, uint256, uint256)
         external
         virtual
         returns (bytes memory updatedExtraData, bool removeAfterRun)

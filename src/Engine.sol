@@ -50,7 +50,7 @@ contract Engine is IEngine {
         address source,
         uint256 step
     );
-    event MonMove(bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 moveIndex, bytes extraData);
+    event MonMove(bytes32 indexed battleKey, uint256 playerIndex, uint256 monIndex, uint256 moveIndex, bytes extraData, int32 staminaCost);
     event DamageDeal(
         bytes32 indexed battleKey,
         uint256 playerIndex,
@@ -298,102 +298,37 @@ contract Engine is IEngine {
                 otherPlayerIndex = 1;
             }
 
-            // Run beginning of round effects all at once to start
-            // NOTE: We assume these cannot KO
-            _runEffects(battleKey, rng, 2, 2, EffectStep.RoundStart);
-            _runEffects(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.RoundStart);
-            _runEffects(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.RoundStart);
+            // Run beginning of round effects
+            _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, 2, 2, EffectStep.RoundStart, EffectRunCondition.SkipIfGameOver);
+            _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.RoundStart, EffectRunCondition.SkipIfGameOverOrMonKO);
+            _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.RoundStart, EffectRunCondition.SkipIfGameOverOrMonKO);
 
-            // Execute priority player's move
+            // Run priority player's move (NOTE: moves won't run if either mon is KOed)
             _handlePlayerMove(battleKey, rng, priorityPlayerIndex);
 
-            // Initialize variables for checking game state
-            bool isPriorityPlayerMonKOed;
-            bool isNonPriorityPlayerMonKOed;
-            bool isGameOver;
-
-            // Check if either player's mon has been KO'ed, and if we need to force a switch for next turn
-            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
-                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
-            if (isGameOver) return;
-            
             // If priority mons is not KO'ed, then run the priority player's mon's afterMove hook(s)
-            if (!isPriorityPlayerMonKOed) {
-                _runEffects(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.AfterMove);
-            }
-
-            // Check for game over and/or KOs
-            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
-                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
-            if (isGameOver) return;
+            _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.AfterMove, EffectRunCondition.SkipIfGameOverOrMonKO);
 
             // Always run the global effect's afterMove hook(s)
-            if (!isNonPriorityPlayerMonKOed && !isPriorityPlayerMonKOed) {
-                _runEffects(battleKey, rng, 2, 2, EffectStep.AfterMove);
-            }
+            _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, 2, priorityPlayerIndex, EffectStep.AfterMove, EffectRunCondition.SkipIfGameOver);
 
-            // Check for game over and/or KOs
-            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
-                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
-            if (isGameOver) return;
-
-            // If both mons are not KO'ed, then run the non priority player's move
-            if (!isNonPriorityPlayerMonKOed) {
-                _handlePlayerMove(battleKey, rng, otherPlayerIndex);
-            }
-
-            // Check for game over and/or KOs
-            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
-                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
-            if (isGameOver) return;
+            // Run the non priority player's move
+            _handlePlayerMove(battleKey, rng, otherPlayerIndex);
 
             // If non priority mon is not KOed, then run the non priority player's mon's afterMove hook(s)
-            if (!isNonPriorityPlayerMonKOed) {
-                _runEffects(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.AfterMove);
-            }
-
-            // Check for game over and/or KOs
-            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
-                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
-            if (isGameOver) return;
+            _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.AfterMove, EffectRunCondition.SkipIfGameOverOrMonKO);
 
             // Always run the global effect's afterMove hook(s)
-            if (!isNonPriorityPlayerMonKOed && !isPriorityPlayerMonKOed) {
-                _runEffects(battleKey, rng, 2, 2, EffectStep.AfterMove);
-            }
-
-            // Check for game over and/or KOs
-            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
-                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
-            if (isGameOver) return;
+            _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, 2, otherPlayerIndex, EffectStep.AfterMove, EffectRunCondition.SkipIfGameOver);
 
             // Always run global effects at the end of the round
-            _runEffects(battleKey, rng, 2, 2, EffectStep.RoundEnd);
-
-            // Check for game over and/or KOs
-            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
-                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
-            if (isGameOver) return;
+            _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, 2, 2, EffectStep.RoundEnd, EffectRunCondition.SkipIfGameOver);
 
             // If priority mon is not KOed, run roundEnd effects for the priority mon
-            if (!isPriorityPlayerMonKOed) {
-                _runEffects(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.RoundEnd);
-            }
-
-            // Check for game over and/or KOs
-            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
-                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
-            if (isGameOver) return;
+            _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.RoundEnd, EffectRunCondition.SkipIfGameOverOrMonKO);
 
             // If non priority mon is not KOed, run roundEnd effects for the non priority mon
-            if (!isNonPriorityPlayerMonKOed) {
-                _runEffects(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.RoundEnd);
-            }
-
-            // Check for game over and/or KOs
-            (playerSwitchForTurnFlag, isPriorityPlayerMonKOed, isNonPriorityPlayerMonKOed, isGameOver) =
-                _checkForGameOverOrKO(battleKey, priorityPlayerIndex);
-            if (isGameOver) return;
+            playerSwitchForTurnFlag = _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.RoundEnd, EffectRunCondition.SkipIfGameOverOrMonKO);
 
             // Progress turn index and finally set the player switch for turn flag
             state.turnId += 1;
@@ -541,7 +476,6 @@ contract Engine is IEngine {
         uint256[] storage rngValues = battleStates[battleKey].pRNGStream;
         uint256 rngValue = rngValues[rngValues.length - 1];
 
-        // Note: We pass playerIndex in twice because `runEffects will look up active mon index
         _runEffects(battleKey, rngValue, playerIndex, playerIndex, EffectStep.AfterDamage);
         emit DamageDeal(battleKey, playerIndex, monIndex, damage, msg.sender, currentStep);
     }
@@ -663,6 +597,7 @@ contract Engine is IEngine {
         Battle storage battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
         RevealedMove memory move = commitManager.getMoveForBattleStateForTurn(battleKey, playerIndex, state.turnId);
+        int32 staminaCost;
 
         // Handle shouldSkipTurn flag first and toggle it off if set
         MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
@@ -675,8 +610,15 @@ contract Engine is IEngine {
             }
         }
 
-        // Emit event
-        emit MonMove(battleKey, playerIndex, state.activeMonIndex[playerIndex], move.moveIndex, move.extraData);
+        // If either player has a KOed mon, then we also just return early without running the move
+        {
+            bool isPlayerKOed = state.monStates[playerIndex][state.activeMonIndex[playerIndex]].isKnockedOut;
+            uint256 otherPlayerIndex = (playerIndex + 1) % 2;
+            bool isOtherPlayerKOed = state.monStates[otherPlayerIndex][state.activeMonIndex[otherPlayerIndex]].isKnockedOut;
+            if (isPlayerKOed || isOtherPlayerKOed) {
+                return;
+            }
+        }
 
         // Handle a switch or a no-op
         // otherwise, execute the moveset
@@ -685,7 +627,6 @@ contract Engine is IEngine {
             _handleSwitch(battleKey, playerIndex, abi.decode(move.extraData, (uint256)), address(0));
         } else if (move.moveIndex == NO_OP_MOVE_INDEX) {
             // do nothing (e.g. just recover stamina)
-            return;
         }
         // Execute the move and then set updated state, active mons, and effects/data
         else {
@@ -700,12 +641,15 @@ contract Engine is IEngine {
             IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex];
 
             // Update the mon state directly to account for the stamina cost of the move
-            state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta -=
-                int32(moveSet.stamina(battleKey));
+            staminaCost = int32(moveSet.stamina(battleKey));
+            state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta -= staminaCost;
 
             // Run the move (no longer checking for a return value)
             moveSet.move(battleKey, playerIndex, move.extraData, rng);
         }
+
+        // Emit event
+        emit MonMove(battleKey, playerIndex, state.activeMonIndex[playerIndex], move.moveIndex, move.extraData, staminaCost);
     }
 
     /**
@@ -759,6 +703,9 @@ contract Engine is IEngine {
                 } else if (round == EffectStep.AfterDamage) {
                     (updatedExtraData, removeAfterRun) =
                         effects[i].onAfterDamage(rng, extraData[i], playerIndex, monIndex, damageDealt);
+                } else if (round == EffectStep.AfterMove) {
+                    (updatedExtraData, removeAfterRun) =
+                        effects[i].onAfterMove(rng, extraData[i], playerIndex, monIndex);
                 }
 
                 // If we remove the effect after doing it, then we clear and update the array/extra data
@@ -776,13 +723,39 @@ contract Engine is IEngine {
         }
     }
 
-    function _runEffectsAndCheckForGameOver(bytes32 battleKey, uint256 rng, uint256 effectIndex, uint256 playerIndex, EffectStep round, EffectRunCondition condition) {
-        // Check for KO
-        // Check flags to see if effect should be run
-        // Run the effect
-        _runEffects()
-        // Check for KO
-        // Set values as needed
+    function _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(
+        bytes32 battleKey, 
+        uint256 rng, 
+        uint256 effectIndex, 
+        uint256 playerIndex,
+        uint256 playerSwitchForTurnFlag,
+        EffectStep round,
+        EffectRunCondition condition) private returns (uint256 playerSwitchForTurnFlag) {
+
+        // Check for Game Over and return early if so
+        BattleState storage state = battleStates[battleKey];
+        if (state.winner != address(0)) {
+            return 2;
+        }
+        // If non-global effect, check if we should still run if mon is KOed
+        if (effectIndex != 2) {
+            bool isMonKOed =
+                state.monStates[playerIndex][state.activeMonIndex[playerIndex]].isKnockedOut;
+            if (isMonKOed && condition == EffectRunCondition.SkipIfGameOverOrMonKO) {
+                return 2;
+                // TODO: use the outputs of the previous call and feed it in
+            }
+        }
+
+        // Otherwise, run the effect
+        _runEffects(battleKey, rng, effectIndex, playerIndex, round);
+
+        // Set Game Over if true, and calculate and return switch for turn flag
+        // We check for both players
+        (playerSwitchForTurnFlag, , , ) =
+                _checkForGameOverOrKO(battleKey, playerIndex);
+        (playerSwitchForTurnFlag, , , ) =
+                _checkForGameOverOrKO(battleKey, (playerIndex + 1) % 2);
     }
 
     /**

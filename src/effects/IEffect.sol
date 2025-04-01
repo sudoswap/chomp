@@ -38,7 +38,7 @@ interface IEffect {
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);
 
-    function onAfterMove(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex, IMoveSet move)
+    function onAfterMove(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);
 

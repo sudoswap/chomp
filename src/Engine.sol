@@ -242,7 +242,7 @@ contract Engine is IEngine {
 
             // Run the move (trust that the validator only lets valid single player moves happen as a switch action)
             // Running the move will set the winner flag if valid
-            playerSwitchForTurnFlag = _handlePlayerMoveAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rngForSoloTurn, playerIndex, playerSwitchForTurnFlag);
+            playerSwitchForTurnFlag = _handleMove(battleKey, rngForSoloTurn, playerIndex, playerSwitchForTurnFlag);
         }
         // Otherwise, we need to run priority calculations and update the game state for both players
         /*
@@ -288,36 +288,49 @@ contract Engine is IEngine {
             }
 
             // Run beginning of round effects
-            playerSwitchForTurnFlag = _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, 2, 2, EffectStep.RoundStart, EffectRunCondition.SkipIfGameOver, playerSwitchForTurnFlag);
-            playerSwitchForTurnFlag = _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.RoundStart, EffectRunCondition.SkipIfGameOverOrMonKO, playerSwitchForTurnFlag);
-            playerSwitchForTurnFlag = _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.RoundStart, EffectRunCondition.SkipIfGameOverOrMonKO, playerSwitchForTurnFlag);
+            playerSwitchForTurnFlag = _handleEffects(battleKey, rng, 2, 2, EffectStep.RoundStart, EffectRunCondition.SkipIfGameOver, playerSwitchForTurnFlag);
+            playerSwitchForTurnFlag = _handleEffects(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.RoundStart, EffectRunCondition.SkipIfGameOverOrMonKO, playerSwitchForTurnFlag);
+            playerSwitchForTurnFlag = _handleEffects(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.RoundStart, EffectRunCondition.SkipIfGameOverOrMonKO, playerSwitchForTurnFlag);
 
             // Run priority player's move (NOTE: moves won't run if either mon is KOed)
-            playerSwitchForTurnFlag = _handlePlayerMoveAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, priorityPlayerIndex, playerSwitchForTurnFlag);
+            playerSwitchForTurnFlag = _handleMove(battleKey, rng, priorityPlayerIndex, playerSwitchForTurnFlag);
 
             // If priority mons is not KO'ed, then run the priority player's mon's afterMove hook(s)
-            playerSwitchForTurnFlag = _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.AfterMove, EffectRunCondition.SkipIfGameOverOrMonKO, playerSwitchForTurnFlag);
+            playerSwitchForTurnFlag = _handleEffects(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.AfterMove, EffectRunCondition.SkipIfGameOverOrMonKO, playerSwitchForTurnFlag);
 
             // Always run the global effect's afterMove hook(s)
-            playerSwitchForTurnFlag = _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, 2, priorityPlayerIndex, EffectStep.AfterMove, EffectRunCondition.SkipIfGameOver, playerSwitchForTurnFlag);
+            playerSwitchForTurnFlag = _handleEffects(battleKey, rng, 2, priorityPlayerIndex, EffectStep.AfterMove, EffectRunCondition.SkipIfGameOver, playerSwitchForTurnFlag);
 
             // Run the non priority player's move
-            playerSwitchForTurnFlag = _handlePlayerMoveAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, otherPlayerIndex, playerSwitchForTurnFlag);
+            playerSwitchForTurnFlag = _handleMove(battleKey, rng, otherPlayerIndex, playerSwitchForTurnFlag);
+
+            // For turn 0 only: wait for both mons to be sent in, then handle the ability activateOnSwitch
+            // Happens immediately after both mons are sent in, before any other effects
+            if (turnId == 0) {
+                Mon memory priorityMon = battle.teams[priorityPlayerIndex][state.activeMonIndex[priorityPlayerIndex]];
+                if (address(priorityMon.ability) != address(0)) {
+                    priorityMon.ability.activateOnSwitch(battleKey, priorityPlayerIndex, state.activeMonIndex[priorityPlayerIndex]);
+                }
+                Mon memory otherMon = battle.teams[otherPlayerIndex][state.activeMonIndex[otherPlayerIndex]];
+                if (address(otherMon.ability) != address(0)) {
+                    otherMon.ability.activateOnSwitch(battleKey, otherPlayerIndex, state.activeMonIndex[otherPlayerIndex]);
+                }
+            }
 
             // If non priority mon is not KOed, then run the non priority player's mon's afterMove hook(s)
-            playerSwitchForTurnFlag = _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.AfterMove, EffectRunCondition.SkipIfGameOverOrMonKO, playerSwitchForTurnFlag);
+            playerSwitchForTurnFlag = _handleEffects(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.AfterMove, EffectRunCondition.SkipIfGameOverOrMonKO, playerSwitchForTurnFlag);
 
             // Always run the global effect's afterMove hook(s)
-            playerSwitchForTurnFlag = _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, 2, otherPlayerIndex, EffectStep.AfterMove, EffectRunCondition.SkipIfGameOver, playerSwitchForTurnFlag);
+            playerSwitchForTurnFlag = _handleEffects(battleKey, rng, 2, otherPlayerIndex, EffectStep.AfterMove, EffectRunCondition.SkipIfGameOver, playerSwitchForTurnFlag);
 
             // Always run global effects at the end of the round
-            playerSwitchForTurnFlag = _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, 2, 2, EffectStep.RoundEnd, EffectRunCondition.SkipIfGameOver, playerSwitchForTurnFlag);
+            playerSwitchForTurnFlag = _handleEffects(battleKey, rng, 2, 2, EffectStep.RoundEnd, EffectRunCondition.SkipIfGameOver, playerSwitchForTurnFlag);
 
             // If priority mon is not KOed, run roundEnd effects for the priority mon
-            playerSwitchForTurnFlag = _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.RoundEnd, EffectRunCondition.SkipIfGameOverOrMonKO, playerSwitchForTurnFlag);
+            playerSwitchForTurnFlag = _handleEffects(battleKey, rng, priorityPlayerIndex, priorityPlayerIndex, EffectStep.RoundEnd, EffectRunCondition.SkipIfGameOverOrMonKO, playerSwitchForTurnFlag);
 
             // If non priority mon is not KOed, run roundEnd effects for the non priority mon
-            playerSwitchForTurnFlag = _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.RoundEnd, EffectRunCondition.SkipIfGameOverOrMonKO, playerSwitchForTurnFlag);
+            playerSwitchForTurnFlag = _handleEffects(battleKey, rng, otherPlayerIndex, otherPlayerIndex, EffectStep.RoundEnd, EffectRunCondition.SkipIfGameOverOrMonKO, playerSwitchForTurnFlag);
         }
 
         // Progress turn index and finally set the player switch for turn flag on the state
@@ -594,16 +607,16 @@ contract Engine is IEngine {
         // Run onMonSwitchIn hook for global effects
         _runEffects(battleKey, rng, 2, playerIndex, EffectStep.OnMonSwitchIn);
 
-        // Run ability for the newly switched in mon
+        // Run ability for the newly switched in mon (as long as it's not turn 0, execute() has a special case to run activateOnSwitch after both moves are handled)
         Mon memory mon = battles[battleKey].teams[playerIndex][monToSwitchIndex];
-        if (address(mon.ability) != address(0)) {
+        if (address(mon.ability) != address(0) && state.turnId != 0) {
             mon.ability.activateOnSwitch(battleKey, playerIndex, monToSwitchIndex);
         }
 
         emit MonSwitch(battleKey, playerIndex, monToSwitchIndex, source);
     }
 
-    function _handlePlayerMoveAndSetGameOverAndReturnSwitchForTurnFlag(bytes32 battleKey, uint256 rng, uint256 playerIndex, uint256 prevPlayerSwitchForTurnFlag) internal returns (uint256 playerSwitchForTurnFlag) {
+    function _handleMove(bytes32 battleKey, uint256 rng, uint256 playerIndex, uint256 prevPlayerSwitchForTurnFlag) internal returns (uint256 playerSwitchForTurnFlag) {
         Battle storage battle = battles[battleKey];
         BattleState storage state = battleStates[battleKey];
         RevealedMove memory move = commitManager.getMoveForBattleStateForTurn(battleKey, playerIndex, state.turnId);
@@ -745,7 +758,7 @@ contract Engine is IEngine {
         }
     }
 
-    function _runEffectsAndSetGameOverAndReturnSwitchForTurnFlag(
+    function _handleEffects(
         bytes32 battleKey, 
         uint256 rng, 
         uint256 effectIndex, 
@@ -830,6 +843,10 @@ contract Engine is IEngine {
         } else {
             return 0;
         }
+    }
+
+    function getTeamSize(bytes32 battleKey, uint256 playerIndex) external view returns (uint256) {
+        return battles[battleKey].teams[playerIndex].length;
     }
 
     function getMoveForMonForBattle(bytes32 battleKey, uint256 playerIndex, uint256 monIndex, uint256 moveIndex)

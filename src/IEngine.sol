@@ -34,6 +34,7 @@ interface IEngine {
         view
         returns (IMoveSet);
     function getPlayersForBattle(bytes32 battleKey) external view returns (address[] memory);
+    function getTeamSize(bytes32 battleKey, uint256 playerIndex) external view returns (uint256);
     function getTurnIdForBattleState(bytes32 battleKey) external view returns (uint256);
     function getActiveMonIndexForBattleState(bytes32 battleKey) external view returns (uint256[] memory);
     function getPlayerSwitchForTurnFlagForBattleState(bytes32 battleKey) external view returns (uint256);

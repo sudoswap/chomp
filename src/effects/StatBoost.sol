@@ -8,7 +8,6 @@ import {IEngine} from "../IEngine.sol";
 import {BasicEffect} from "./BasicEffect.sol";
 
 contract StatBoost is BasicEffect {
-    
     IEngine immutable ENGINE;
 
     constructor(IEngine _ENGINE) {
@@ -33,7 +32,7 @@ contract StatBoost is BasicEffect {
         external
         override
         returns (bytes memory, bool)
-{       
+    {
         // Check if an existing stat boost for the mon / stat index already exists
         (uint256 statIndex, int32 newBoostAmount) = abi.decode(extraData, (uint256, int32));
         bytes32 keyForMon = keccak256(abi.encode(targetIndex, monIndex, statIndex, name()));
@@ -59,7 +58,7 @@ contract StatBoost is BasicEffect {
     }
 
     function _resetStatBoosts(uint256 targetIndex, uint256 monIndex, bytes memory extraData) internal {
-        (uint256 statIndex, ) = abi.decode(extraData, (uint256, int32));
+        (uint256 statIndex,) = abi.decode(extraData, (uint256, int32));
         bytes32 keyForMon = keccak256(abi.encode(targetIndex, monIndex, statIndex, name()));
         int32 existingBoostAmount = int32(int256(uint256(ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), keyForMon))));
 

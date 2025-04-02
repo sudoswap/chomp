@@ -17,8 +17,9 @@ import {IRuleset} from "../../src/IRuleset.sol";
 import {IValidator} from "../../src/IValidator.sol";
 import {IAbility} from "../../src/abilities/IAbility.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
-import {Interweaving} from "../../src/mons/inutia/Interweaving.sol";
+
 import {StatBoost} from "../../src/effects/StatBoost.sol";
+import {Interweaving} from "../../src/mons/inutia/Interweaving.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
@@ -144,7 +145,9 @@ contract InutiaTest is Test, BattleHelper {
         // Check that Bob's mon Attack stat has been decreased
         int32 bobAttackAfterSwapIn = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Attack);
         int32 expectedAttackDecrease = -1; // -1 * base Attack / DECREASE_DENOM
-        assertEq(bobAttackAfterSwapIn, bobInitialAttack + expectedAttackDecrease, "Attack should be decreased after swap in");
+        assertEq(
+            bobAttackAfterSwapIn, bobInitialAttack + expectedAttackDecrease, "Attack should be decreased after swap in"
+        );
 
         // Alice switches back to the regular mon, Bob does a No-Op
         _commitRevealExecuteForAliceAndBob(
@@ -152,11 +155,12 @@ contract InutiaTest is Test, BattleHelper {
         );
 
         // Check that Bob's mon SpecialAttack stat has been decreased
-        int32 bobSpecialAttackAfterSwapOut = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.SpecialAttack);
+        int32 bobSpecialAttackAfterSwapOut =
+            engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.SpecialAttack);
         int32 expectedSpecialAttackDecrease = -1; // -1 * base SpecialAttack / DECREASE_DENOM
         assertEq(
-            bobSpecialAttackAfterSwapOut, 
-            bobInitialSpecialAttack + expectedSpecialAttackDecrease, 
+            bobSpecialAttackAfterSwapOut,
+            bobInitialSpecialAttack + expectedSpecialAttackDecrease,
             "SpecialAttack should be decreased after swap out"
         );
     }

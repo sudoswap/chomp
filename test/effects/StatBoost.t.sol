@@ -22,8 +22,8 @@ import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 
-import {StatBoostMove} from "../mocks/StatBoostMove.sol";
 import {StatBoost} from "../../src/effects/StatBoost.sol";
+import {StatBoostMove} from "../mocks/StatBoostMove.sol";
 
 import {BattleHelper} from "../abstract/BattleHelper.sol";
 
@@ -167,7 +167,7 @@ contract StatBoostTest is Test, BattleHelper {
         assertEq(boostedStat, initialStat + 2, "Stat should be boosted by +2");
 
         // Verify the effect was added to Alice's mon
-        (IEffect[] memory effects, ) = engine.getEffects(battleKey, 0, 0);
+        (IEffect[] memory effects,) = engine.getEffects(battleKey, 0, 0);
         bool foundEffect = false;
         for (uint256 i = 0; i < effects.length; i++) {
             if (keccak256(abi.encodePacked(effects[i].name())) == keccak256(abi.encodePacked(statBoost.name()))) {
@@ -196,7 +196,7 @@ contract StatBoostTest is Test, BattleHelper {
         assertEq(furtherBoostedStat, initialStat + 3, "Stat should be boosted by +3 total");
 
         // Verify no duplicate effect was added
-        (effects, ) = engine.getEffects(battleKey, 0, 0);
+        (effects,) = engine.getEffects(battleKey, 0, 0);
         assertEq(effects.length, effectCount, "No duplicate effect should be added");
 
         // 3. Apply a debuff (-2) to the same stat
@@ -217,7 +217,7 @@ contract StatBoostTest is Test, BattleHelper {
         assertEq(debuffedStat, initialStat + 1, "Stat should be at +1 after debuff");
 
         // Verify no duplicate effect was added
-        (effects, ) = engine.getEffects(battleKey, 0, 0);
+        (effects,) = engine.getEffects(battleKey, 0, 0);
         assertEq(effects.length, effectCount, "No duplicate effect should be added");
 
         // 4. Switch out the mon
@@ -234,7 +234,7 @@ contract StatBoostTest is Test, BattleHelper {
         );
 
         // Verify the effect was removed
-        (effects, ) = engine.getEffects(battleKey, 0, 1);
+        (effects,) = engine.getEffects(battleKey, 0, 1);
         foundEffect = false;
         for (uint256 i = 0; i < effects.length; i++) {
             if (keccak256(abi.encodePacked(effects[i].name())) == keccak256(abi.encodePacked("StatBoost"))) {
@@ -370,10 +370,11 @@ contract StatBoostTest is Test, BattleHelper {
             assertEq(boostedStat, 2, "Stat should be boosted by +2");
 
             // Verify the effect was added
-            (IEffect[] memory statEffects, ) = engine.getEffects(battleKey, 0, 0);
+            (IEffect[] memory statEffects,) = engine.getEffects(battleKey, 0, 0);
             bool foundStatEffect = false;
             for (uint256 j = 0; j < statEffects.length; j++) {
-                if (keccak256(abi.encodePacked(statEffects[j].name())) == keccak256(abi.encodePacked(statBoost.name()))) {
+                if (keccak256(abi.encodePacked(statEffects[j].name())) == keccak256(abi.encodePacked(statBoost.name())))
+                {
                     foundStatEffect = true;
                     break;
                 }
@@ -393,7 +394,7 @@ contract StatBoostTest is Test, BattleHelper {
         );
 
         // Verify all effects were removed
-        (IEffect[] memory effects, ) = engine.getEffects(battleKey, 0, 1);
+        (IEffect[] memory effects,) = engine.getEffects(battleKey, 0, 1);
         for (uint256 i = 0; i < effects.length; i++) {
             assertFalse(
                 keccak256(abi.encodePacked(effects[i].name())) == keccak256(abi.encodePacked(statBoost.name())),

@@ -12,7 +12,7 @@ import {IEffect} from "../../effects/IEffect.sol";
 import {StatBoost} from "../../effects/StatBoost.sol";
 
 contract SplitThePot is IAbility, BasicEffect {
-    int32 constant HEAL_DENOM = 16;
+    int32 constant public HEAL_DENOM = 16;
     IEngine immutable ENGINE;
 
     constructor(IEngine _ENGINE) {
@@ -41,7 +41,7 @@ contract SplitThePot is IAbility, BasicEffect {
         return (step == EffectStep.AfterMove);
     }
 
-    function onAfterMove(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+    function onAfterMove(uint256, bytes memory, uint256 targetIndex, uint256)
         external
         override
         returns (bytes memory updatedExtraData, bool removeAfterRun)
@@ -68,5 +68,6 @@ contract SplitThePot is IAbility, BasicEffect {
                 }
             }
         }
+        return ("", false);
     }
 }

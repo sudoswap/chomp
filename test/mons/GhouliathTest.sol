@@ -18,11 +18,12 @@ import {IValidator} from "../../src/IValidator.sol";
 import {IAbility} from "../../src/abilities/IAbility.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
-import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
-import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
+
 import {StandardAttack} from "../../src/moves/StandardAttack.sol";
 import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
 import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
+import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
+import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
 import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";

@@ -12,7 +12,6 @@ import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {StatBoost} from "../../src/effects/StatBoost.sol";
 
 contract StatBoostMove is IMoveSet {
-
     IEngine immutable ENGINE;
     StatBoost immutable STAT_BOOST;
 
@@ -26,7 +25,8 @@ contract StatBoostMove is IMoveSet {
     }
 
     function move(bytes32, uint256, bytes memory extraData, uint256) external {
-        (uint256 playerIndex, uint256 monIndex, uint256 statIndex, int32 boostAmount) = abi.decode(extraData, (uint256, uint256, uint256, int32));
+        (uint256 playerIndex, uint256 monIndex, uint256 statIndex, int32 boostAmount) =
+            abi.decode(extraData, (uint256, uint256, uint256, int32));
         ENGINE.addEffect(playerIndex, monIndex, STAT_BOOST, abi.encode(statIndex, boostAmount));
     }
 
@@ -53,5 +53,4 @@ contract StatBoostMove is IMoveSet {
     function basePower(bytes32) external pure returns (uint32) {
         return 0;
     }
-
 }

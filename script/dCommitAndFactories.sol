@@ -9,8 +9,6 @@ import {FastValidator} from "../src/FastValidator.sol";
 import {Engine} from "../src/Engine.sol";
 import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
 
-import {CustomEffectAttack} from "../src/moves/CustomEffectAttack.sol";
-import {CustomEffectAttackFactory} from "../src/moves/CustomEffectAttackFactory.sol";
 import {DefaultRandomnessOracle} from "../src/rng/DefaultRandomnessOracle.sol";
 import {DefaultMonRegistry} from "../src/teams/DefaultMonRegistry.sol";
 import {LazyTeamRegistry} from "../src/teams/LazyTeamRegistry.sol";
@@ -25,9 +23,7 @@ contract dCommitAndFactories is Script {
             DefaultRuleset defaultRuleset,
             FastValidator validator,
             DefaultMonRegistry defaultMonRegistry,
-            LazyTeamRegistry teamRegistry,
-            CustomEffectAttack customEffectAttack,
-            CustomEffectAttackFactory customEffectAttackFactory
+            LazyTeamRegistry teamRegistry
         )
     {
         uint256 deployerPrivateKey = uint256(vm.envBytes32("PRIVATE_KEY"));
@@ -47,11 +43,6 @@ contract dCommitAndFactories is Script {
         // Create default stamina regen/rulesets
         defaultStaminaRegen = new DefaultStaminaRegen(Engine(vm.envAddress("ENGINE")));
         defaultRuleset = new DefaultRuleset(Engine(vm.envAddress("ENGINE")), defaultStaminaRegen);
-
-        // Effect Attack factory
-        customEffectAttack =
-            new CustomEffectAttack(Engine(vm.envAddress("ENGINE")), TypeCalculator(vm.envAddress("TYPE_CALCULATOR")));
-        customEffectAttackFactory = new CustomEffectAttackFactory(customEffectAttack);
 
         // Create Mon/Team registry
         defaultMonRegistry = new DefaultMonRegistry();

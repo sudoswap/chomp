@@ -29,8 +29,9 @@ import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 
-import {CustomEffectAttack} from "../../src/moves/CustomEffectAttack.sol";
-import {CustomEffectAttackFactory} from "../../src/moves/CustomEffectAttackFactory.sol";
+import {StandardAttack} from "../../src/moves/StandardAttack.sol";
+import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
+import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
 
 contract GorillaxTest is Test, BattleHelper {
     Engine engine;
@@ -40,7 +41,7 @@ contract GorillaxTest is Test, BattleHelper {
     TestTeamRegistry defaultRegistry;
     FastValidator validator;
     Angery angery;
-    CustomEffectAttackFactory attackFactory;
+    StandardAttackFactory attackFactory;
 
     function setUp() public {
         typeCalc = new TestTypeCalculator();
@@ -53,9 +54,7 @@ contract GorillaxTest is Test, BattleHelper {
         commitManager = new FastCommitManager(IEngine(address(engine)));
         engine.setCommitManager(address(commitManager));
         angery = new Angery(IEngine(address(engine)));
-        attackFactory = new CustomEffectAttackFactory(
-            new CustomEffectAttack(IEngine(address(engine)), ITypeCalculator(address(typeCalc)))
-        );
+        attackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
     }
 
     /*
@@ -73,16 +72,18 @@ contract GorillaxTest is Test, BattleHelper {
 
         // Strong attack is exactly max hp / threshold
         moves[0] = attackFactory.createAttack(
-            CustomEffectAttackFactory.ATTACK_PARAMS({
+            ATTACK_PARAMS({
                 BASE_POWER: uint32(hpScale),
                 STAMINA_COST: 1,
                 ACCURACY: 100,
                 PRIORITY: 1,
                 MOVE_TYPE: Type.Fire,
-                EFFECT: IEffect(address(0)),
                 EFFECT_ACCURACY: 0,
                 MOVE_CLASS: MoveClass.Physical,
-                NAME: "Strong"
+                CRIT_RATE: 0,
+                VOLATILITY: 0,
+                NAME: "Strong",
+                EFFECT: IEffect(address(0))
             })
         );
         Mon memory angeryMon = Mon({

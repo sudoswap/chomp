@@ -31,8 +31,9 @@ import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 
-import {CustomEffectAttack} from "../../src/moves/CustomEffectAttack.sol";
-import {CustomEffectAttackFactory} from "../../src/moves/CustomEffectAttackFactory.sol";
+import {StandardAttack} from "../../src/moves/StandardAttack.sol";
+import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
+import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
 
 contract InutiaTest is Test, BattleHelper {
     Engine engine;
@@ -43,7 +44,7 @@ contract InutiaTest is Test, BattleHelper {
     FastValidator validator;
     Interweaving interweaving;
     StatBoost statBoost;
-    CustomEffectAttackFactory attackFactory;
+    StandardAttackFactory attackFactory;
 
     function setUp() public {
         typeCalc = new TestTypeCalculator();
@@ -57,9 +58,7 @@ contract InutiaTest is Test, BattleHelper {
         engine.setCommitManager(address(commitManager));
         statBoost = new StatBoost(IEngine(address(engine)));
         interweaving = new Interweaving(IEngine(address(engine)), IEffect(address(statBoost)));
-        attackFactory = new CustomEffectAttackFactory(
-            new CustomEffectAttack(IEngine(address(engine)), ITypeCalculator(address(typeCalc)))
-        );
+        attackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
     }
 
     function test_interweaving() public {

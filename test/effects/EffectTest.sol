@@ -28,10 +28,11 @@ import {FrightStatus} from "../../src/effects/status/FrightStatus.sol";
 import {FrostbiteStatus} from "../../src/effects/status/FrostbiteStatus.sol";
 import {SleepStatus} from "../../src/effects/status/SleepStatus.sol";
 
-// Import custom effect attack factory and template
+// Import standard attack factory and template
 
-import {CustomEffectAttack} from "../../src/moves/CustomEffectAttack.sol";
-import {CustomEffectAttackFactory} from "../../src/moves/CustomEffectAttackFactory.sol";
+import {StandardAttack} from "../../src/moves/StandardAttack.sol";
+import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
+import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
 
 contract EngineTest is Test {
     CommitManager commitManager;
@@ -41,7 +42,7 @@ contract EngineTest is Test {
     MockRandomnessOracle mockOracle;
     TestTeamRegistry defaultRegistry;
 
-    CustomEffectAttackFactory customEffectAttackFactory;
+    StandardAttackFactory standardAttackFactory;
     FrostbiteStatus frostbiteStatus;
     SleepStatus sleepStatus;
     FrightStatus frightStatus;
@@ -73,9 +74,8 @@ contract EngineTest is Test {
         typeCalc = new TestTypeCalculator();
         defaultRegistry = new TestTeamRegistry();
 
-        // Deploy CustomEffectAttack template and factory
-        CustomEffectAttack template = new CustomEffectAttack(engine, typeCalc);
-        customEffectAttackFactory = new CustomEffectAttackFactory(template);
+        // Deploy StandardAttackFactory
+        standardAttackFactory = new StandardAttackFactory(engine, typeCalc);
 
         // Deploy all effects
         frostbiteStatus = new FrostbiteStatus(engine);
@@ -106,17 +106,19 @@ contract EngineTest is Test {
 
     function test_frostbite() public {
         // Deploy an attack with frostbite
-        IMoveSet frostbiteAttack = customEffectAttackFactory.createAttack(
-            CustomEffectAttackFactory.ATTACK_PARAMS({
+        IMoveSet frostbiteAttack = standardAttackFactory.createAttack(
+            ATTACK_PARAMS({
                 BASE_POWER: 0,
                 STAMINA_COST: 0,
                 ACCURACY: 100,
                 PRIORITY: 1,
                 MOVE_TYPE: Type.Ice,
-                EFFECT: frostbiteStatus,
                 EFFECT_ACCURACY: 100,
                 MOVE_CLASS: MoveClass.Physical,
-                NAME: bytes32("FrostbiteHit")
+                CRIT_RATE: 0,
+                VOLATILITY: 0,
+                NAME: "FrostbiteHit",
+                EFFECT: frostbiteStatus
             })
         );
 
@@ -217,17 +219,19 @@ contract EngineTest is Test {
 
     function test_frostbite2() public {
         // Deploy an attack with frostbite
-        IMoveSet frostbiteAttack = customEffectAttackFactory.createAttack(
-            CustomEffectAttackFactory.ATTACK_PARAMS({
+        IMoveSet frostbiteAttack = standardAttackFactory.createAttack(
+            ATTACK_PARAMS({
                 BASE_POWER: 0,
                 STAMINA_COST: 0,
                 ACCURACY: 100,
                 PRIORITY: 1,
                 MOVE_TYPE: Type.Ice,
-                EFFECT: frostbiteStatus,
                 EFFECT_ACCURACY: 100,
                 MOVE_CLASS: MoveClass.Physical,
-                NAME: bytes32("FrostbiteHit")
+                CRIT_RATE: 0,
+                VOLATILITY: 0,
+                NAME: "FrostbiteHit",
+                EFFECT: frostbiteStatus
             })
         );
 
@@ -296,18 +300,19 @@ contract EngineTest is Test {
 
     function test_sleep() public {
         // Deploy an attack with sleep
-        IMoveSet sleepAttack = customEffectAttackFactory.createAttack(
-            CustomEffectAttackFactory.ATTACK_PARAMS({
+        IMoveSet sleepAttack = standardAttackFactory.createAttack(
+            ATTACK_PARAMS({
                 BASE_POWER: 1,
-                STAMINA_COST: // Does 1 damage
-                    0,
+                STAMINA_COST: 0, // Does 1 damage
                 ACCURACY: 100,
                 PRIORITY: 1,
                 MOVE_TYPE: Type.Ice,
-                EFFECT: sleepStatus,
                 EFFECT_ACCURACY: 100,
                 MOVE_CLASS: MoveClass.Physical,
-                NAME: bytes32("SleepHit")
+                CRIT_RATE: 0,
+                VOLATILITY: 0,
+                NAME: "SleepHit",
+                EFFECT: sleepStatus
             })
         );
         IMoveSet[] memory moves = new IMoveSet[](1);
@@ -469,19 +474,19 @@ contract EngineTest is Test {
      */
     function test_fright() public {
         // Deploy an attack with fright
-        IMoveSet frightAttack = customEffectAttackFactory.createAttack(
-            CustomEffectAttackFactory.ATTACK_PARAMS({
+        IMoveSet frightAttack = standardAttackFactory.createAttack(
+            ATTACK_PARAMS({
                 BASE_POWER: 1,
-                STAMINA_COST: // Does 1 damage
-                    1,
-                ACCURACY: // Costs 1 stamina
-                    100,
+                STAMINA_COST: 1, // Does 1 damage, costs 1 stamina
+                ACCURACY: 100,
                 PRIORITY: 1,
                 MOVE_TYPE: Type.Cosmic,
-                EFFECT: frightStatus,
                 EFFECT_ACCURACY: 100,
                 MOVE_CLASS: MoveClass.Physical,
-                NAME: bytes32("FrightHit")
+                CRIT_RATE: 0,
+                VOLATILITY: 0,
+                NAME: "FrightHit",
+                EFFECT: frightStatus
             })
         );
         IMoveSet[] memory moves = new IMoveSet[](1);

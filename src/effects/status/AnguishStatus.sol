@@ -7,13 +7,13 @@ import {IEffect} from "../IEffect.sol";
 
 import {StatusEffect} from "./StatusEffect.sol";
 
-contract FrightStatus is StatusEffect {
+contract AnguishStatus is StatusEffect {
     uint256 constant DURATION = 3;
 
     constructor(IEngine engine) StatusEffect(engine) {}
 
     function name() public pure override returns (string memory) {
-        return "Fright";
+        return "Anguish";
     }
 
     function shouldRunAtStep(EffectStep r) external pure override returns (bool) {
@@ -51,7 +51,7 @@ contract FrightStatus is StatusEffect {
         // Get current stamina delta of the target mon
         int32 staminaDelta = ENGINE.getMonStateForBattle(battleKey, targetIndex, monIndex, MonStateIndexName.Stamina);
 
-        // If the stamina is less than the max stamina, then reduce stamina by 1
+        // If the stamina is less than the max stamina, then reduce stamina by 1 (as long as it's not already 0)
         uint32 maxStamina = ENGINE.getMonValueForBattle(battleKey, targetIndex, monIndex, MonStateIndexName.Stamina);
         if (staminaDelta + int32(maxStamina) > 0) {
             ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Stamina, -1);

@@ -24,7 +24,7 @@ import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 
 // Import effects
 
-import {FrightStatus} from "../../src/effects/status/FrightStatus.sol";
+import {AnguishStatus} from "../../src/effects/status/AnguishStatus.sol";
 import {FrostbiteStatus} from "../../src/effects/status/FrostbiteStatus.sol";
 import {SleepStatus} from "../../src/effects/status/SleepStatus.sol";
 
@@ -45,7 +45,7 @@ contract EngineTest is Test {
     StandardAttackFactory standardAttackFactory;
     FrostbiteStatus frostbiteStatus;
     SleepStatus sleepStatus;
-    FrightStatus frightStatus;
+    AnguishStatus anguishStatus;
 
     address constant ALICE = address(1);
     address constant BOB = address(2);
@@ -80,7 +80,7 @@ contract EngineTest is Test {
         // Deploy all effects
         frostbiteStatus = new FrostbiteStatus(engine);
         sleepStatus = new SleepStatus(engine);
-        frightStatus = new FrightStatus(engine);
+        anguishStatus = new AnguishStatus(engine);
     }
 
     function _commitRevealExecuteForAliceAndBob(
@@ -486,7 +486,7 @@ contract EngineTest is Test {
                 CRIT_RATE: 0,
                 VOLATILITY: 0,
                 NAME: "FrightHit",
-                EFFECT: frightStatus
+                EFFECT: anguishStatus
             })
         );
         IMoveSet[] memory moves = new IMoveSet[](1);

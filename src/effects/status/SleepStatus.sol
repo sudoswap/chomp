@@ -9,7 +9,6 @@ import {StatusEffect} from "./StatusEffect.sol";
 
 contract SleepStatus is StatusEffect {
     uint256 constant DURATION = 3;
-    bytes32 constant SLEEP_STATUS = "SLEEP_STATUS";
 
     constructor(IEngine engine) StatusEffect(engine) {}
 
@@ -67,7 +66,7 @@ contract SleepStatus is StatusEffect {
     }
 
     function _globalSleepKey(uint256 targetIndex) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(SLEEP_STATUS, targetIndex));
+        return keccak256(abi.encodePacked(name(), targetIndex));
     }
 
     // Whether or not to add the effect if the step condition is met

@@ -17,7 +17,8 @@ contract AnguishStatus is StatusEffect {
     }
 
     function shouldRunAtStep(EffectStep r) external pure override returns (bool) {
-        return r == EffectStep.RoundStart || r == EffectStep.RoundEnd || r == EffectStep.OnApply;
+        // Need to also return OnRemove to remove the global status flag
+        return r == EffectStep.RoundStart || r == EffectStep.RoundEnd || r == EffectStep.OnApply || r == EffectStep.OnRemove;
     }
 
     // At the start of the turn, check to see if we should apply fright or end early

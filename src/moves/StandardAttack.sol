@@ -77,7 +77,7 @@ contract StandardAttack is AttackCalculator, IMoveSet, Ownable {
         return _priority;
     }
 
-    function stamina(bytes32) public view returns (uint32) {
+    function stamina(bytes32, uint256, uint256) public view returns (uint32) {
         return _stamina;
     }
 

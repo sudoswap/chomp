@@ -34,7 +34,7 @@ contract StatBoostMove is IMoveSet {
         return 0;
     }
 
-    function stamina(bytes32) external pure returns (uint32) {
+    function stamina(bytes32, uint256, uint256) external pure returns (uint32) {
         return 0;
     }
 

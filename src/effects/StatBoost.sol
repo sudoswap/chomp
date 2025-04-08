@@ -23,7 +23,7 @@ contract StatBoost is BasicEffect {
         return "Stat Boost";
     }
 
-    function getKeyForMonIndex(uint256 targetIndex, uint256 monIndex, uint256 statIndex) public view returns (bytes32) {
+    function getKeyForMonIndex(uint256 targetIndex, uint256 monIndex, uint256 statIndex) public pure returns (bytes32) {
         return keccak256(abi.encode(targetIndex, monIndex, statIndex, name()));
     }
 

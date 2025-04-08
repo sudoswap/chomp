@@ -118,7 +118,7 @@ contract DefaultValidator is IValidator {
         uint256 monBaseStamina =
             ENGINE.getMonValueForBattle(battleKey, playerIndex, activeMonIndex[playerIndex], MonStateIndexName.Stamina);
         uint256 monCurrentStamina = uint256(int256(monBaseStamina) + monStaminaDelta);
-        if (moveSet.stamina(battleKey) > monCurrentStamina) {
+        if (moveSet.stamina(battleKey, playerIndex, activeMonIndex[playerIndex]) > monCurrentStamina) {
             return false;
         } else {
             // Then, we check the move itself to see if it enforces any other specific conditions

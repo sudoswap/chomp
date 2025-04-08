@@ -635,9 +635,9 @@ contract Engine is IEngine {
         }
 
         // If either player has a KOed mon, then we also just return early without running the move
+        uint256 otherPlayerIndex = (playerIndex + 1) % 2;
         {
             bool isPlayerKOed = state.monStates[playerIndex][state.activeMonIndex[playerIndex]].isKnockedOut;
-            uint256 otherPlayerIndex = (playerIndex + 1) % 2;
             bool isOtherPlayerKOed = state.monStates[otherPlayerIndex][state.activeMonIndex[otherPlayerIndex]].isKnockedOut;
 
             // Only do this check for 2-player turns
@@ -668,7 +668,7 @@ contract Engine is IEngine {
             IMoveSet moveSet = battle.teams[playerIndex][state.activeMonIndex[playerIndex]].moves[move.moveIndex];
 
             // Update the mon state directly to account for the stamina cost of the move
-            staminaCost = int32(moveSet.stamina(battleKey));
+            staminaCost = int32(moveSet.stamina(battleKey, playerIndex, state.activeMonIndex[playerIndex]));
             state.monStates[playerIndex][state.activeMonIndex[playerIndex]].staminaDelta -= staminaCost;
 
             // Run the move (no longer checking for a return value)
@@ -681,9 +681,9 @@ contract Engine is IEngine {
         // Set Game Over if true, and calculate and return switch for turn flag
         // (We check for both players)
         (playerSwitchForTurnFlag, , , ) =
-                _checkForGameOverOrKO(battleKey, 0);
+                _checkForGameOverOrKO(battleKey, playerIndex);
         (playerSwitchForTurnFlag, , , ) =
-                _checkForGameOverOrKO(battleKey, 1);
+                _checkForGameOverOrKO(battleKey, otherPlayerIndex);
         return playerSwitchForTurnFlag;
     }
 

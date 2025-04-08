@@ -10,9 +10,8 @@ interface IMoveSet {
     function name() external view returns (string memory);
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData, uint256 rng) external;
     function priority(bytes32 battleKey) external view returns (uint32);
-    function stamina(bytes32 battleKey) external view returns (uint32);
+    function stamina(bytes32 battleKey, uint256 attackerPlayerIndex, uint256 monIndex) external view returns (uint32);
     function moveType(bytes32 battleKey) external view returns (Type);
     function isValidTarget(bytes32 battleKey, bytes calldata extraData) external view returns (bool);
     function moveClass(bytes32 battleKey) external view returns (MoveClass);
-    function basePower(bytes32 battleKey) external view returns (uint32);
 }

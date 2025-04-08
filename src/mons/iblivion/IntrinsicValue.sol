@@ -8,14 +8,17 @@ import {IAbility} from "../../abilities/IAbility.sol";
 import {BasicEffect} from "../../effects/BasicEffect.sol";
 import {IEffect} from "../../effects/IEffect.sol";
 import {StatBoost} from "../../effects/StatBoost.sol";
+import {Baselight} from "../iblivion/Baselight.sol";
 
 contract IntrinsicValue is IAbility, BasicEffect {
 
     IEngine immutable ENGINE;
+    Baselight immutable BASELIGHT;
     IEffect immutable STAT_BOOST;
 
-    constructor(IEngine _ENGINE, IEffect _STAT_BOOST) {
+    constructor(IEngine _ENGINE, Baselight _BASELIGHT, IEffect _STAT_BOOST) {
         ENGINE = _ENGINE;
+        BASELIGHT = _BASELIGHT;
         STAT_BOOST = _STAT_BOOST;
     }
 
@@ -42,12 +45,34 @@ contract IntrinsicValue is IAbility, BasicEffect {
         return (step == EffectStep.RoundEnd);
     }
 
-    function onRoundEnd(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+    function onRoundEnd(uint256, bytes memory, uint256 targetIndex, uint256 monIndex)
         external
         override
         returns (bytes memory updatedExtraData, bool removeAfterRun)
     {
-        // Check for negative stat boosts in ATK/DEF/SpATK/SpDEF/SPD
-        
+        bool statsReset = false;
+
+        // Check for negative stat boosts in ATK/DEF/SpATK/SpDEF/SPD:
+        uint256[] memory statIndexNames = new uint256[](5);
+        statIndexNames[0] = uint256(MonStateIndexName.Attack);
+        statIndexNames[1] = uint256(MonStateIndexName.Defense);
+        statIndexNames[2] = uint256(MonStateIndexName.SpecialAttack);
+        statIndexNames[3] = uint256(MonStateIndexName.SpecialDefense);
+        statIndexNames[4] = uint256(MonStateIndexName.Speed);
+        for (uint256 i = 0; i < statIndexNames.length; i++) {
+            bytes32 statKey = StatBoost(address(STAT_BOOST)).getKeyForMonIndex(targetIndex, monIndex, uint256(statIndexNames[i]));
+            int32 existingBoostAmount = int32(int256(uint256(ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), statKey))));
+            // Reset the stat debuff
+            if (existingBoostAmount < 0) {
+                int32 resetBoostAmount = existingBoostAmount * -1;
+                bytes memory boostData = abi.encode(targetIndex, monIndex, statIndexNames[i], resetBoostAmount);
+                ENGINE.addEffect(targetIndex, monIndex, STAT_BOOST, boostData);
+                statsReset = true;
+            }
+        }
+        if (statsReset) {
+            BASELIGHT.increaseBaselightLevel(targetIndex, monIndex);
+        }
+        return ("", false);
     }
 }

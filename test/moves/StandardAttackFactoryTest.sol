@@ -55,7 +55,7 @@ contract StandardAttackFactoryTest is Test {
 
         // Verify all parameters were set correctly using the actual function names
         assertEq(attack.basePower(TEST_BATTLE_KEY), basePower, "Base power mismatch");
-        assertEq(attack.stamina(TEST_BATTLE_KEY), staminaCost, "Stamina cost mismatch");
+        assertEq(attack.stamina(TEST_BATTLE_KEY, 0, 0), staminaCost, "Stamina cost mismatch");
         assertEq(attack.accuracy(TEST_BATTLE_KEY), accuracy, "Crit rate mismatch");
         assertEq(attack.priority(TEST_BATTLE_KEY), priority, "Priority mismatch");
         assertEq(uint32(attack.moveType(TEST_BATTLE_KEY)), uint32(moveType), "Move type mismatch");
@@ -173,7 +173,7 @@ contract StandardAttackFactoryTest is Test {
         attack.changeVar(0, 100); // Change base power
         assertEq(attack.basePower(TEST_BATTLE_KEY), 100, "Base power mismatch");
         attack.changeVar(1, 2); // Change stamina cost
-        assertEq(attack.stamina(TEST_BATTLE_KEY), 2, "Stamina cost mismatch");
+        assertEq(attack.stamina(TEST_BATTLE_KEY, 0, 0), 2, "Stamina cost mismatch");
         attack.changeVar(2, 90); // Change accuracy
         assertEq(attack.accuracy(TEST_BATTLE_KEY), 90, "Accuracy mismatch");
         attack.changeVar(3, 4); // Change priority

@@ -9,7 +9,6 @@ import {IEngine} from "../../IEngine.sol";
 import {IAbility} from "../../abilities/IAbility.sol";
 import {BasicEffect} from "../../effects/BasicEffect.sol";
 import {IEffect} from "../../effects/IEffect.sol";
-import {StatBoost} from "../../effects/StatBoost.sol";
 
 import {StatusEffectLib} from "../../effects/status/StatusEffectLib.sol";
 

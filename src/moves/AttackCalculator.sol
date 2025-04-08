@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../Enums.sol";
 import "../Structs.sol";
+import "../Constants.sol";
 
 import {IEngine} from "../IEngine.sol";
 import {ITypeCalculator} from "../types/ITypeCalculator.sol";
@@ -148,12 +149,14 @@ abstract contract AttackCalculator {
             // [0... crit rate] [crit rate + 1, ..., 100]
             // [succeeds      ] [fails                  ]
             uint256 rng3 = uint256(keccak256(abi.encode(rng2)));
-            uint32 critMultiplier = 1;
+            uint32 critNum = 1;
+            uint32 critDenom = 1;
             if ((rng3 % 100) <= critRate) {
-                critMultiplier = 2;
+                critNum = CRIT_NUM;
+                critDenom = CRIT_DENOM;
             }
             damage =
-                int32(critMultiplier * (scaledBasePower * attackStat * rngScaling) / (defenceStat * RNG_SCALING_DENOM));
+                int32(critNum * (scaledBasePower * attackStat * rngScaling) / (defenceStat * RNG_SCALING_DENOM * critDenom));
         }
         return damage;
     }

@@ -5,6 +5,7 @@ import {DefaultRuleset} from "../../src/DefaultRuleset.sol";
 import {Engine} from "../../src/Engine.sol";
 import {MoveClass, Type} from "../../src/Enums.sol";
 import "../../src/Structs.sol";
+import "../../src/Constants.sol";
 
 import {IAbility} from "../../src/abilities/IAbility.sol";
 import {CommitManager} from "../../src/deprecated/CommitManager.sol";
@@ -16,7 +17,6 @@ import {AttackCalculator} from "../../src/moves/AttackCalculator.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
 import {TypeCalculator} from "../../src/types/TypeCalculator.sol";
-import {CustomAttack} from "../mocks/CustomAttack.sol";
 import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {Test} from "forge-std/Test.sol";
@@ -266,7 +266,7 @@ contract AttackCalculatorTest is Test {
         );
 
         // Critical hits should double the damage
-        assertEq(critDamage, normalDamage * 2, "Critical hit should double the damage");
+        assertEq(critDamage, int32(CRIT_NUM) * normalDamage / int32(CRIT_DENOM), "Critical hit should deal 1.5x damage");
     }
 
     function test_volatility() public view {

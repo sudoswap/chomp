@@ -29,7 +29,7 @@ contract InvalidMove is IMoveSet {
         return 1;
     }
 
-    function stamina(bytes32) external pure returns (uint32) {
+    function stamina(bytes32, uint256, uint256) external pure returns (uint32) {
         return 1;
     }
 

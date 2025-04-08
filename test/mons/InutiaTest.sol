@@ -25,7 +25,6 @@ import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
 
 import {BattleHelper} from "../abstract/BattleHelper.sol";
-import {CustomAttack} from "../mocks/CustomAttack.sol";
 
 import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";

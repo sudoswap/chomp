@@ -58,7 +58,7 @@ contract CustomAttack is AttackCalculator, IMoveSet {
         return PRIORITY;
     }
 
-    function stamina(bytes32) external view returns (uint32) {
+    function stamina(bytes32, uint256, uint256) external view returns (uint32) {
         return STAMINA_COST;
     }
 

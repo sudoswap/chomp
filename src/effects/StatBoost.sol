@@ -20,7 +20,11 @@ contract StatBoost is BasicEffect {
      * Maintain a global kv for player index / mon index / stat index
      */
     function name() public pure override returns (string memory) {
-        return "StatBoost";
+        return "Stat Boost";
+    }
+
+    function getKeyForMonIndex(uint256 targetIndex, uint256 monIndex, uint256 statIndex) public view returns (bytes32) {
+        return keccak256(abi.encode(targetIndex, monIndex, statIndex, name()));
     }
 
     // Should run at end of round and on apply
@@ -35,7 +39,7 @@ contract StatBoost is BasicEffect {
     {
         // Check if an existing stat boost for the mon / stat index already exists
         (uint256 statIndex, int32 newBoostAmount) = abi.decode(extraData, (uint256, int32));
-        bytes32 keyForMon = keccak256(abi.encode(targetIndex, monIndex, statIndex, name()));
+        bytes32 keyForMon = getKeyForMonIndex(targetIndex, monIndex, statIndex);
         int32 existingBoostAmount = int32(int256(uint256(ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), keyForMon))));
 
         // Compute the new total boost

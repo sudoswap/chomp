@@ -45,7 +45,6 @@ contract Angery is IAbility, BasicEffect {
         return (step == EffectStep.RoundEnd || step == EffectStep.AfterDamage);
     }
 
-    // Regain stamina on round end, this can overheal stamina
     function onRoundEnd(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         override

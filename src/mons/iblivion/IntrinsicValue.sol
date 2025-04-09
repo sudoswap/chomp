@@ -65,13 +65,17 @@ contract IntrinsicValue is IAbility, BasicEffect {
             // Reset the stat debuff
             if (existingBoostAmount < 0) {
                 int32 resetBoostAmount = existingBoostAmount * -1;
-                bytes memory boostData = abi.encode(targetIndex, monIndex, statIndexNames[i], resetBoostAmount);
+                bytes memory boostData = abi.encode(statIndexNames[i], resetBoostAmount);
                 ENGINE.addEffect(targetIndex, monIndex, STAT_BOOST, boostData);
                 statsReset = true;
             }
         }
         if (statsReset) {
-            BASELIGHT.increaseBaselightLevel(targetIndex, monIndex);
+            // Increase baselight level if we reset any stats
+            uint256 baselightLevel = BASELIGHT.getBaselightLevel(ENGINE.battleKeyForWrite(), targetIndex, monIndex);
+            if (baselightLevel < BASELIGHT.MAX_BASELIGHT_LEVEL()) {
+                BASELIGHT.increaseBaselightLevel(targetIndex, monIndex);
+            }
         }
         return ("", false);
     }

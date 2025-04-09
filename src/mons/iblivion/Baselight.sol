@@ -14,6 +14,7 @@ contract Baselight is IMoveSet, AttackCalculator {
     uint32 constant BASE_POWER = 80;
     uint32 constant BASELIGHT_LEVEL_BOOST = 20;
     uint32 constant ACCURACY = 100;
+    uint256 constant public MAX_BASELIGHT_LEVEL = 5;
 
     constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR) AttackCalculator(_ENGINE, _TYPE_CALCULATOR) {}
 
@@ -25,8 +26,8 @@ contract Baselight is IMoveSet, AttackCalculator {
         return keccak256(abi.encode(playerIndex, monIndex, name()));
     }
 
-    function getBaselightLevel(uint256 playerIndex, uint256 monIndex) public view returns (uint256) {
-        return uint256(ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), _baselightKey(playerIndex, monIndex)));
+    function getBaselightLevel(bytes32 battleKey, uint256 playerIndex, uint256 monIndex) public view returns (uint256) {
+        return uint256(ENGINE.getGlobalKV(battleKey, _baselightKey(playerIndex, monIndex)));
     }
 
     function increaseBaselightLevel(uint256 playerIndex, uint256 monIndex) public {
@@ -37,7 +38,7 @@ contract Baselight is IMoveSet, AttackCalculator {
 
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng) external {
         
-        uint32 baselightLevel = uint32(getBaselightLevel(attackerPlayerIndex, ENGINE.getActiveMonIndexForBattleState(battleKey)[attackerPlayerIndex]));
+        uint32 baselightLevel = uint32(getBaselightLevel(battleKey, attackerPlayerIndex, ENGINE.getActiveMonIndexForBattleState(battleKey)[attackerPlayerIndex]));
         uint32 basePower = (baselightLevel * BASELIGHT_LEVEL_BOOST) + BASE_POWER;
 
         calculateDamage(
@@ -52,11 +53,13 @@ contract Baselight is IMoveSet, AttackCalculator {
             DEFAULT_CRIT_RATE);
 
         // Finally, increase Baselight level of the attacking mon
-        increaseBaselightLevel(attackerPlayerIndex, ENGINE.getActiveMonIndexForBattleState(battleKey)[attackerPlayerIndex]);
+        if (baselightLevel < MAX_BASELIGHT_LEVEL) {
+            increaseBaselightLevel(attackerPlayerIndex, ENGINE.getActiveMonIndexForBattleState(battleKey)[attackerPlayerIndex]);
+        }
     }
 
-    function stamina(bytes32, uint256 attackerPlayerIndex, uint256 monIndex) external view returns (uint32) {
-        return uint32(getBaselightLevel(attackerPlayerIndex, monIndex));
+    function stamina(bytes32 battleKey, uint256 attackerPlayerIndex, uint256 monIndex) external view returns (uint32) {
+        return uint32(getBaselightLevel(battleKey, attackerPlayerIndex, monIndex));
     }
 
     function priority(bytes32) external pure returns (uint32) {

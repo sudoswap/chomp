@@ -11,9 +11,9 @@ import {ITypeCalculator} from "../../types/ITypeCalculator.sol";
 
 contract Baselight is IMoveSet, AttackCalculator {
 
-    uint32 constant BASE_POWER = 80;
-    uint32 constant BASELIGHT_LEVEL_BOOST = 20;
     uint32 constant ACCURACY = 100;
+    uint32 constant public BASE_POWER = 80;
+    uint32 constant public BASELIGHT_LEVEL_BOOST = 20;
     uint256 constant public MAX_BASELIGHT_LEVEL = 5;
 
     constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR) AttackCalculator(_ENGINE, _TYPE_CALCULATOR) {}
@@ -33,6 +33,9 @@ contract Baselight is IMoveSet, AttackCalculator {
     function increaseBaselightLevel(uint256 playerIndex, uint256 monIndex) public {
         uint256 currentLevel = uint256(ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), _baselightKey(playerIndex, monIndex)));
         uint256 newLevel = currentLevel + 1;
+        if (newLevel > MAX_BASELIGHT_LEVEL) {
+            return;
+        }
         ENGINE.setGlobalKV(_baselightKey(playerIndex, monIndex), bytes32(newLevel));
     }
 
@@ -53,9 +56,7 @@ contract Baselight is IMoveSet, AttackCalculator {
             DEFAULT_CRIT_RATE);
 
         // Finally, increase Baselight level of the attacking mon
-        if (baselightLevel < MAX_BASELIGHT_LEVEL) {
-            increaseBaselightLevel(attackerPlayerIndex, ENGINE.getActiveMonIndexForBattleState(battleKey)[attackerPlayerIndex]);
-        }
+        increaseBaselightLevel(attackerPlayerIndex, ENGINE.getActiveMonIndexForBattleState(battleKey)[attackerPlayerIndex]);
     }
 
     function stamina(bytes32 battleKey, uint256 attackerPlayerIndex, uint256 monIndex) external view returns (uint32) {

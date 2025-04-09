@@ -72,10 +72,7 @@ contract IntrinsicValue is IAbility, BasicEffect {
         }
         if (statsReset) {
             // Increase baselight level if we reset any stats
-            uint256 baselightLevel = BASELIGHT.getBaselightLevel(ENGINE.battleKeyForWrite(), targetIndex, monIndex);
-            if (baselightLevel < BASELIGHT.MAX_BASELIGHT_LEVEL()) {
-                BASELIGHT.increaseBaselightLevel(targetIndex, monIndex);
-            }
+            BASELIGHT.increaseBaselightLevel(targetIndex, monIndex);
         }
         return ("", false);
     }

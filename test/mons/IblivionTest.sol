@@ -195,4 +195,131 @@ contract IblivionTest is Test, BattleHelper {
         if (statType == MonStateIndexName.Speed) return "Speed";
         return "Unknown";
     }
+
+    function test_baselightSequentialUse() public {
+        // Create a team with a mon that has Baselight move and high HP
+        IMoveSet[] memory aliceMoves = new IMoveSet[](1);
+        aliceMoves[0] = baselight;
+
+        Mon memory aliceMon = Mon({
+            stats: MonStats({
+                hp: 1000,
+                stamina: 20,
+                speed: 10,
+                attack: 10,
+                defense: 10,
+                specialAttack: 10,
+                specialDefense: 10,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: aliceMoves,
+            ability: IAbility(address(0))
+        });
+
+        // Create a mon with high HP to receive damage
+        IMoveSet[] memory bobMoves = new IMoveSet[](1);
+        bobMoves[0] = statBoostMove; // Just a placeholder move
+
+        Mon memory bobMon = Mon({
+            stats: MonStats({
+                hp: 10000,
+                stamina: 20,
+                speed: 5, // Lower speed so Alice goes first
+                attack: 10,
+                defense: 10,
+                specialAttack: 10,
+                specialDefense: 10,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: bobMoves,
+            ability: IAbility(address(0)) // No ability
+        });
+
+        // Set up teams
+        Mon[] memory aliceTeam = new Mon[](1);
+        aliceTeam[0] = aliceMon;
+
+        Mon[] memory bobTeam = new Mon[](1);
+        bobTeam[0] = bobMon;
+
+        defaultRegistry.setTeam(ALICE, aliceTeam);
+        defaultRegistry.setTeam(BOB, bobTeam);
+
+        // Start a battle
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: mockOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
+        );
+
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move: Both players select their first mon (index 0)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Use Baselight sequentially and verify damage and stamina cost
+        for (uint256 i = 0; i < baselight.MAX_BASELIGHT_LEVEL(); i++) {
+            // Get current Baselight level before the move
+            uint256 currentBaselightLevel = baselight.getBaselightLevel(battleKey, 0, 0);
+            assertEq(currentBaselightLevel, i, string(abi.encodePacked("Baselight level should be ", vm.toString(i), " before move")));
+
+            // Get current stamina before the move
+            int32 aliceStaminaBefore = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Stamina);
+
+            // Get Bob's HP before the move
+            int32 bobHpBefore = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
+
+            // Alice uses Baselight, Bob uses NO_OP
+            _commitRevealExecuteForAliceAndBob(
+                engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+            );
+
+            // Get new Baselight level after the move
+            uint256 newBaselightLevel = baselight.getBaselightLevel(battleKey, 0, 0);
+            assertEq(newBaselightLevel, i + 1, string(abi.encodePacked("Baselight level should be ", vm.toString(i + 1), " after move")));
+
+            // Get stamina after the move
+            int32 aliceStaminaAfter = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Stamina);
+
+            // Verify stamina cost (should be equal to the Baselight level before the move)
+            int32 expectedStaminaCost = int32(int256(currentBaselightLevel));
+            assertEq(aliceStaminaBefore - aliceStaminaAfter, expectedStaminaCost,
+                string(abi.encodePacked("Stamina cost should be ", vm.toString(uint256(uint32(expectedStaminaCost))), " at level ", vm.toString(currentBaselightLevel))));
+
+            // Get Bob's HP after the move
+            int32 bobHpAfter = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
+            uint32 expectedBasePower = baselight.BASE_POWER() + (uint32(currentBaselightLevel) * baselight.BASELIGHT_LEVEL_BOOST());
+            uint32 damageDealt = uint32(bobHpBefore - bobHpAfter);
+            assertApproxEqRel(damageDealt, expectedBasePower, 2e17, string(abi.encodePacked("Damage dealt should be ", vm.toString(expectedBasePower), " at level ", vm.toString(currentBaselightLevel))));
+        }
+
+        // Do it one more time and verify that Baselight does not go up more
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+        );
+
+        uint256 finalBaselightLevel = baselight.getBaselightLevel(battleKey, 0, 0);
+        assertEq(finalBaselightLevel, baselight.MAX_BASELIGHT_LEVEL(), "Baselight level should not exceed max level");
+    }
 }

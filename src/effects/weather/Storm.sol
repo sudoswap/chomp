@@ -12,10 +12,7 @@ contract Storm is BasicEffect {
 
     uint256 public constant DEFAULT_DURATION = 3;
 
-    int32 public constant SPEED_NUM = 5;
     int32 public constant SPEED_DENOM = 4;
-
-    int32 public constant SP_DEF_NUM = 3;
     int32 public constant SP_DEF_DENOM = 4;
 
     IEngine immutable ENGINE;
@@ -43,6 +40,19 @@ contract Storm is BasicEffect {
         return keccak256(abi.encode(playerIndex, name()));
     }
 
+    function applyStorm(uint256 playerIndex) public {
+        // Check if we have an active Storm effect
+        bytes32 battleKey = ENGINE.battleKeyForWrite();
+        uint256 duration = getDuration(battleKey, playerIndex);
+        if (duration == 0) {
+            // If not, add the effect to the global effects array
+            ENGINE.addEffect(2, 0, IEffect(address(this)), abi.encode(playerIndex));
+        } else {
+            // Otherwise, reset the duration
+            setDuration(DEFAULT_DURATION, playerIndex);
+        }
+    }
+
     function getDuration(bytes32 battleKey, uint256 playerIndex) public view returns (uint256) {
         return uint256(ENGINE.getGlobalKV(battleKey, _effectKey(playerIndex)));
     }
@@ -53,16 +63,16 @@ contract Storm is BasicEffect {
 
     function _applyStatChange(uint256 playerIndex, uint256 monIndex) internal {
         // Apply stat boosts (speed buff / sp def debuff)
-        int32 speedBuff = int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), playerIndex, monIndex, MonStateIndexName.Speed)) * SPEED_NUM / SPEED_DENOM;
-        int32 spDefDebuff = int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), playerIndex, monIndex, MonStateIndexName.SpecialDefense)) * SP_DEF_NUM / SP_DEF_DENOM;
+        int32 speedBuff = int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), playerIndex, monIndex, MonStateIndexName.Speed)) / SPEED_DENOM;
+        int32 spDefDebuff = -1 * int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), playerIndex, monIndex, MonStateIndexName.SpecialDefense)) / SP_DEF_DENOM;
         ENGINE.addEffect(playerIndex, monIndex, STAT_BOOST, abi.encode(uint256(MonStateIndexName.Speed), speedBuff));
         ENGINE.addEffect(playerIndex, monIndex, STAT_BOOST, abi.encode(uint256(MonStateIndexName.SpecialDefense), spDefDebuff));
     }
 
     function _removeStatChange(uint256 playerIndex, uint256 monIndex) internal {
         // Reset stat boosts (speed buff / sp def debuff)
-        int32 speedDebuff = int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), playerIndex, monIndex, MonStateIndexName.Speed)) * SPEED_NUM / SPEED_DENOM * -1;
-        int32 spDefBuff = int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), playerIndex, monIndex, MonStateIndexName.SpecialDefense)) * SP_DEF_NUM / SP_DEF_DENOM * -1;
+        int32 speedDebuff = -1 * int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), playerIndex, monIndex, MonStateIndexName.Speed)) / SPEED_DENOM;
+        int32 spDefBuff = int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), playerIndex, monIndex, MonStateIndexName.SpecialDefense)) / SP_DEF_DENOM;
         ENGINE.addEffect(playerIndex, monIndex, STAT_BOOST, abi.encode(uint256(MonStateIndexName.Speed), speedDebuff));
         ENGINE.addEffect(playerIndex, monIndex, STAT_BOOST, abi.encode(uint256(MonStateIndexName.SpecialDefense), spDefBuff));
     }
@@ -101,7 +111,6 @@ contract Storm is BasicEffect {
 
     function onMonSwitchIn(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex) external override returns (bytes memory updatedExtraData, bool removeAfterRun) {
         uint256 playerIndex = abi.decode(extraData, (uint256));
-
         // Apply stat change to the mon on the team of the player who summoned Storm
         if (targetIndex == playerIndex) {
             _applyStatChange(targetIndex, monIndex);
@@ -114,5 +123,7 @@ contract Storm is BasicEffect {
         uint256 activeMonIndex = ENGINE.getActiveMonIndexForBattleState(ENGINE.battleKeyForWrite())[playerIndex];
         // Reset stat changes from the mon on the team of the player who summoned Storm
         _removeStatChange(playerIndex, activeMonIndex);
+        // Clear the duration when we clear the effect
+        setDuration(0, playerIndex);
     }
 }

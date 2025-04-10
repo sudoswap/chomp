@@ -15,19 +15,23 @@ pragma solidity ^0.8.0;
 import {EffectStep, MonStateIndexName} from "../../Enums.sol";
 import {IEngine} from "../../IEngine.sol";
 import {IAbility} from "../../abilities/IAbility.sol";
+import {Storm} from "../../effects/weather/Storm.sol";
 
 contract Overclock is IAbility {
     
     IEngine immutable ENGINE;
+    Storm immutable STORM;
 
-    constructor(IEngine _ENGINE) {
+    constructor(IEngine _ENGINE, Storm _STORM) {
         ENGINE = _ENGINE;
+        STORM = _STORM;
     }
 
     function name() public pure override returns (string memory) {
         return "Overclock";
     }
 
-    function activateOnSwitch(bytes32 battleKey, uint256 playerIndex, uint256 monIndex) external override {
+    function activateOnSwitch(bytes32, uint256 playerIndex, uint256) external override {
+        STORM.applyStorm(playerIndex);
     }
 }

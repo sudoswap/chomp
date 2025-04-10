@@ -8,17 +8,13 @@ import "../Constants.sol";
 import {IEngine} from "../IEngine.sol";
 import {ITypeCalculator} from "../types/ITypeCalculator.sol";
 
-abstract contract AttackCalculator {
-    IEngine immutable ENGINE;
-    ITypeCalculator immutable TYPE_CALCULATOR;
+library AttackCalculator {
+
     uint32 constant RNG_SCALING_DENOM = 100;
 
-    constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR) {
-        ENGINE = _ENGINE;
-        TYPE_CALCULATOR = _TYPE_CALCULATOR;
-    }
-
     function calculateDamage(
+        IEngine ENGINE,
+        ITypeCalculator TYPE_CALCULATOR,
         bytes32 battleKey,
         uint256 attackerPlayerIndex,
         uint32 basePower,
@@ -29,15 +25,17 @@ abstract contract AttackCalculator {
         uint256 rng,
         uint256 critRate // out of 100
     ) public {
-        int32 damage = calculateDamagePure(
-            battleKey, attackerPlayerIndex, basePower, accuracy, volatility, attackType, attackSupertype, rng, critRate
+        int32 damage = calculateDamageView(
+            ENGINE, TYPE_CALCULATOR, battleKey, attackerPlayerIndex, basePower, accuracy, volatility, attackType, attackSupertype, rng, critRate
         );
         uint256 defenderPlayerIndex = (attackerPlayerIndex + 1) % 2;
         uint256[] memory monIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
         ENGINE.dealDamage(defenderPlayerIndex, monIndex[defenderPlayerIndex], damage);
     }
 
-    function calculateDamagePure(
+    function calculateDamageView(
+        IEngine ENGINE,
+        ITypeCalculator TYPE_CALCULATOR,
         bytes32 battleKey,
         uint256 attackerPlayerIndex,
         uint32 basePower,

@@ -3,14 +3,13 @@ pragma solidity ^0.8.0;
 
 import {DefaultRuleset} from "../../src/DefaultRuleset.sol";
 import {Engine} from "../../src/Engine.sol";
+import {IEngine} from "../../src/IEngine.sol";
 import {MoveClass, Type} from "../../src/Enums.sol";
 import "../../src/Structs.sol";
 import "../../src/Constants.sol";
 
 import {IAbility} from "../../src/abilities/IAbility.sol";
 import {CommitManager} from "../../src/deprecated/CommitManager.sol";
-import {CommitManager} from "../../src/deprecated/CommitManager.sol";
-import {DefaultValidator} from "../../src/deprecated/DefaultValidator.sol";
 import {DefaultValidator} from "../../src/deprecated/DefaultValidator.sol";
 import {AttackCalculator} from "../../src/moves/AttackCalculator.sol";
 
@@ -21,31 +20,9 @@ import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {Test} from "forge-std/Test.sol";
 
-contract TestAttackCalculator is AttackCalculator {
-    constructor(Engine _ENGINE, ITypeCalculator _TYPE_CALCULATOR) AttackCalculator(_ENGINE, _TYPE_CALCULATOR) {}
-
-    // Expose the calculateDamage function for testing
-    function testCalculateDamage(
-        bytes32 battleKey,
-        uint256 attackerPlayerIndex,
-        uint32 basePower,
-        uint32 accuracy,
-        uint256 volatility,
-        Type attackType,
-        MoveClass attackSupertype,
-        uint256 rng,
-        uint256 critRate
-    ) external view returns (int32) {
-        return calculateDamagePure(
-            battleKey, attackerPlayerIndex, basePower, accuracy, volatility, attackType, attackSupertype, rng, critRate
-        );
-    }
-}
-
 contract AttackCalculatorTest is Test {
     Engine engine;
     TypeCalculator typeCalc;
-    TestAttackCalculator attackCalc;
     MockRandomnessOracle defaultOracle;
     TestTeamRegistry defaultRegistry;
     MockRandomnessOracle mockOracle;
@@ -61,7 +38,6 @@ contract AttackCalculatorTest is Test {
         // Set up the core components
         engine = new Engine();
         typeCalc = new TypeCalculator();
-        attackCalc = new TestAttackCalculator(engine, typeCalc);
         mockOracle = new MockRandomnessOracle();
         commitManager = new CommitManager(engine);
         engine.setCommitManager(address(commitManager));
@@ -152,7 +128,9 @@ contract AttackCalculatorTest is Test {
         uint256 critRate = 0; // No crits
 
         // Calculate damage (Alice attacking Bob)
-        int32 damage = attackCalc.testCalculateDamage(
+        int32 damage = AttackCalculator.calculateDamageView(
+            engine,
+            typeCalc,
             battleKey,
             0, // Alice's index
             basePower,
@@ -182,7 +160,9 @@ contract AttackCalculatorTest is Test {
         uint256 critRate = 0; // No crits
 
         // Calculate damage (Bob attacking Alice)
-        int32 damage = attackCalc.testCalculateDamage(
+        int32 damage = AttackCalculator.calculateDamageView(
+            engine,
+            typeCalc,
             battleKey,
             1, // Bob's index
             basePower,
@@ -211,13 +191,13 @@ contract AttackCalculatorTest is Test {
         uint256 critRate = 0;
 
         // With rng = 49, attack should hit (rng < accuracy)
-        int32 damage1 = attackCalc.testCalculateDamage(
-            battleKey, 0, basePower, accuracy, volatility, attackType, attackSupertype, 49, critRate
+        int32 damage1 = AttackCalculator.calculateDamageView(
+            engine, typeCalc, battleKey, 0, basePower, accuracy, volatility, attackType, attackSupertype, 49, critRate
         );
 
         // With rng = 50, attack should miss (rng >= accuracy)
-        int32 damage2 = attackCalc.testCalculateDamage(
-            battleKey, 0, basePower, accuracy, volatility, attackType, attackSupertype, 50, critRate
+        int32 damage2 = AttackCalculator.calculateDamageView(
+            engine, typeCalc, battleKey, 0, basePower, accuracy, volatility, attackType, attackSupertype, 50, critRate
         );
 
         assertGt(damage1, 0, "Attack should hit with rng < accuracy");
@@ -240,7 +220,9 @@ contract AttackCalculatorTest is Test {
         // For simplicity, we'll test both scenarios
 
         // First, force a non-crit by setting critRate to 0
-        int32 normalDamage = attackCalc.testCalculateDamage(
+        int32 normalDamage = AttackCalculator.calculateDamageView(
+            engine,
+            typeCalc,
             battleKey,
             0,
             basePower,
@@ -253,7 +235,9 @@ contract AttackCalculatorTest is Test {
         );
 
         // Then, force a crit by setting critRate to 100
-        int32 critDamage = attackCalc.testCalculateDamage(
+        int32 critDamage = AttackCalculator.calculateDamageView(
+            engine,
+            typeCalc,
             battleKey,
             0,
             basePower,
@@ -279,7 +263,9 @@ contract AttackCalculatorTest is Test {
         uint256 critRate = 0;
 
         // With even RNG, damage should increase
-        int32 damageScaledUp = attackCalc.testCalculateDamage(
+        int32 damageScaledUp = AttackCalculator.calculateDamageView(
+            engine,
+            typeCalc,
             battleKey,
             0,
             basePower,
@@ -292,7 +278,9 @@ contract AttackCalculatorTest is Test {
         );
 
         // With odd RNG, damage should decrease
-        int32 damageScaledDown = attackCalc.testCalculateDamage(
+        int32 damageScaledDown = AttackCalculator.calculateDamageView(
+            engine,
+            typeCalc,
             battleKey,
             0,
             basePower,
@@ -305,7 +293,9 @@ contract AttackCalculatorTest is Test {
         );
 
         // Reset volatility and get base damage
-        int32 baseDamage = attackCalc.testCalculateDamage(
+        int32 baseDamage = AttackCalculator.calculateDamageView(
+            engine,
+            typeCalc,
             battleKey,
             0,
             basePower,

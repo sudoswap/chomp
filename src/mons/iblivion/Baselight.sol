@@ -9,14 +9,20 @@ import {IEngine} from "../../IEngine.sol";
 import {AttackCalculator} from "../../moves/AttackCalculator.sol";
 import {ITypeCalculator} from "../../types/ITypeCalculator.sol";
 
-contract Baselight is IMoveSet, AttackCalculator {
+contract Baselight is IMoveSet {
 
     uint32 constant ACCURACY = 100;
     uint32 constant public BASE_POWER = 80;
     uint32 constant public BASELIGHT_LEVEL_BOOST = 20;
     uint256 constant public MAX_BASELIGHT_LEVEL = 5;
 
-    constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR) AttackCalculator(_ENGINE, _TYPE_CALCULATOR) {}
+    IEngine immutable ENGINE;
+    ITypeCalculator immutable TYPE_CALCULATOR;
+
+    constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR) {
+        ENGINE = _ENGINE;
+        TYPE_CALCULATOR = _TYPE_CALCULATOR;
+    }
 
     function name() public pure override returns (string memory) {
         return "Baselight";
@@ -44,7 +50,9 @@ contract Baselight is IMoveSet, AttackCalculator {
         uint32 baselightLevel = uint32(getBaselightLevel(battleKey, attackerPlayerIndex, ENGINE.getActiveMonIndexForBattleState(battleKey)[attackerPlayerIndex]));
         uint32 basePower = (baselightLevel * BASELIGHT_LEVEL_BOOST) + BASE_POWER;
 
-        calculateDamage(
+        AttackCalculator.calculateDamage(
+            ENGINE, 
+            TYPE_CALCULATOR,
             battleKey, 
             attackerPlayerIndex, 
             basePower, 

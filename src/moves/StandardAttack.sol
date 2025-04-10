@@ -14,7 +14,11 @@ import {AttackCalculator} from "./AttackCalculator.sol";
 import {IMoveSet} from "./IMoveSet.sol";
 import {ATTACK_PARAMS} from "./StandardAttackStructs.sol";
 
-contract StandardAttack is AttackCalculator, IMoveSet, Ownable {
+contract StandardAttack is IMoveSet, Ownable {
+
+    IEngine immutable ENGINE;
+    ITypeCalculator immutable TYPE_CALCULATOR;
+
     uint32 private _basePower;
     uint32 private _stamina;
     uint32 private _accuracy;
@@ -28,9 +32,9 @@ contract StandardAttack is AttackCalculator, IMoveSet, Ownable {
 
     string public name;
 
-    constructor(address owner, IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR, ATTACK_PARAMS memory params)
-        AttackCalculator(_ENGINE, _TYPE_CALCULATOR)
-    {
+    constructor(address owner, IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR, ATTACK_PARAMS memory params) {
+        ENGINE = _ENGINE;
+        TYPE_CALCULATOR = _TYPE_CALCULATOR;
         _basePower = params.BASE_POWER;
         _stamina = params.STAMINA_COST;
         _accuracy = params.ACCURACY;
@@ -47,7 +51,9 @@ contract StandardAttack is AttackCalculator, IMoveSet, Ownable {
 
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng) public {
         if (basePower(battleKey) > 0) {
-            calculateDamage(
+            AttackCalculator.calculateDamage(
+                ENGINE,
+                TYPE_CALCULATOR,
                 battleKey,
                 attackerPlayerIndex,
                 basePower(battleKey),

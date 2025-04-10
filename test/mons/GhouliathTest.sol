@@ -205,4 +205,107 @@ contract GhouliathTest is Test, BattleHelper {
         isKnockedOut = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut);
         assertEq(isKnockedOut, 1, "Alice's mon should be revived");
     }
+
+    function testDoubleRiseFromTheGrave() public {
+
+        // Create a team with a mon that has RiseFromTheGrave ability
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = standardAttackFactory.createAttack(
+            ATTACK_PARAMS({
+                BASE_POWER: 100,
+                STAMINA_COST: 1,
+                ACCURACY: 100,
+                PRIORITY: 1,
+                MOVE_TYPE: Type.Fire,
+                MOVE_CLASS: MoveClass.Physical,
+                NAME: "Attack",
+                EFFECT: IEffect(address(0)),
+                EFFECT_ACCURACY: 0,
+                CRIT_RATE: 0,
+                VOLATILITY: 0
+            })
+        );
+        Mon memory ghouliathMon = Mon({
+            stats: MonStats({
+                hp: 100,
+                stamina: 10,
+                speed: 5,
+                attack: 5,
+                defense: 5,
+                specialAttack: 5,
+                specialDefense: 5,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(riseFromTheGrave))
+        });
+
+        Mon[] memory aliceTeam = new Mon[](2);
+        aliceTeam[0] = ghouliathMon;
+        aliceTeam[1] = ghouliathMon;
+
+        Mon[] memory bobTeam = new Mon[](2);
+        bobTeam[0] = ghouliathMon;
+        bobTeam[1] = ghouliathMon;
+
+        // Register teams
+        defaultRegistry.setTeam(ALICE, aliceTeam);
+        defaultRegistry.setTeam(BOB, bobTeam);
+
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: mockOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move: Both players select their first mon (index 0)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Bob uses the attack (which KOs) on Alice's mon
+        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, NO_OP_MOVE_INDEX, 0, "", "");
+
+        // Alice swaps in mon index 1
+        vm.startPrank(ALICE);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, "", abi.encode(1), true);
+
+        // Alice KOs Bob's mon
+        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", "");
+
+        // Bob swaps in mon index 1
+        vm.startPrank(BOB);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, "", abi.encode(1), true);
+
+        // We wait for the REVIVAL_DELAY turns to pass
+        for (uint256 i = 0; i < riseFromTheGrave.REVIVAL_DELAY() - 1; i++) {
+            _commitRevealExecuteForAliceAndBob(
+                engine, commitManager, battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, "", ""
+            );
+        }
+
+        // Verify Alice's mon is revived
+        int32 isKnockedOut = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut);
+        assertEq(isKnockedOut, 0, "Alice's mon should be revived");
+
+        // Verify Bob's mon is revived
+        isKnockedOut = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.IsKnockedOut);
+        assertEq(isKnockedOut, 0, "Bob's mon should be revived");
+    }
 }

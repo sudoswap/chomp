@@ -14,6 +14,7 @@ abstract contract StatusEffect is BasicEffect {
     }
 
     // Whether or not to add the effect if the step condition is met
+    // NOTE: somewhat weirdly, this is a state mutating function
     function shouldApply(bytes memory, uint256 targetIndex, uint256 monIndex) public virtual override returns (bool) {
         bytes32 battleKey = ENGINE.battleKeyForWrite();
         bytes32 keyForMon = StatusEffectLib.getKeyForMonIndex(targetIndex, monIndex);

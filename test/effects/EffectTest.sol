@@ -24,9 +24,10 @@ import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 
 // Import effects
 
-import {AnguishStatus} from "../../src/effects/status/AnguishStatus.sol";
+import {PanicStatus} from "../../src/effects/status/PanicStatus.sol";
 import {FrostbiteStatus} from "../../src/effects/status/FrostbiteStatus.sol";
 import {SleepStatus} from "../../src/effects/status/SleepStatus.sol";
+import {BurnStatus} from "../../src/effects/status/BurnStatus.sol";
 
 // Import standard attack factory and template
 
@@ -45,7 +46,8 @@ contract EngineTest is Test {
     StandardAttackFactory standardAttackFactory;
     FrostbiteStatus frostbiteStatus;
     SleepStatus sleepStatus;
-    AnguishStatus anguishStatus;
+    PanicStatus panicStatus;
+    BurnStatus burnStatus;
 
     address constant ALICE = address(1);
     address constant BOB = address(2);
@@ -80,7 +82,7 @@ contract EngineTest is Test {
         // Deploy all effects
         frostbiteStatus = new FrostbiteStatus(engine);
         sleepStatus = new SleepStatus(engine);
-        anguishStatus = new AnguishStatus(engine);
+        panicStatus = new PanicStatus(engine);
     }
 
     function _commitRevealExecuteForAliceAndBob(
@@ -465,16 +467,16 @@ contract EngineTest is Test {
     }
 
     /**
-     * - Alice and Bob both have mons that induce fright
+     * - Alice and Bob both have mons that induce panic
      *  - Alice outspeeds Bob, and Bob should not have enough stamina after the effect's onApply trigger
      *  - So Bob's effect should fizzle
      *  - Wait 3 turns, Bob just does nothing, Alice does nothing
      *  - Wait for effect to end by itself
      *  - Check that Bob's mon has no more targeted effects
      */
-    function test_fright() public {
-        // Deploy an attack with fright
-        IMoveSet frightAttack = standardAttackFactory.createAttack(
+    function test_panic() public {
+        // Deploy an attack with panic
+        IMoveSet panicAttack = standardAttackFactory.createAttack(
             ATTACK_PARAMS({
                 BASE_POWER: 1,
                 STAMINA_COST: 1, // Does 1 damage, costs 1 stamina
@@ -485,12 +487,12 @@ contract EngineTest is Test {
                 MOVE_CLASS: MoveClass.Physical,
                 CRIT_RATE: 0,
                 VOLATILITY: 0,
-                NAME: "FrightHit",
-                EFFECT: anguishStatus
+                NAME: "PanicHit",
+                EFFECT: panicStatus
             })
         );
         IMoveSet[] memory moves = new IMoveSet[](1);
-        moves[0] = frightAttack;
+        moves[0] = panicAttack;
 
         Mon memory fastMon = Mon({
             stats: MonStats({
@@ -564,13 +566,13 @@ contract EngineTest is Test {
             battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
         );
 
-        // Alice and Bob both select attacks, both of them are move index 0 (inflict fright)
+        // Alice and Bob both select attacks, both of them are move index 0 (inflict panic)
         _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
 
         // Get newest state
         BattleState memory state = engine.getBattleState(battleKey);
 
-        // Both mons have inflicted fright
+        // Both mons have inflicted panic
         assertEq(state.monStates[0][0].targetedEffects.length, 1);
         assertEq(state.monStates[1][0].targetedEffects.length, 1);
 
@@ -584,7 +586,7 @@ contract EngineTest is Test {
         // Assert that Bob's mon has a stamina delta of -1 (max stamina of 1)
         assertEq(state.monStates[1][0].staminaDelta, -1);
 
-        // Set the oracle to report back 1 for the next turn (we do not exit fright early)
+        // Set the oracle to report back 1 for the next turn (we do not exit panic early)
         mockOracle.setRNG(1);
 
         // Alice and Bob both select attacks, both of them are no ops (we wait a turn)
@@ -593,7 +595,7 @@ contract EngineTest is Test {
         // Alice and Bob both select attacks, both of them are no ops (we wait another turn)
         _commitRevealExecuteForAliceAndBob(battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, "", "");
 
-        // The stamina effect should be over now
+        // The panic effect should be over now
         state = engine.getBattleState(battleKey);
         assertEq(state.monStates[1][0].targetedEffects.length, 0);
     }

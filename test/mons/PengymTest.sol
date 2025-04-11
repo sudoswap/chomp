@@ -20,7 +20,7 @@ import {IEffect} from "../../src/effects/IEffect.sol";
 
 import {StatBoost} from "../../src/effects/StatBoost.sol";
 import {PostWorkout} from "../../src/mons/pengym/PostWorkout.sol";
-import {AnguishStatus} from "../../src/effects/status/AnguishStatus.sol";
+import {PanicStatus} from "../../src/effects/status/PanicStatus.sol";
 import {FrostbiteStatus} from "../../src/effects/status/FrostbiteStatus.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
@@ -47,7 +47,7 @@ contract PengymTest is Test, BattleHelper {
     StatBoost statBoost;
     StandardAttackFactory attackFactory;
     PostWorkout postWorkout;
-    AnguishStatus anguishStatus;
+    PanicStatus panicStatus;
     FrostbiteStatus frostbiteStatus;
 
     function setUp() public {
@@ -63,13 +63,13 @@ contract PengymTest is Test, BattleHelper {
         statBoost = new StatBoost(IEngine(address(engine)));
         attackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
         postWorkout = new PostWorkout(IEngine(address(engine)));
-        anguishStatus = new AnguishStatus(IEngine(address(engine)));
+        panicStatus = new PanicStatus(IEngine(address(engine)));
         frostbiteStatus = new FrostbiteStatus(IEngine(address(engine)));
     }
 
-    function test_postWorkoutClearsAnguishStatusAndGainsStamina() public {
-        // Create an attack that inflicts AnguishStatus with 100% chance
-        StandardAttack anguishAttack = attackFactory.createAttack(
+    function test_postWorkoutClearsPanicStatusAndGainsStamina() public {
+        // Create an attack that inflicts PanicStatus with 100% chance
+        StandardAttack panicAttack = attackFactory.createAttack(
             ATTACK_PARAMS({
                 BASE_POWER: 0, // No damage
                 STAMINA_COST: 1,
@@ -80,8 +80,8 @@ contract PengymTest is Test, BattleHelper {
                 MOVE_CLASS: MoveClass.Physical,
                 CRIT_RATE: 0,
                 VOLATILITY: 0,
-                NAME: "Anguish Inflict",
-                EFFECT: IEffect(address(anguishStatus))
+                NAME: "Panic Inflict",
+                EFFECT: IEffect(address(panicStatus))
             })
         );
 
@@ -141,14 +141,14 @@ contract PengymTest is Test, BattleHelper {
             ability: IAbility(address(0))
         });
 
-        // Create Bob's team: one mon with AnguishStatus attack and one regular mon
+        // Create Bob's team: one mon with PanicStatus attack and one regular mon
         IMoveSet[] memory bobMon1Moves = new IMoveSet[](1);
-        bobMon1Moves[0] = anguishAttack;
+        bobMon1Moves[0] = panicAttack;
 
         IMoveSet[] memory bobMon2Moves = new IMoveSet[](1);
         bobMon2Moves[0] = standardAttack;
 
-        Mon memory bobAnguishMon = Mon({
+        Mon memory bobPanicMon = Mon({
             stats: MonStats({
                 hp: 10,
                 stamina: 5,
@@ -170,7 +170,7 @@ contract PengymTest is Test, BattleHelper {
         aliceTeam[1] = regularMon;
 
         Mon[] memory bobTeam = new Mon[](2);
-        bobTeam[0] = bobAnguishMon; // First mon has AnguishStatus attack
+        bobTeam[0] = bobPanicMon; // First mon has PanicStatus attack
         bobTeam[1] = regularMon;
 
         defaultRegistry.setTeam(ALICE, aliceTeam);
@@ -218,24 +218,24 @@ contract PengymTest is Test, BattleHelper {
         }
         assertTrue(hasPostWorkoutEffect, "Alice's mon should have PostWorkout effect");
 
-        // Bob uses AnguishStatus attack on Alice's mon
+        // Bob uses PanicStatus attack on Alice's mon
         _commitRevealExecuteForAliceAndBob(
             engine, commitManager, battleKey, NO_OP_MOVE_INDEX, 0, "", ""
         );
 
-        // Set the rng to be 1 (so no early anguish exit)
+        // Set the rng to be 1 (so no early panic exit)
         mockOracle.setRNG(1);
 
-        // Check that Alice's mon has the AnguishStatus effect
+        // Check that Alice's mon has the PanicStatus effect
         (aliceEffects,) = engine.getEffects(battleKey, 0, 0);
-        bool hasAnguishEffect = false;
+        bool hasPanicEffect = false;
         for (uint i = 0; i < aliceEffects.length; i++) {
-            if (aliceEffects[i] == IEffect(address(anguishStatus))) {
-                hasAnguishEffect = true;
+            if (aliceEffects[i] == IEffect(address(panicStatus))) {
+                hasPanicEffect = true;
                 break;
             }
         }
-        assertTrue(hasAnguishEffect, "Alice's mon should have AnguishStatus effect");
+        assertTrue(hasPanicEffect, "Alice's mon should have PanicStatus effect");
 
         // Get current stamina before switching
         int32 staminaBefore = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Stamina);
@@ -250,17 +250,17 @@ contract PengymTest is Test, BattleHelper {
             engine, commitManager, battleKey, SWITCH_MOVE_INDEX, NO_OP_MOVE_INDEX, abi.encode(0), ""
         );
 
-        // Check that Alice's mon no longer has the AnguishStatus effect
+        // Check that Alice's mon no longer has the PanicStatus effect
         (aliceEffects,) = engine.getEffects(battleKey, 0, 0);
-        hasAnguishEffect = false;
+        hasPanicEffect = false;
 
         for (uint i = 0; i < aliceEffects.length; i++) {
-            if (aliceEffects[i] == IEffect(address(anguishStatus))) {
-                hasAnguishEffect = true;
+            if (aliceEffects[i] == IEffect(address(panicStatus))) {
+                hasPanicEffect = true;
                 break;
             }
         }
-        assertFalse(hasAnguishEffect, "Alice's mon should not have AnguishStatus effect after switching");
+        assertFalse(hasPanicEffect, "Alice's mon should not have PanicStatus effect after switching");
 
         // Check that Alice's mon gained 1 stamina
         int32 staminaAfter = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Stamina);

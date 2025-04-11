@@ -7,13 +7,13 @@ import {IEffect} from "../IEffect.sol";
 
 import {StatusEffect} from "./StatusEffect.sol";
 
-contract AnguishStatus is StatusEffect {
+contract PanicStatus is StatusEffect {
     uint256 constant DURATION = 3;
 
     constructor(IEngine engine) StatusEffect(engine) {}
 
     function name() public pure override returns (string memory) {
-        return "Anguish";
+        return "Panic";
     }
 
     function shouldRunAtStep(EffectStep r) external pure override returns (bool) {
@@ -46,8 +46,12 @@ contract AnguishStatus is StatusEffect {
         return (abi.encode(DURATION), false);
     }
 
-    // Fright reduces stamina by 1 if it is not already at 0
-    function _applyFright(uint256, uint256 targetIndex, uint256 monIndex) internal {
+    // Apply fright on end of turn, and then check how many turns are left
+    function onRoundEnd(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
+        external
+        override
+        returns (bytes memory, bool removeAfterRun)
+    {
         bytes32 battleKey = ENGINE.battleKeyForWrite();
 
         // Get current stamina delta of the target mon
@@ -58,15 +62,7 @@ contract AnguishStatus is StatusEffect {
         if (staminaDelta + int32(maxStamina) > 0) {
             ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Stamina, -1);
         }
-    }
 
-    // Apply fright on end of turn, and then check how many turns are left
-    function onRoundEnd(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
-        external
-        override
-        returns (bytes memory, bool removeAfterRun)
-    {
-        _applyFright(rng, targetIndex, monIndex);
         uint256 turnsLeft = abi.decode(extraData, (uint256));
         if (turnsLeft == 1) {
             return (extraData, true);

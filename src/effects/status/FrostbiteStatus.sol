@@ -8,8 +8,8 @@ import {IEffect} from "../IEffect.sol";
 import {StatusEffect} from "./StatusEffect.sol";
 
 contract FrostbiteStatus is StatusEffect {
-    int32 constant DAMAGE_DENOMINATOR = 16;
-    uint32 constant SP_ATTACK_DENOMINATOR = 2;
+    int32 constant DAMAGE_DENOM = 16;
+    uint32 constant SP_ATTACK_DENOM = 2;
 
     constructor(IEngine engine) StatusEffect(engine) {}
 
@@ -32,7 +32,7 @@ contract FrostbiteStatus is StatusEffect {
         );
 
         // Reduce special attack by half
-        int32 specialAttackAmountToReduce = int32(baseSpecialAttack / SP_ATTACK_DENOMINATOR) * -1;
+        int32 specialAttackAmountToReduce = int32(baseSpecialAttack / SP_ATTACK_DENOM) * -1;
 
         // Reduce special attack
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.SpecialAttack, specialAttackAmountToReduce);
@@ -52,7 +52,7 @@ contract FrostbiteStatus is StatusEffect {
         );
 
         // Reduce special attack by half
-        int32 specialAttackAmountToIncrease = int32(baseSpecialAttack / SP_ATTACK_DENOMINATOR);
+        int32 specialAttackAmountToIncrease = int32(baseSpecialAttack / SP_ATTACK_DENOM);
 
         // Reduce special attack
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.SpecialAttack, specialAttackAmountToIncrease);
@@ -68,7 +68,7 @@ contract FrostbiteStatus is StatusEffect {
             ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.Hp);
 
         // Calculate damage
-        int32 damage = int32(maxHealth) / DAMAGE_DENOMINATOR;
+        int32 damage = int32(maxHealth) / DAMAGE_DENOM;
 
         // Deal the damage
         ENGINE.dealDamage(targetIndex, monIndex, damage);

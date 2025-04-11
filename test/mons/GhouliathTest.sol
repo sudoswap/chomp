@@ -31,6 +31,7 @@ import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 import {BattleHelper} from "../abstract/BattleHelper.sol";
 
 import {RiseFromTheGrave} from "../../src/mons/ghouliath/RiseFromTheGrave.sol";
+import {Osteoporosis} from "../../src/mons/ghouliath/Osteoporosis.sol";
 
 contract GhouliathTest is Test, BattleHelper {
     Engine engine;
@@ -40,6 +41,7 @@ contract GhouliathTest is Test, BattleHelper {
     TestTeamRegistry defaultRegistry;
     FastValidator validator;
     RiseFromTheGrave riseFromTheGrave;
+    Osteoporosis osteoporosis;
     StandardAttackFactory standardAttackFactory;
 
     function setUp() public {
@@ -53,6 +55,7 @@ contract GhouliathTest is Test, BattleHelper {
         commitManager = new FastCommitManager(IEngine(address(engine)));
         engine.setCommitManager(address(commitManager));
         riseFromTheGrave = new RiseFromTheGrave(IEngine(address(engine)));
+        osteoporosis = new Osteoporosis(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
         standardAttackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
     }
 
@@ -307,5 +310,94 @@ contract GhouliathTest is Test, BattleHelper {
         // Verify Bob's mon is revived
         isKnockedOut = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.IsKnockedOut);
         assertEq(isKnockedOut, 0, "Bob's mon should be revived");
+    }
+
+    function testOsteoporosis() public {
+        // Create a team with a mon that has Osteoporosis move
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = osteoporosis;
+
+        // Create a mon with specific stats to make damage calculation predictable
+        Mon memory attackerMon = Mon({
+            stats: MonStats({
+                hp: 100,
+                stamina: 10,
+                speed: 5,
+                attack: 10,
+                defense: 5,
+                specialAttack: 5,
+                specialDefense: 5,
+                type1: Type.Yang, 
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        // Create a regular mon for the opponent with known defense
+        Mon memory defenderMon = Mon({
+            stats: MonStats({
+                hp: 100,
+                stamina: 10,
+                speed: 5,
+                attack: 5,
+                defense: 10, 
+                specialAttack: 5,
+                specialDefense: 5,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        // Create teams
+        Mon[] memory aliceTeam = new Mon[](2);
+        aliceTeam[0] = attackerMon;
+        aliceTeam[1] = attackerMon;
+
+        Mon[] memory bobTeam = new Mon[](2);
+        bobTeam[0] = defenderMon;
+        bobTeam[1] = defenderMon;
+
+        // Register teams
+        defaultRegistry.setTeam(ALICE, aliceTeam);
+        defaultRegistry.setTeam(BOB, bobTeam);
+
+        // Start a battle
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: mockOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move: Both players select their first mon (index 0)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice uses Osteoporosis on Bob's mon
+        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", "");
+
+        // Calculate the damage dealt
+        uint32 damageTaken = uint32(-1 * engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp));
+
+        // Assert it's at least base power / 2
+        assertGe(damageTaken, osteoporosis.basePower(battleKey) / 2, "Damage taken should be at least base power / 2");
     }
 }

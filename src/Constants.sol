@@ -9,6 +9,6 @@ uint32 constant DEFAULT_PRIORITY = 3;
 
 uint32 constant CRIT_NUM = 3;
 uint32 constant CRIT_DENOM = 2;
-uint256 constant DEFAULT_CRIT_RATE = 5;
+uint32 constant DEFAULT_CRIT_RATE = 5;
 
-uint256 constant DEFAULT_VOL = 10;
+uint32 constant DEFAULT_VOL = 10;

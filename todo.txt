@@ -1,11 +1,5 @@
 # TODO
 
-Status effects
-- make sure Sleep/Fright/Frostbite work as expected
-- Add burn
-- Work on pengym
-
-
 2) Allow restricting/enforcement of move selection
 3) Add a OnBeforeDamage hook to the Engine, add tests for it as well, allow editing of damage on the stack, also put the damage source on the stack
 

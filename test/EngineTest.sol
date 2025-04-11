@@ -41,25 +41,6 @@ import {TestTeamRegistry} from "./mocks/TestTeamRegistry.sol";
 
 import {TestTypeCalculator} from "./mocks/TestTypeCalculator.sol";
 
-/**
- * Tests (inexhaustive):
- * Battle initiated, stored to state [x]
- * Battle initiated, MUST select swap [x]
- * Faster Speed Wins KO, leads to game over if team size = 1 [x]
- * Faster Priority Wins KO, leads to game over if team size = 1 [x]
- * Faster Priority Wins KO, leads to forced switch if team size is >= 2 [x]
- * Execute reverts if game is already over [x]
- * Switches are forced correctly on KO [x]
- * Faster Speed Wins KO, leads to forced switch if team size is >= 2 [ ]
- * Non-KO moves lead to subsequent move for both players [x]
- * Switching executes at correct priority [x]
- * Global Stamina Recovery effect works as expected [x]
- * Accuracy works as expected (i.e. controls damage or no damage, modify oracle) [x]
- * Stamina works as expected (i.e. controls whether or not a move can be used, deltas are updated) [x]
- * Effects work as expected (create a damage over time effect, check that Effect can KO) [x]
- * shouldSkipTurn flag works as expected (create an effect that skips move, and a move that skips move) [x]
- * Moves that force switch work and revert when expected (e.g. invalid switch) [ ]
- */
 contract EngineTest is Test {
     CommitManager commitManager;
     Engine engine;

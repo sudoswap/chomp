@@ -49,7 +49,7 @@ contract StandardAttack is IMoveSet, Ownable {
         _initializeOwner(owner);
     }
 
-    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng) public {
+    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng) public virtual {
         if (basePower(battleKey) > 0) {
             AttackCalculator.calculateDamage(
                 ENGINE,

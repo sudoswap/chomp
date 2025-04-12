@@ -64,6 +64,8 @@ contract EngineTest is Test {
      *   - sleep prevents moves
      *   - fright reduces stamina
      *   - sleep and fright end after 3 turns
+     *   - burn reduces attack and deals damage at eot
+     *   - burn degree increases over time, increasing damage
      */
     function setUp() public {
         mockOracle = new MockRandomnessOracle();
@@ -83,6 +85,7 @@ contract EngineTest is Test {
         frostbiteStatus = new FrostbiteStatus(engine);
         sleepStatus = new SleepStatus(engine);
         panicStatus = new PanicStatus(engine);
+        burnStatus = new BurnStatus(engine);
     }
 
     function _commitRevealExecuteForAliceAndBob(
@@ -598,5 +601,139 @@ contract EngineTest is Test {
         // The panic effect should be over now
         state = engine.getBattleState(battleKey);
         assertEq(state.monStates[1][0].targetedEffects.length, 0);
+    }
+
+    function test_burn() public {
+        // Deploy an attack with burn status
+        IMoveSet burnAttack = standardAttackFactory.createAttack(
+            ATTACK_PARAMS({
+                BASE_POWER: 0,
+                STAMINA_COST: 0,
+                ACCURACY: 100,
+                PRIORITY: 1,
+                MOVE_TYPE: Type.Fire,
+                EFFECT_ACCURACY: 100,
+                MOVE_CLASS: MoveClass.Physical,
+                CRIT_RATE: 0,
+                VOLATILITY: 0,
+                NAME: "BurnHit",
+                EFFECT: burnStatus
+            })
+        );
+
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = burnAttack;
+
+        // Create mons with HP = 256 for easy division by 16 (burn damage denominator)
+        Mon memory mon = Mon({
+            stats: MonStats({
+                hp: 256,
+                stamina: 10,
+                speed: 5,
+                attack: 32, // Use 32 for easy division by 2 (attack reduction denominator)
+                defense: 5,
+                specialAttack: 5,
+                specialDefense: 5,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        Mon[] memory team = new Mon[](1);
+        team[0] = mon;
+
+        // Register both teams
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: oneMonOneMoveValidator,
+            rngOracle: mockOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            )
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice and Bob both select attacks, both of them are move index 0 (apply burn status)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Check that both mons have an effect length of 1
+        BattleState memory state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][0].targetedEffects.length, 1);
+        assertEq(state.monStates[1][0].targetedEffects.length, 1);
+
+        // Check that the attack of both mons was reduced by 50% (32/2 = 16)
+        assertEq(state.monStates[0][0].attackDelta, -16);
+        assertEq(state.monStates[1][0].attackDelta, -16);
+
+        // Check that both mons took 1/16 damage at end of round (256/16 = 16)
+        assertEq(state.monStates[0][0].hpDelta, -16);
+        assertEq(state.monStates[1][0].hpDelta, -16);
+
+        // Alice and Bob both select attacks again to increase burn degree
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Check that both mons still have an effect length of 1
+        state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][0].targetedEffects.length, 1);
+        assertEq(state.monStates[1][0].targetedEffects.length, 1);
+
+        // Check that both mons took additional 1/8 damage (256/8 = 32)
+        // Total damage should be 16 (first round) + 32 (second round) = 48
+        assertEq(state.monStates[0][0].hpDelta, -48);
+        assertEq(state.monStates[1][0].hpDelta, -48);
+
+        // Alice and Bob both select attacks again to increase burn degree to maximum
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Check that both mons still have an effect length of 1
+        state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][0].targetedEffects.length, 1);
+        assertEq(state.monStates[1][0].targetedEffects.length, 1);
+
+        // Check that both mons took additional 1/4 damage (256/4 = 64)
+        // Total damage should be 16 (first round) + 32 (second round) + 64 (third round) = 112
+        assertEq(state.monStates[0][0].hpDelta, -112);
+        assertEq(state.monStates[1][0].hpDelta, -112);
+
+        // Alice and Bob both select attacks again to increase burn degree to maximum
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Check that both mons still have an effect length of 1
+        state = engine.getBattleState(battleKey);
+        assertEq(state.monStates[0][0].targetedEffects.length, 1);
+        assertEq(state.monStates[1][0].targetedEffects.length, 1);
+
+        // Check that both mons took another 1/4 damage (max burn degree)
+        // Total damage should be 16 (first round) + 32 (second round) + 64 (third round) + 64 (fourth round) = 176
+        assertEq(state.monStates[0][0].hpDelta, -176);
+        assertEq(state.monStates[1][0].hpDelta, -176);
     }
 }

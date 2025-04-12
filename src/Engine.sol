@@ -210,6 +210,7 @@ contract Engine is IEngine {
         emit BattleStart(battleKey, p0TeamIndex, battle.p0, battle.p1);
     }
 
+    // THE IMPORTANT FUNCTION
     function execute(bytes32 battleKey) external {
         // Load storage vars
         Battle storage battle = battles[battleKey];
@@ -343,6 +344,7 @@ contract Engine is IEngine {
         // Emits switch for turn flag for the next turn, but the priority index for this current turn
         emit EngineExecute(battleKey, turnId, playerSwitchForTurnFlag, priorityPlayerIndex);
     }
+
 
     function end(bytes32 battleKey) external {
         BattleState storage state = battleStates[battleKey];

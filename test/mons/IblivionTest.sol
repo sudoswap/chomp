@@ -21,6 +21,7 @@ import {IEffect} from "../../src/effects/IEffect.sol";
 import {StatBoost} from "../../src/effects/StatBoost.sol";
 import {IntrinsicValue} from "../../src/mons/iblivion/IntrinsicValue.sol";
 import {Baselight} from "../../src/mons/iblivion/Baselight.sol";
+import {Loop} from "../../src/mons/iblivion/Loop.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
@@ -32,6 +33,8 @@ import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 
 import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
+import {StandardAttack} from "../../src/moves/StandardAttack.sol";
+import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
 import {StatBoostMove} from "../mocks/StatBoostMove.sol";
 
 contract IblivionTest is Test, BattleHelper {
@@ -43,8 +46,10 @@ contract IblivionTest is Test, BattleHelper {
     FastValidator validator;
     IntrinsicValue intrinsicValue;
     Baselight baselight;
+    Loop loop;
     StatBoost statBoost;
     StatBoostMove statBoostMove;
+    StandardAttackFactory attackFactory;
 
     function setUp() public {
         typeCalc = new TestTypeCalculator();
@@ -58,8 +63,10 @@ contract IblivionTest is Test, BattleHelper {
         engine.setCommitManager(address(commitManager));
         statBoost = new StatBoost(IEngine(address(engine)));
         baselight = new Baselight(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
+        loop = new Loop(IEngine(address(engine)));
         intrinsicValue = new IntrinsicValue(IEngine(address(engine)), baselight, IEffect(address(statBoost)));
         statBoostMove = new StatBoostMove(IEngine(address(engine)), statBoost);
+        attackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
     }
 
     function test_intrinsicValueResetsDebuffsAndIncreasesBaselightLevel() public {
@@ -321,5 +328,130 @@ contract IblivionTest is Test, BattleHelper {
 
         uint256 finalBaselightLevel = baselight.getBaselightLevel(battleKey, 0, 0);
         assertEq(finalBaselightLevel, baselight.MAX_BASELIGHT_LEVEL(), "Baselight level should not exceed max level");
+    }
+
+    function test_loop() public {
+        // Create a new validator with 2 moves per mon
+        FastValidator twoMovesValidator = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 2, TIMEOUT_DURATION: 10})
+        );
+
+        // Create a StandardAttack with 5 stamina cost but 0 damage
+        StandardAttack highStaminaAttack = attackFactory.createAttack(
+            ATTACK_PARAMS({
+                BASE_POWER: 0, // No damage
+                STAMINA_COST: 5, // High stamina cost
+                ACCURACY: 100,
+                PRIORITY: 0,
+                MOVE_TYPE: Type.Fire,
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Physical,
+                CRIT_RATE: 0,
+                VOLATILITY: 0,
+                NAME: "Stamina Drain",
+                EFFECT: IEffect(address(0))
+            })
+        );
+
+        // Create a team with a mon that has Loop move and the high stamina cost attack
+        IMoveSet[] memory aliceMoves = new IMoveSet[](2);
+        aliceMoves[0] = highStaminaAttack;
+        aliceMoves[1] = loop;
+
+        Mon memory aliceMon = Mon({
+            stats: MonStats({
+                hp: 100,
+                stamina: 6,
+                speed: 10,
+                attack: 10,
+                defense: 10,
+                specialAttack: 10,
+                specialDefense: 10,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: aliceMoves,
+            ability: IAbility(address(0))
+        });
+
+        // Create a mon for Bob
+        IMoveSet[] memory bobMoves = new IMoveSet[](2);
+        bobMoves[0] = statBoostMove; // Just a placeholder move
+        bobMoves[1] = statBoostMove; // Just a placeholder move
+
+        Mon memory bobMon = Mon({
+            stats: MonStats({
+                hp: 100,
+                stamina: 10,
+                speed: 5, // Lower speed so Alice goes first
+                attack: 10,
+                defense: 10,
+                specialAttack: 10,
+                specialDefense: 10,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: bobMoves,
+            ability: IAbility(address(0)) // No ability
+        });
+
+        // Set up teams
+        Mon[] memory aliceTeam = new Mon[](1);
+        aliceTeam[0] = aliceMon;
+
+        Mon[] memory bobTeam = new Mon[](1);
+        bobTeam[0] = bobMon;
+
+        defaultRegistry.setTeam(ALICE, aliceTeam);
+        defaultRegistry.setTeam(BOB, bobTeam);
+
+        // Start a battle
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMovesValidator, // Use the validator with 2 moves per mon
+            rngOracle: mockOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
+        );
+
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move: Both players select their first mon (index 0)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice uses high stamina cost attack, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+        );
+
+        // Get the stamina delta (staminaDelta is stored in the Stamina field)
+        int32 staminaDelta = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Stamina);
+        assertEq(staminaDelta, -5, "Stamina should be 0 after using high stamina cost attack");
+
+        // Alice uses Loop, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 1, NO_OP_MOVE_INDEX, "", ""
+        );
+
+        // Check that Alice's mon's stamina delta is reset
+        int32 staminaDeltaAfterLoop = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Stamina);
+        assertEq(staminaDeltaAfterLoop, 0, "Stamina delta should be reset to 0 after using Loop");
     }
 }

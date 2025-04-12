@@ -32,6 +32,8 @@ import {BattleHelper} from "../abstract/BattleHelper.sol";
 
 import {RiseFromTheGrave} from "../../src/mons/ghouliath/RiseFromTheGrave.sol";
 import {Osteoporosis} from "../../src/mons/ghouliath/Osteoporosis.sol";
+import {WitherAway} from "../../src/mons/ghouliath/WitherAway.sol";
+import {PanicStatus} from "../../src/effects/status/PanicStatus.sol";
 
 contract GhouliathTest is Test, BattleHelper {
     Engine engine;
@@ -42,6 +44,8 @@ contract GhouliathTest is Test, BattleHelper {
     FastValidator validator;
     RiseFromTheGrave riseFromTheGrave;
     Osteoporosis osteoporosis;
+    WitherAway witherAway;
+    PanicStatus panicStatus;
     StandardAttackFactory standardAttackFactory;
 
     function setUp() public {
@@ -56,6 +60,8 @@ contract GhouliathTest is Test, BattleHelper {
         engine.setCommitManager(address(commitManager));
         riseFromTheGrave = new RiseFromTheGrave(IEngine(address(engine)));
         osteoporosis = new Osteoporosis(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
+        panicStatus = new PanicStatus(IEngine(address(engine)));
+        witherAway = new WitherAway(IEngine(address(engine)), ITypeCalculator(address(typeCalc)), IEffect(address(panicStatus)));
         standardAttackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
     }
 
@@ -312,6 +318,127 @@ contract GhouliathTest is Test, BattleHelper {
         assertEq(isKnockedOut, 0, "Bob's mon should be revived");
     }
 
+    function testWitherAway() public {
+        // Create a team with a mon that has WitherAway move
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = witherAway;
+
+        // Create a mon with specific stats
+        Mon memory attackerMon = Mon({
+            stats: MonStats({
+                hp: 100,
+                stamina: 10,
+                speed: 10, // Higher speed to go first
+                attack: 5,
+                defense: 5,
+                specialAttack: 5,
+                specialDefense: 5,
+                type1: Type.Yang,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        // Create a regular mon for the opponent
+        Mon memory defenderMon = Mon({
+            stats: MonStats({
+                hp: 100,
+                stamina: 10,
+                speed: 5,
+                attack: 5,
+                defense: 5,
+                specialAttack: 5,
+                specialDefense: 5,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        // Create teams
+        Mon[] memory aliceTeam = new Mon[](2);
+        aliceTeam[0] = attackerMon;
+        aliceTeam[1] = attackerMon;
+
+        Mon[] memory bobTeam = new Mon[](2);
+        bobTeam[0] = defenderMon;
+        bobTeam[1] = defenderMon;
+
+        // Register teams
+        defaultRegistry.setTeam(ALICE, aliceTeam);
+        defaultRegistry.setTeam(BOB, bobTeam);
+
+        // Start a battle
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: mockOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move: Both players select their first mon (index 0)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice uses WitherAway on Bob's mon
+        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", "");
+
+        // Verify that both mons have the PanicStatus effect applied
+        (IEffect[] memory aliceEffects,) = engine.getEffects(battleKey, 0, 0);
+        (IEffect[] memory bobEffects,) = engine.getEffects(battleKey, 1, 0);
+
+        // Check that both mons have at least one effect
+        assertGt(aliceEffects.length, 0, "Alice's mon should have at least one effect");
+        assertGt(bobEffects.length, 0, "Bob's mon should have at least one effect");
+
+        // Check that the effect is PanicStatus
+        bool aliceHasPanic = false;
+        bool bobHasPanic = false;
+
+        for (uint256 i = 0; i < aliceEffects.length; i++) {
+            if (keccak256(abi.encodePacked(aliceEffects[i].name())) == keccak256(abi.encodePacked("Panic"))) {
+                aliceHasPanic = true;
+                break;
+            }
+        }
+
+        for (uint256 i = 0; i < bobEffects.length; i++) {
+            if (keccak256(abi.encodePacked(bobEffects[i].name())) == keccak256(abi.encodePacked("Panic"))) {
+                bobHasPanic = true;
+                break;
+            }
+        }
+
+        assertTrue(aliceHasPanic, "Alice's mon should have Panic status");
+        assertTrue(bobHasPanic, "Bob's mon should have Panic status");
+
+        // Verify that stamina is reduced at the end of the turn due to Panic status
+        int32 aliceStaminaDelta = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Stamina);
+        int32 bobStaminaDelta = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Stamina);
+
+        // Alice used the move (costs 3 stamina) and got panic (costs 1 more), so -4 total
+        assertEq(aliceStaminaDelta, -4, "Alice's mon should have lost 4 stamina");
+        // Bob got panic (costs 1 stamina)
+        assertEq(bobStaminaDelta, -1, "Bob's mon should have lost 1 stamina");
+    }
+
     function testOsteoporosis() public {
         // Create a team with a mon that has Osteoporosis move
         IMoveSet[] memory moves = new IMoveSet[](1);
@@ -323,11 +450,11 @@ contract GhouliathTest is Test, BattleHelper {
                 hp: 100,
                 stamina: 10,
                 speed: 5,
-                attack: 10,
+                attack: 5,
                 defense: 5,
                 specialAttack: 5,
                 specialDefense: 5,
-                type1: Type.Yang, 
+                type1: Type.Yang,
                 type2: Type.None
             }),
             moves: moves,
@@ -341,7 +468,7 @@ contract GhouliathTest is Test, BattleHelper {
                 stamina: 10,
                 speed: 5,
                 attack: 5,
-                defense: 10, 
+                defense: 5,
                 specialAttack: 5,
                 specialDefense: 5,
                 type1: Type.Fire,

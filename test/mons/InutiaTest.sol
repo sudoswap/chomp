@@ -167,6 +167,11 @@ contract InutiaTest is Test, BattleHelper {
     }
 
     function test_shrineStrike() public {
+        // Create a validator with 1 mon and 1 move per mon
+        FastValidator oneMonOneMove = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: 10})
+        );
+
         // Create a StandardAttack that deals significant damage
         uint256 hpScale = 1024; // Large HP amount as requested
         int32 healDenom = shrineStrike.HEAL_DENOM();
@@ -229,7 +234,7 @@ contract InutiaTest is Test, BattleHelper {
         });
 
         // Set up teams
-        Mon[] memory aliceTeam = new Mon[](2);
+        Mon[] memory aliceTeam = new Mon[](1);
         aliceTeam[0] = aliceMon;
 
         Mon[] memory bobTeam = new Mon[](1);
@@ -242,7 +247,7 @@ contract InutiaTest is Test, BattleHelper {
         StartBattleArgs memory args = StartBattleArgs({
             p0: ALICE,
             p1: BOB,
-            validator: validator,
+            validator: oneMonOneMove,
             rngOracle: mockOracle,
             ruleset: IRuleset(address(0)),
             teamRegistry: defaultRegistry,

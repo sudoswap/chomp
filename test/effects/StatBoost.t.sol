@@ -22,8 +22,8 @@ import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 
-import {StatBoost} from "../../src/effects/StatBoost.sol";
-import {StatBoostMove} from "../mocks/StatBoostMove.sol";
+import {StatBoosts} from "../../src/effects/StatBoosts.sol";
+import {StatBoostsMove} from "../mocks/StatBoostsMove.sol";
 
 import {BattleHelper} from "../abstract/BattleHelper.sol";
 
@@ -34,8 +34,8 @@ contract StatBoostTest is Test, BattleHelper {
     MockRandomnessOracle mockOracle;
     TestTeamRegistry defaultRegistry;
     IValidator validator;
-    StatBoost statBoost;
-    StatBoostMove statBoostMove;
+    StatBoosts statBoosts;
+    StatBoostsMove statBoostMove;
 
     function setUp() public {
         typeCalc = new TestTypeCalculator();
@@ -48,9 +48,9 @@ contract StatBoostTest is Test, BattleHelper {
         commitManager = new FastCommitManager(IEngine(address(engine)));
         engine.setCommitManager(address(commitManager));
 
-        // Create the StatBoost effect and move
-        statBoost = new StatBoost(IEngine(address(engine)));
-        statBoostMove = new StatBoostMove(IEngine(address(engine)), statBoost);
+        // Create the StatBoosts effect and move
+        statBoosts = new StatBoosts(IEngine(address(engine)));
+        statBoostMove = new StatBoostsMove(IEngine(address(engine)), statBoosts);
     }
 
     function test_statBoostMove() public {
@@ -62,11 +62,11 @@ contract StatBoostTest is Test, BattleHelper {
             stats: MonStats({
                 hp: 100,
                 stamina: 100,
-                speed: 10,
-                attack: 10,
-                defense: 10,
-                specialAttack: 10,
-                specialDefense: 10,
+                speed: 100,
+                attack: 100,
+                defense: 100,
+                specialAttack: 100,
+                specialDefense: 100,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -78,11 +78,11 @@ contract StatBoostTest is Test, BattleHelper {
             stats: MonStats({
                 hp: 100,
                 stamina: 100,
-                speed: 10,
-                attack: 10,
-                defense: 10,
-                specialAttack: 10,
-                specialDefense: 10,
+                speed: 100,
+                attack: 100,
+                defense: 100,
+                specialAttack: 100,
+                specialDefense: 100,
                 type1: Type.Water,
                 type2: Type.None
             }),
@@ -148,7 +148,7 @@ contract StatBoostTest is Test, BattleHelper {
 
         // 1. Apply a positive boost (+2) to Alice's mon
         console.log("Testing %s stat boost", statName);
-        console.log("1. Applying +2 boost to Alice's mon");
+        console.log("1. Applying 10% boost to Alice's mon");
 
         int32 initialStat = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName(statIndex));
 
@@ -158,28 +158,28 @@ contract StatBoostTest is Test, BattleHelper {
             battleKey,
             0, // Alice uses stat boost move
             NO_OP_MOVE_INDEX, // Bob does nothing
-            abi.encode(0, 0, statIndex, int32(2)), // Alice boosts her own mon by +2
+            abi.encode(0, 0, statIndex, int32(10)), // Alice boosts her own mon by 10%
             "" // Bob does nothing
         );
 
         // Verify the stat was boosted
         int32 boostedStat = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName(statIndex));
-        assertEq(boostedStat, initialStat + 2, "Stat should be boosted by +2");
+        assertEq(boostedStat, initialStat + 10, "Stat should be boosted by 10%");
 
         // Verify the effect was added to Alice's mon
         (IEffect[] memory effects,) = engine.getEffects(battleKey, 0, 0);
         bool foundEffect = false;
         for (uint256 i = 0; i < effects.length; i++) {
-            if (keccak256(abi.encodePacked(effects[i].name())) == keccak256(abi.encodePacked(statBoost.name()))) {
+            if (keccak256(abi.encodePacked(effects[i].name())) == keccak256(abi.encodePacked("Stat Boost"))) {
                 foundEffect = true;
                 break;
             }
         }
-        assertTrue(foundEffect, "StatBoost effect should be added to mon's effects");
+        assertTrue(foundEffect, "Stat Boost effect should be added to mon's effects");
         uint256 effectCount = effects.length;
 
         // 2. Apply another boost (+1) to the same stat
-        console.log("2. Applying additional +1 boost to Alice's mon");
+        console.log("2. Applying additional 1% boost to Alice's mon");
 
         _commitRevealExecuteForAliceAndBob(
             engine,
@@ -193,14 +193,14 @@ contract StatBoostTest is Test, BattleHelper {
 
         // Verify the stat was boosted further
         int32 furtherBoostedStat = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName(statIndex));
-        assertEq(furtherBoostedStat, initialStat + 3, "Stat should be boosted by +3 total");
+        assertEq(furtherBoostedStat, initialStat + 11, "Stat should be boosted by 11% total");
 
         // Verify no duplicate effect was added
         (effects,) = engine.getEffects(battleKey, 0, 0);
         assertEq(effects.length, effectCount, "No duplicate effect should be added");
 
-        // 3. Apply a debuff (-2) to the same stat
-        console.log("3. Applying -2 debuff to Alice's mon");
+        // 3. Apply a debuff (-5) to the same stat
+        console.log("3. Applying -5% debuff to Alice's mon");
 
         _commitRevealExecuteForAliceAndBob(
             engine,
@@ -208,13 +208,13 @@ contract StatBoostTest is Test, BattleHelper {
             battleKey,
             0, // Alice uses stat boost move
             NO_OP_MOVE_INDEX, // Bob does nothing
-            abi.encode(0, 0, statIndex, int32(-2)), // Alice debuffs her own mon by -2
+            abi.encode(0, 0, statIndex, int32(-5)), // Alice debuffs her own mon by -5%
             "" // Bob does nothing
         );
 
         // Verify the stat was debuffed
         int32 debuffedStat = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName(statIndex));
-        assertEq(debuffedStat, initialStat + 1, "Stat should be at +1 after debuff");
+        assertEq(debuffedStat, initialStat + 5, "Stat should be at +5% after debuff");
 
         // Verify no duplicate effect was added
         (effects,) = engine.getEffects(battleKey, 0, 0);
@@ -237,12 +237,12 @@ contract StatBoostTest is Test, BattleHelper {
         (effects,) = engine.getEffects(battleKey, 0, 1);
         foundEffect = false;
         for (uint256 i = 0; i < effects.length; i++) {
-            if (keccak256(abi.encodePacked(effects[i].name())) == keccak256(abi.encodePacked("StatBoost"))) {
+            if (keccak256(abi.encodePacked(effects[i].name())) == keccak256(abi.encodePacked("Stat Boost"))) {
                 foundEffect = true;
                 break;
             }
         }
-        assertFalse(foundEffect, "StatBoost effect should be removed after switching out");
+        assertFalse(foundEffect, "Stat Boost effect should be removed after switching out");
 
         // 5. Switch back to the original mon and verify stat is reset
         _commitRevealExecuteForAliceAndBob(
@@ -278,11 +278,11 @@ contract StatBoostTest is Test, BattleHelper {
             stats: MonStats({
                 hp: 100,
                 stamina: 100,
-                speed: 10,
-                attack: 10,
-                defense: 10,
-                specialAttack: 10,
-                specialDefense: 10,
+                speed: 100,
+                attack: 100,
+                defense: 100,
+                specialAttack: 100,
+                specialDefense: 100,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -294,11 +294,11 @@ contract StatBoostTest is Test, BattleHelper {
             stats: MonStats({
                 hp: 100,
                 stamina: 100,
-                speed: 10,
-                attack: 10,
-                defense: 10,
-                specialAttack: 10,
-                specialDefense: 10,
+                speed: 100,
+                attack: 100,
+                defense: 100,
+                specialAttack: 100,
+                specialDefense: 100,
                 type1: Type.Water,
                 type2: Type.None
             }),
@@ -373,13 +373,13 @@ contract StatBoostTest is Test, BattleHelper {
             (IEffect[] memory statEffects,) = engine.getEffects(battleKey, 0, 0);
             bool foundStatEffect = false;
             for (uint256 j = 0; j < statEffects.length; j++) {
-                if (keccak256(abi.encodePacked(statEffects[j].name())) == keccak256(abi.encodePacked(statBoost.name())))
+                if (keccak256(abi.encodePacked(statEffects[j].name())) == keccak256(abi.encodePacked("Stat Boost")))
                 {
                     foundStatEffect = true;
                     break;
                 }
             }
-            assertTrue(foundStatEffect, "StatBoost effect should be added for each stat");
+            assertTrue(foundStatEffect, "Stat Boost effect should be added for each stat");
         }
 
         // Switch out and verify all effects are removed
@@ -397,8 +397,8 @@ contract StatBoostTest is Test, BattleHelper {
         (IEffect[] memory effects,) = engine.getEffects(battleKey, 0, 1);
         for (uint256 i = 0; i < effects.length; i++) {
             assertFalse(
-                keccak256(abi.encodePacked(effects[i].name())) == keccak256(abi.encodePacked(statBoost.name())),
-                "No StatBoost effects should remain after switching out"
+                keccak256(abi.encodePacked(effects[i].name())) == keccak256(abi.encodePacked("Stat Boost")),
+                "No Stat Boost effects should remain after switching out"
             );
         }
     }

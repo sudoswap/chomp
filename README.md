@@ -16,7 +16,7 @@ mechanical differences are:
 - far greater support for state-based moves / mechanics
 - stamina-based resource system instead of PP for balancing moves
 
-See [Architecture](README.md) for a deeper dive.
+See [Architecture](ARCHITECTURE.md) for a deeper dive.
 
 ## Getting Started
 

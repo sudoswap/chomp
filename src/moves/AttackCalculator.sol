@@ -109,6 +109,15 @@ library AttackCalculator {
                         )
                 );
             }
+
+            // Prevent weird stat bugs from messing up the math
+            if (attackStat <= 0) {
+                attackStat = 1;
+            }
+            if (defenceStat <= 0) {
+                defenceStat = 1;
+            }
+
             uint32 scaledBasePower = TYPE_CALCULATOR.getTypeEffectiveness(
                 attackType,
                 Type(

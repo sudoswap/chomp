@@ -27,6 +27,7 @@ import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
 import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
+import {StatBoosts} from "../../src/effects/StatBoosts.sol";
 
 import {BattleHelper} from "../abstract/BattleHelper.sol";
 
@@ -34,6 +35,7 @@ import {RiseFromTheGrave} from "../../src/mons/ghouliath/RiseFromTheGrave.sol";
 import {Osteoporosis} from "../../src/mons/ghouliath/Osteoporosis.sol";
 import {WitherAway} from "../../src/mons/ghouliath/WitherAway.sol";
 import {PanicStatus} from "../../src/effects/status/PanicStatus.sol";
+import {EternalGrudge} from "../../src/mons/ghouliath/EternalGrudge.sol";
 
 contract GhouliathTest is Test, BattleHelper {
     Engine engine;
@@ -46,6 +48,8 @@ contract GhouliathTest is Test, BattleHelper {
     Osteoporosis osteoporosis;
     WitherAway witherAway;
     PanicStatus panicStatus;
+    StatBoosts statBoosts;
+    EternalGrudge eternalGrudge;
     StandardAttackFactory standardAttackFactory;
 
     function setUp() public {
@@ -63,6 +67,8 @@ contract GhouliathTest is Test, BattleHelper {
         panicStatus = new PanicStatus(IEngine(address(engine)));
         witherAway = new WitherAway(IEngine(address(engine)), ITypeCalculator(address(typeCalc)), IEffect(address(panicStatus)));
         standardAttackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
+        statBoosts = new StatBoosts(IEngine(address(engine)));
+        eternalGrudge = new EternalGrudge(IEngine(address(engine)), statBoosts);
     }
 
     /*
@@ -526,5 +532,80 @@ contract GhouliathTest is Test, BattleHelper {
 
         // Assert it's at least base power / 2
         assertGe(damageTaken, osteoporosis.basePower(battleKey) / 2, "Damage taken should be at least base power / 2");
+    }
+
+    function testEternalGrudge() public {
+        // Create a team with a mon that has EternalGrudge move
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = eternalGrudge;
+
+        // Create a mon with specific stats to make damage calculation predictable
+        Mon memory attackerMon = Mon({
+            stats: MonStats({
+                hp: 100,
+                stamina: 10,
+                speed: 5,
+                attack: 10,
+                defense: 5,
+                specialAttack: 10,
+                specialDefense: 5,
+                type1: Type.Yang,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        Mon[] memory aliceTeam = new Mon[](2);
+        aliceTeam[0] = attackerMon;
+        aliceTeam[1] = attackerMon;
+
+        Mon[] memory bobTeam = new Mon[](2);
+        bobTeam[0] = attackerMon;
+        bobTeam[1] = attackerMon;
+
+                // Register teams
+        defaultRegistry.setTeam(ALICE, aliceTeam);
+        defaultRegistry.setTeam(BOB, bobTeam);
+
+        // Start a battle
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: mockOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move: Both players select their first mon (index 0)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice uses Eternal Grudge on Bob's mon
+        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", "");
+
+        // Assert Alice's mon is KO'd
+        int32 isKnockedOut = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut);
+        assertEq(isKnockedOut, 1, "Alice's mon should be KO'd");
+
+        // Assert Bob's mon has debuffs
+        int32 attackDelta = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Attack);
+        int32 spAttackDelta = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.SpecialAttack);
+        assertEq(attackDelta, -5, "Bob's mon's attack should be debuffed");
+        assertEq(spAttackDelta, -5, "Bob's mon's special attack should be debuffed");
     }
 }

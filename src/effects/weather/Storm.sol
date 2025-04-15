@@ -7,18 +7,19 @@ import "../../Structs.sol";
 import {IEngine} from "../../IEngine.sol";
 import {BasicEffect} from "../BasicEffect.sol";
 import {IEffect} from "../IEffect.sol";
+import {StatBoosts} from "../StatBoosts.sol";
 
 contract Storm is BasicEffect {
 
     uint256 public constant DEFAULT_DURATION = 3;
 
-    int32 public constant SPEED_DENOM = 4;
-    int32 public constant SP_DEF_DENOM = 4;
+    int32 public constant SPEED_PERCENT = 25;
+    int32 public constant SP_DEF_PERCENT = 25;
 
     IEngine immutable ENGINE;
-    IEffect immutable STAT_BOOST;
+    StatBoosts immutable STAT_BOOST;
 
-    constructor(IEngine _ENGINE, IEffect _STAT_BOOST) {
+    constructor(IEngine _ENGINE, StatBoosts _STAT_BOOST) {
         ENGINE = _ENGINE;
         STAT_BOOST = _STAT_BOOST;
     }
@@ -63,18 +64,14 @@ contract Storm is BasicEffect {
 
     function _applyStatChange(uint256 playerIndex, uint256 monIndex) internal {
         // Apply stat boosts (speed buff / sp def debuff)
-        int32 speedBuff = int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), playerIndex, monIndex, MonStateIndexName.Speed)) / SPEED_DENOM;
-        int32 spDefDebuff = -1 * int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), playerIndex, monIndex, MonStateIndexName.SpecialDefense)) / SP_DEF_DENOM;
-        ENGINE.addEffect(playerIndex, monIndex, STAT_BOOST, abi.encode(uint256(MonStateIndexName.Speed), speedBuff));
-        ENGINE.addEffect(playerIndex, monIndex, STAT_BOOST, abi.encode(uint256(MonStateIndexName.SpecialDefense), spDefDebuff));
+        STAT_BOOST.addStatBoost(playerIndex, monIndex, uint256(MonStateIndexName.Speed), SPEED_PERCENT, StatBoostType.Multiply, StatBoostFlag.Temp);
+        STAT_BOOST.addStatBoost(playerIndex, monIndex, uint256(MonStateIndexName.SpecialDefense), SP_DEF_PERCENT, StatBoostType.Divide, StatBoostFlag.Temp);
     }
 
     function _removeStatChange(uint256 playerIndex, uint256 monIndex) internal {
         // Reset stat boosts (speed buff / sp def debuff)
-        int32 speedDebuff = -1 * int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), playerIndex, monIndex, MonStateIndexName.Speed)) / SPEED_DENOM;
-        int32 spDefBuff = int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), playerIndex, monIndex, MonStateIndexName.SpecialDefense)) / SP_DEF_DENOM;
-        ENGINE.addEffect(playerIndex, monIndex, STAT_BOOST, abi.encode(uint256(MonStateIndexName.Speed), speedDebuff));
-        ENGINE.addEffect(playerIndex, monIndex, STAT_BOOST, abi.encode(uint256(MonStateIndexName.SpecialDefense), spDefBuff));
+        STAT_BOOST.removeStatBoost(playerIndex, monIndex, uint256(MonStateIndexName.Speed), SPEED_PERCENT, StatBoostType.Multiply, StatBoostFlag.Temp);
+        STAT_BOOST.removeStatBoost(playerIndex, monIndex, uint256(MonStateIndexName.SpecialDefense), SP_DEF_PERCENT, StatBoostType.Divide, StatBoostFlag.Temp);
     }
 
     function onApply(uint256, bytes memory extraData, uint256, uint256)

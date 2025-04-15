@@ -9,7 +9,6 @@ import {IEngine} from "../../IEngine.sol";
 import {IAbility} from "../../abilities/IAbility.sol";
 import {BasicEffect} from "../../effects/BasicEffect.sol";
 import {IEffect} from "../../effects/IEffect.sol";
-import {StatBoost} from "../../effects/StatBoost.sol";
 
 contract SplitThePot is IAbility, BasicEffect {
     int32 constant public HEAL_DENOM = 16;

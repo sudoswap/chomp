@@ -2,19 +2,19 @@
 
 pragma solidity ^0.8.0;
 
-import {EffectStep, MonStateIndexName} from "../../Enums.sol";
+import "../../Enums.sol";
 import {IEngine} from "../../IEngine.sol";
 import {IAbility} from "../../abilities/IAbility.sol";
 import {BasicEffect} from "../../effects/BasicEffect.sol";
 import {IEffect} from "../../effects/IEffect.sol";
-import {StatBoost} from "../../effects/StatBoost.sol";
+import {StatBoosts} from "../../effects/StatBoosts.sol";
 
 contract Interweaving is IAbility, BasicEffect {
-    int32 constant DECREASE_DENOM = 10;
+    int32 constant DECREASE_PERCENTAGE = 10;
     IEngine immutable ENGINE;
-    IEffect immutable STAT_BOOST;
+    StatBoosts immutable STAT_BOOST;
 
-    constructor(IEngine _ENGINE, IEffect _STAT_BOOST) {
+    constructor(IEngine _ENGINE, StatBoosts _STAT_BOOST) {
         ENGINE = _ENGINE;
         STAT_BOOST = _STAT_BOOST;
     }
@@ -28,15 +28,7 @@ contract Interweaving is IAbility, BasicEffect {
         uint256 otherPlayerIndex = (playerIndex + 1) % 2;
         uint256 otherPlayerActiveMonIndex =
             ENGINE.getActiveMonIndexForBattleState(ENGINE.battleKeyForWrite())[otherPlayerIndex];
-        // Decrease by 1/DECREASE_DENOM of base Attack stat
-        int32 decreaseAmount = -1
-            * int32(
-                ENGINE.getMonValueForBattle(
-                    ENGINE.battleKeyForWrite(), otherPlayerIndex, otherPlayerActiveMonIndex, MonStateIndexName.Attack
-                )
-            ) / DECREASE_DENOM;
-        bytes memory statBoostArgs = abi.encode(uint256(MonStateIndexName.Attack), decreaseAmount);
-        ENGINE.addEffect(otherPlayerIndex, otherPlayerActiveMonIndex, STAT_BOOST, statBoostArgs);
+        STAT_BOOST.addStatBoost(otherPlayerIndex, otherPlayerActiveMonIndex, uint256(MonStateIndexName.Attack), DECREASE_PERCENTAGE, StatBoostType.Divide, StatBoostFlag.Temp);
 
         // Check if the effect has already been set for this mon
         bytes32 monEffectId = keccak256(abi.encode(playerIndex, monIndex, name()));
@@ -64,15 +56,7 @@ contract Interweaving is IAbility, BasicEffect {
         uint256 otherPlayerIndex = (targetIndex + 1) % 2;
         uint256 otherPlayerActiveMonIndex =
             ENGINE.getActiveMonIndexForBattleState(ENGINE.battleKeyForWrite())[otherPlayerIndex];
-        // Decrease by 1/DECREASE_DENOM of base Special Attack stat
-        int32 decreaseAmount = -1
-            * int32(
-                ENGINE.getMonValueForBattle(
-                    ENGINE.battleKeyForWrite(), otherPlayerIndex, otherPlayerActiveMonIndex, MonStateIndexName.SpecialAttack
-                )
-            ) / DECREASE_DENOM;
-        bytes memory statBoostArgs = abi.encode(uint256(MonStateIndexName.SpecialAttack), decreaseAmount);
-        ENGINE.addEffect(otherPlayerIndex, otherPlayerActiveMonIndex, STAT_BOOST, statBoostArgs);
+        STAT_BOOST.addStatBoost(otherPlayerIndex, otherPlayerActiveMonIndex, uint256(MonStateIndexName.SpecialAttack), DECREASE_PERCENTAGE, StatBoostType.Divide, StatBoostFlag.Temp);
         return ("", false);
     }
 }

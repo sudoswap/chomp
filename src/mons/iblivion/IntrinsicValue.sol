@@ -7,16 +7,16 @@ import {IEngine} from "../../IEngine.sol";
 import {IAbility} from "../../abilities/IAbility.sol";
 import {BasicEffect} from "../../effects/BasicEffect.sol";
 import {IEffect} from "../../effects/IEffect.sol";
-import {StatBoost} from "../../effects/StatBoost.sol";
+import {StatBoosts} from "../../effects/StatBoosts.sol";
 import {Baselight} from "../iblivion/Baselight.sol";
 
 contract IntrinsicValue is IAbility, BasicEffect {
 
     IEngine immutable ENGINE;
     Baselight immutable BASELIGHT;
-    IEffect immutable STAT_BOOST;
+    StatBoosts immutable STAT_BOOST;
 
-    constructor(IEngine _ENGINE, Baselight _BASELIGHT, IEffect _STAT_BOOST) {
+    constructor(IEngine _ENGINE, Baselight _BASELIGHT, StatBoosts _STAT_BOOST) {
         ENGINE = _ENGINE;
         BASELIGHT = _BASELIGHT;
         STAT_BOOST = _STAT_BOOST;
@@ -60,15 +60,8 @@ contract IntrinsicValue is IAbility, BasicEffect {
         statIndexNames[3] = uint256(MonStateIndexName.SpecialDefense);
         statIndexNames[4] = uint256(MonStateIndexName.Speed);
         for (uint256 i = 0; i < statIndexNames.length; i++) {
-            bytes32 statKey = StatBoost(address(STAT_BOOST)).getKeyForMonIndex(targetIndex, monIndex, uint256(statIndexNames[i]));
-            int32 existingBoostAmount = int32(int256(uint256(ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), statKey))));
-            // Reset the stat debuff
-            if (existingBoostAmount < 0) {
-                int32 resetBoostAmount = existingBoostAmount * -1;
-                bytes memory boostData = abi.encode(statIndexNames[i], resetBoostAmount);
-                ENGINE.addEffect(targetIndex, monIndex, STAT_BOOST, boostData);
-                statsReset = true;
-            }
+            bool reset = STAT_BOOST.clearTempBoost(targetIndex, monIndex, statIndexNames[i]);
+            statsReset = statsReset || reset;
         }
         if (statsReset) {
             // Increase baselight level if we reset any stats

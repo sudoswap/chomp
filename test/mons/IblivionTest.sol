@@ -18,7 +18,7 @@ import {IValidator} from "../../src/IValidator.sol";
 import {IAbility} from "../../src/abilities/IAbility.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
 
-import {StatBoost} from "../../src/effects/StatBoost.sol";
+import {StatBoosts} from "../../src/effects/StatBoosts.sol";
 import {IntrinsicValue} from "../../src/mons/iblivion/IntrinsicValue.sol";
 import {Baselight} from "../../src/mons/iblivion/Baselight.sol";
 import {Loop} from "../../src/mons/iblivion/Loop.sol";
@@ -35,7 +35,7 @@ import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
 import {StandardAttack} from "../../src/moves/StandardAttack.sol";
 import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
-import {StatBoostMove} from "../mocks/StatBoostMove.sol";
+import {StatBoostsMove} from "../mocks/StatBoostsMove.sol";
 
 contract IblivionTest is Test, BattleHelper {
     Engine engine;
@@ -47,8 +47,8 @@ contract IblivionTest is Test, BattleHelper {
     IntrinsicValue intrinsicValue;
     Baselight baselight;
     Loop loop;
-    StatBoost statBoost;
-    StatBoostMove statBoostMove;
+    StatBoosts statBoost;
+    StatBoostsMove statBoostMove;
     StandardAttackFactory attackFactory;
 
     function setUp() public {
@@ -61,11 +61,11 @@ contract IblivionTest is Test, BattleHelper {
         );
         commitManager = new FastCommitManager(IEngine(address(engine)));
         engine.setCommitManager(address(commitManager));
-        statBoost = new StatBoost(IEngine(address(engine)));
+        statBoost = new StatBoosts(IEngine(address(engine)));
         baselight = new Baselight(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
         loop = new Loop(IEngine(address(engine)));
-        intrinsicValue = new IntrinsicValue(IEngine(address(engine)), baselight, IEffect(address(statBoost)));
-        statBoostMove = new StatBoostMove(IEngine(address(engine)), statBoost);
+        intrinsicValue = new IntrinsicValue(IEngine(address(engine)), baselight, statBoost);
+        statBoostMove = new StatBoostsMove(IEngine(address(engine)), statBoost);
         attackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
     }
 
@@ -86,12 +86,12 @@ contract IblivionTest is Test, BattleHelper {
         Mon memory aliceMon = Mon({
             stats: MonStats({
                 hp: 100,
-                stamina: 10,
-                speed: 10,
-                attack: 10,
-                defense: 10,
-                specialAttack: 10,
-                specialDefense: 10,
+                stamina: 100,
+                speed: 100,
+                attack: 100,
+                defense: 100,
+                specialAttack: 100,
+                specialDefense: 100,
                 type1: Type.Fire,
                 type2: Type.None
             }),
@@ -107,7 +107,7 @@ contract IblivionTest is Test, BattleHelper {
             stats: MonStats({
                 hp: 100,
                 stamina: 10,
-                speed: 5, // Lower speed so Alice goes first
+                speed: 10,
                 attack: 10,
                 defense: 10,
                 specialAttack: 10,
@@ -178,7 +178,7 @@ contract IblivionTest is Test, BattleHelper {
         uint256 baselightLevelBefore = baselight.getBaselightLevel(battleKey, 0, 0);
 
         // Bob uses debuff attack on Alice's mon
-        // The debuff applies -1 to the specified stat, which then gets reset at end of round
+        // The debuff applies -1% to the specified stat, which then gets reset at end of round
         bytes memory debuffData = abi.encode(0, 0, uint256(statType), int32(-1));
         _commitRevealExecuteForAliceAndBob(
             engine, commitManager, battleKey, NO_OP_MOVE_INDEX, 0, "", debuffData

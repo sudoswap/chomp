@@ -63,3 +63,14 @@ enum EffectRunCondition {
     SkipIfGameOver, // Default to always run
     SkipIfGameOverOrMonKO // Skips if mon is KO'ed
 }
+
+enum StatBoostType {
+    Multiply,
+    Divide
+}
+
+enum StatBoostFlag {
+    Temp,
+    Perm,
+    Existence
+}

@@ -18,7 +18,7 @@ import {IValidator} from "../../src/IValidator.sol";
 import {IAbility} from "../../src/abilities/IAbility.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
 
-import {StatBoost} from "../../src/effects/StatBoost.sol";
+import {StatBoosts} from "../../src/effects/StatBoosts.sol";
 import {Interweaving} from "../../src/mons/inutia/Interweaving.sol";
 import {ShrineStrike} from "../../src/mons/inutia/ShrineStrike.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
@@ -43,7 +43,7 @@ contract InutiaTest is Test, BattleHelper {
     TestTeamRegistry defaultRegistry;
     FastValidator validator;
     Interweaving interweaving;
-    StatBoost statBoost;
+    StatBoosts statBoost;
     StandardAttackFactory attackFactory;
     ShrineStrike shrineStrike;
 
@@ -57,8 +57,8 @@ contract InutiaTest is Test, BattleHelper {
         );
         commitManager = new FastCommitManager(IEngine(address(engine)));
         engine.setCommitManager(address(commitManager));
-        statBoost = new StatBoost(IEngine(address(engine)));
-        interweaving = new Interweaving(IEngine(address(engine)), IEffect(address(statBoost)));
+        statBoost = new StatBoosts(IEngine(address(engine)));
+        interweaving = new Interweaving(IEngine(address(engine)), statBoost);
         attackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
         shrineStrike = new ShrineStrike(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
     }

@@ -19,7 +19,7 @@ import {IAbility} from "../../src/abilities/IAbility.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
 import {Overclock} from "../../src/mons/volthare/Overclock.sol";
 import {Storm} from "../../src/effects/weather/Storm.sol";
-import {StatBoost} from "../../src/effects/StatBoost.sol";
+import {StatBoosts} from "../../src/effects/StatBoosts.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
@@ -43,7 +43,7 @@ contract VolthareTest is Test, BattleHelper {
     FastValidator validator;
     Overclock overclock;
     Storm storm;
-    StatBoost statBoost;
+    StatBoosts statBoost;
     StandardAttackFactory attackFactory;
 
     function setUp() public {
@@ -56,8 +56,8 @@ contract VolthareTest is Test, BattleHelper {
         );
         commitManager = new FastCommitManager(IEngine(address(engine)));
         engine.setCommitManager(address(commitManager));
-        statBoost = new StatBoost(IEngine(address(engine)));
-        storm = new Storm(IEngine(address(engine)), IEffect(address(statBoost)));
+        statBoost = new StatBoosts(IEngine(address(engine)));
+        storm = new Storm(IEngine(address(engine)), statBoost);
         overclock = new Overclock(IEngine(address(engine)), storm);
         attackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
     }
@@ -145,14 +145,14 @@ contract VolthareTest is Test, BattleHelper {
         assertEq(stormDuration, storm.DEFAULT_DURATION() - 1, "Storm should be applied with default duration");
 
         // Verify that Alice's mon's speed is boosted according to Storm's constants
-        // Speed should be increased by SPEED_NUM/SPEED_DENOM (5/4)
-        int32 expectedSpeedBoost = int32(100) / storm.SPEED_DENOM();
+        // Speed should be increased by 25%
+        int32 expectedSpeedBoost = storm.SPEED_PERCENT();
         int32 speedDelta = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Speed);
         assertEq(speedDelta, expectedSpeedBoost, "Speed should be boosted");
 
         // Verify that Alice's mon's special defense is decreased according to Storm's constants
         // SpDef should be decreased (3/4)
-        int32 expectedSpDefDebuff = -1 * int32(100) / storm.SP_DEF_DENOM();
+        int32 expectedSpDefDebuff = -1 * storm.SP_DEF_PERCENT();
         int32 spDefDelta = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.SpecialDefense);
         assertEq(spDefDelta, expectedSpDefDebuff, "Special Defense should be decreased");
 
@@ -270,8 +270,8 @@ contract VolthareTest is Test, BattleHelper {
         );
 
         // Verify that the stat changes are applied to Bob's mon
-        int32 expectedSpeedBoost = int32(100) / storm.SPEED_DENOM();
-        int32 expectedSpDefDebuff = -1 * int32(100) / storm.SP_DEF_DENOM();
+        int32 expectedSpeedBoost = storm.SPEED_PERCENT();
+        int32 expectedSpDefDebuff = -1 * storm.SP_DEF_PERCENT();
         int32 bobSpeedDelta = engine.getMonStateForBattle(battleKey, 1, 1, MonStateIndexName.Speed);
         int32 bobSpDefDelta = engine.getMonStateForBattle(battleKey, 1, 1, MonStateIndexName.SpecialDefense);
         assertEq(bobSpeedDelta, expectedSpeedBoost, "Bob's mon's speed should be boosted");

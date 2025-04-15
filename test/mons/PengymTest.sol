@@ -18,7 +18,6 @@ import {IValidator} from "../../src/IValidator.sol";
 import {IAbility} from "../../src/abilities/IAbility.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
 
-import {StatBoost} from "../../src/effects/StatBoost.sol";
 import {PostWorkout} from "../../src/mons/pengym/PostWorkout.sol";
 import {PanicStatus} from "../../src/effects/status/PanicStatus.sol";
 import {FrostbiteStatus} from "../../src/effects/status/FrostbiteStatus.sol";
@@ -44,7 +43,6 @@ contract PengymTest is Test, BattleHelper {
     MockRandomnessOracle mockOracle;
     TestTeamRegistry defaultRegistry;
     FastValidator validator;
-    StatBoost statBoost;
     StandardAttackFactory attackFactory;
     PostWorkout postWorkout;
     PanicStatus panicStatus;
@@ -60,7 +58,6 @@ contract PengymTest is Test, BattleHelper {
         );
         commitManager = new FastCommitManager(IEngine(address(engine)));
         engine.setCommitManager(address(commitManager));
-        statBoost = new StatBoost(IEngine(address(engine)));
         attackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
         postWorkout = new PostWorkout(IEngine(address(engine)));
         panicStatus = new PanicStatus(IEngine(address(engine)));

@@ -18,7 +18,7 @@ contract StatBoosts is BasicEffect {
     }
 
     /**
-     * Can only be applied once per mon
+     * Should only be applied once per mon
 
         getKeyForMonIndex => hash(targetIndex, monIndex, statIndex, name(), TEMP/PERM/EXISTENCE)
         TEMP/PERM
@@ -54,7 +54,7 @@ contract StatBoosts is BasicEffect {
 
     event Foo(uint256 a);
 
-    function _calculateExistingBoost(uint256 targetIndex, uint256 monIndex, uint256 statIndex, bool tempOnly) internal returns (int32) {
+    function calculateExistingBoost(uint256 targetIndex, uint256 monIndex, uint256 statIndex, bool tempOnly) public view returns (int32) {
         // First get the temporary boost
         bytes32 tempBoostKey = getKeyForMonIndexStat(targetIndex, monIndex, statIndex, StatBoostFlag.Temp);
         uint256 packedTempBoostValue = uint256(ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), tempBoostKey));
@@ -123,7 +123,7 @@ contract StatBoosts is BasicEffect {
     function _updateStatBoost(uint256 targetIndex, uint256 monIndex, uint256 statIndex, int32 boostAmount, StatBoostType boostType, StatBoostFlag boostFlag) internal {
 
         // Get the existing boost amount
-        int32 existingBoostAmount = _calculateExistingBoost(targetIndex, monIndex, statIndex, false);
+        int32 existingBoostAmount = calculateExistingBoost(targetIndex, monIndex, statIndex, false);
 
         bytes32 statKey = getKeyForMonIndexStat(targetIndex, monIndex, statIndex, StatBoostFlag(boostFlag));
         uint256 multiplyAndDivideTotal = uint256(ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), statKey));
@@ -172,7 +172,7 @@ contract StatBoosts is BasicEffect {
         ENGINE.setGlobalKV(statKey, bytes32(multiplyAndDivideTotal));
 
         // Set the new boost amount
-        int32 newBoostAmount = _calculateExistingBoost(targetIndex, monIndex, statIndex, false);
+        int32 newBoostAmount = calculateExistingBoost(targetIndex, monIndex, statIndex, false);
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName(statIndex), newBoostAmount - existingBoostAmount);
     }
 
@@ -213,6 +213,23 @@ contract StatBoosts is BasicEffect {
         return (extraData, removeAfterRun);
     }
 
+    function clearTempBoost(uint256 targetIndex, uint256 monIndex, uint256 statIndex) public returns (bool) {
+        bytes32 statKey = getKeyForMonIndexBoostExistence(targetIndex, monIndex, uint256(statIndex));
+        if (ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), statKey) != bytes32(0)) {
+            // Get the existing temporary boost amount
+            int32 existingBoostAmount = calculateExistingBoost(targetIndex, monIndex, uint256(statIndex), true);
+            if (existingBoostAmount != 0) {
+                // Clear the temporary boost in both directions
+                bytes32 tempBoostKey = getKeyForMonIndexStat(targetIndex, monIndex, uint256(statIndex), StatBoostFlag.Temp);
+                ENGINE.setGlobalKV(tempBoostKey, bytes32(0));
+                // Reset the temporary boost
+                ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName(statIndex), existingBoostAmount * -1);
+                return true;
+            }
+        }
+        return false;
+    }
+
     function onMonSwitchOut(uint256, bytes memory, uint256 targetIndex, uint256 monIndex)
         external
         override
@@ -226,20 +243,8 @@ contract StatBoosts is BasicEffect {
         statIndexNames[3] = uint256(MonStateIndexName.SpecialDefense);
         statIndexNames[4] = uint256(MonStateIndexName.Speed);
         for (uint256 i = 0; i < statIndexNames.length; i++) {
-            bytes32 statKey = getKeyForMonIndexBoostExistence(targetIndex, monIndex, uint256(statIndexNames[i]));
-            if (ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), statKey) != bytes32(0)) {
-                // Get the existing temporary boost amount
-                int32 existingBoostAmount = _calculateExistingBoost(targetIndex, monIndex, uint256(statIndexNames[i]), true);
-
-                // Clear the temporary boost in both directions
-                bytes32 tempBoostKey = getKeyForMonIndexStat(targetIndex, monIndex, uint256(statIndexNames[i]), StatBoostFlag.Temp);
-                ENGINE.setGlobalKV(tempBoostKey, bytes32(0));
-
-                // Reset the temporary boost
-                ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName(statIndexNames[i]), existingBoostAmount * -1);
-            }
+            clearTempBoost(targetIndex, monIndex, statIndexNames[i]);
         }
-
         return ("", false);
     }
 }

@@ -95,7 +95,7 @@ contract BurnStatus is StatusEffect {
         super.onRemove("", targetIndex, monIndex);
 
         // Reset the attack reduction
-        STAT_BOOSTS.addStatBoost(targetIndex, monIndex, uint256(MonStateIndexName.Attack), (-1 * ATTACK_PERCENT), StatBoostType.Multiply, StatBoostFlag.Perm);
+        STAT_BOOSTS.removeStatBoost(targetIndex, monIndex, uint256(MonStateIndexName.Attack), ATTACK_PERCENT, StatBoostType.Divide, StatBoostFlag.Perm);
 
         // Reset the burn degree
         ENGINE.setGlobalKV(getKeyForMonIndex(targetIndex, monIndex), bytes32(0));

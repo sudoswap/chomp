@@ -29,6 +29,7 @@ import {FrostbiteStatus} from "../../src/effects/status/FrostbiteStatus.sol";
 import {SleepStatus} from "../../src/effects/status/SleepStatus.sol";
 import {BurnStatus} from "../../src/effects/status/BurnStatus.sol";
 import {StatBoosts} from "../../src/effects/StatBoosts.sol";
+import {ZapStatus} from "../../src/effects/status/ZapStatus.sol";
 
 // Import standard attack factory and template
 
@@ -50,6 +51,7 @@ contract EffectTest is Test {
     SleepStatus sleepStatus;
     PanicStatus panicStatus;
     BurnStatus burnStatus;
+    ZapStatus zapStatus;
 
     address constant ALICE = address(1);
     address constant BOB = address(2);
@@ -89,6 +91,7 @@ contract EffectTest is Test {
         sleepStatus = new SleepStatus(engine);
         panicStatus = new PanicStatus(engine);
         burnStatus = new BurnStatus(engine, statBoosts);
+        zapStatus = new ZapStatus(engine);
     }
 
     function _commitRevealExecuteForAliceAndBob(
@@ -738,5 +741,136 @@ contract EffectTest is Test {
         // Total damage should be 16 (first round) + 32 (second round) + 64 (third round) + 64 (fourth round) = 176
         assertEq(state.monStates[0][0].hpDelta, -176);
         assertEq(state.monStates[1][0].hpDelta, -176);
+    }
+
+    function test_zap() public {
+        // Deploy an attack with burn status
+        IMoveSet zapAttack = standardAttackFactory.createAttack(
+            ATTACK_PARAMS({
+                BASE_POWER: 0,
+                STAMINA_COST: 1,
+                ACCURACY: 100,
+                PRIORITY: uint32(SWITCH_PRIORITY) + 1, // Make it faster than switching
+                MOVE_TYPE: Type.Fire,
+                EFFECT_ACCURACY: 100,
+                MOVE_CLASS: MoveClass.Physical,
+                CRIT_RATE: 0,
+                VOLATILITY: 0,
+                NAME: "ZapHit",
+                EFFECT: zapStatus
+            })
+        );
+
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = zapAttack;
+
+        // Create mons with HP = 256 for easy division by 16 (burn damage denominator)
+        Mon memory fastMon = Mon({
+            stats: MonStats({
+                hp: 256,
+                stamina: 10,
+                speed: 5,
+                attack: 32, // Use 32 for easy division by 2 (attack reduction denominator)
+                defense: 5,
+                specialAttack: 5,
+                specialDefense: 5,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon memory slowMon = Mon({
+            stats: MonStats({
+                hp: 256,
+                stamina: 10,
+                speed: 1,
+                attack: 32, // Use 32 for easy division by 2 (attack reduction denominator)
+                defense: 5,
+                specialAttack: 5,
+                specialDefense: 5,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        Mon[] memory fastTeam = new Mon[](2);
+        fastTeam[0] = fastMon;
+        fastTeam[1] = fastMon;
+
+        Mon[] memory slowTeam = new Mon[](2);
+        slowTeam[0] = slowMon;
+        slowTeam[1] = slowMon;
+
+        // Register both teams
+        defaultRegistry.setTeam(ALICE, fastTeam);
+        defaultRegistry.setTeam(BOB, slowTeam);
+
+        DefaultValidator twoMonOneMoveValidator = new DefaultValidator(
+            engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
+        );
+
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: twoMonOneMoveValidator,
+            rngOracle: mockOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(
+                args.validator,
+                args.rngOracle,
+                args.ruleset,
+                args.teamRegistry,
+                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
+            )
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice and Bob both select attacks, both of them are move index 0 (apply zap status)
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // But Alice should outspeed Bob, so Bob should have zero stamina delta
+        assertEq(engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Stamina), 0);
+
+        // Whereas Alice should have -1 stamina delta
+        assertEq(engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Stamina), -1);
+
+        // Alice uses Zap, Bob switches to mon index 1
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, SWITCH_MOVE_INDEX, "", abi.encode(1));
+
+        // Bob's mon index 0 should not have the skip turn flag because they swapped out
+        assertEq(engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.ShouldSkipTurn), 0);
+
+        // Also effect should still be there for Bob's mon index 0
+        (, bytes[] memory extraData) = engine.getEffects(battleKey, 1, 0);
+        assertEq(extraData.length, 1);
+
+        // Bob switches back to mon index 0, Alice does nothing
+        _commitRevealExecuteForAliceAndBob(battleKey, NO_OP_MOVE_INDEX, SWITCH_MOVE_INDEX, "", abi.encode(0));
+
+        // Bob's mon index 0 should have the skip turn flag set (the effect triggers on on switch in)
+        assertEq(engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.ShouldSkipTurn), 1);
+
+        (, extraData) = engine.getEffects(battleKey, 1, 0);
+        assertEq(extraData.length, 0);
     }
 }

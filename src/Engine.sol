@@ -525,6 +525,7 @@ contract Engine is IEngine {
             battleStates[battleKey].playerSwitchForTurnFlag = playerSwitchForTurnFlag;
 
             // TODO: consider also checking game over / setting flag for other player
+            // Also upstreaming more updates from `_handleSwitch` and change it to also add `_handleEffects`
         }
         // If the switch is invalid, we simply do nothing and continue execution
     }
@@ -605,6 +606,9 @@ contract Engine is IEngine {
 
         // Update to new active mon (we assume validate already resolved and gives us a valid target)
         state.activeMonIndex[playerIndex] = monToSwitchIndex;
+
+        // Run onMonSwitchIn hook for local effects
+        _runEffects(battleKey, rng, playerIndex, playerIndex, EffectStep.OnMonSwitchIn);
 
         // Run onMonSwitchIn hook for global effects
         _runEffects(battleKey, rng, 2, playerIndex, EffectStep.OnMonSwitchIn);

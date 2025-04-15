@@ -2,6 +2,7 @@
 
 2) Allow restricting/enforcement of move selection
 3) Add a OnBeforeDamage hook to the Engine, add tests for it as well, allow editing of damage on the stack, also put the damage source on the stack
+4) right now, _handleSwitch runs a bunch of effects before handling control flow back. in some future edge cases this will mess things up, just don't worry about it for now. we'll need more fine grained control later on though.
 
 ---------------------------------------------------------------------------------------------
 
@@ -24,7 +25,7 @@ Ways to mitigate:
 - avoid dealing damage in the afterDamage hook itself
 - maintain manual mutex to prevent infinite recurse
 
-3) Ending a match before any moves are committed is valid 
+3) Ending a match before any moves are committed is valid
 - Bypasses the timeout for the default validator
 
 4) Malicious p0 can commit to a team that has an array of mons, but modify the mon moves prior to starting a battle (after p1 commits)

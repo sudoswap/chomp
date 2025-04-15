@@ -23,7 +23,6 @@ interface IEffect {
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);
 
-    // NOTE: ONLY RUN ON GLOBAL EFFECTS (mons have their Ability as their own hook to apply an effect on switch in)
     function onMonSwitchIn(uint256 rng, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         returns (bytes memory updatedExtraData, bool removeAfterRun);

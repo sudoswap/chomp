@@ -34,6 +34,7 @@ import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 import {StandardAttack} from "../../src/moves/StandardAttack.sol";
 import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
 import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
+import {StatBoosts} from "../../src/effects/StatBoosts.sol";
 
 contract PengymTest is Test, BattleHelper {
 
@@ -47,6 +48,7 @@ contract PengymTest is Test, BattleHelper {
     PostWorkout postWorkout;
     PanicStatus panicStatus;
     FrostbiteStatus frostbiteStatus;
+    StatBoosts statBoost;
 
     function setUp() public {
         typeCalc = new TestTypeCalculator();
@@ -61,7 +63,8 @@ contract PengymTest is Test, BattleHelper {
         attackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
         postWorkout = new PostWorkout(IEngine(address(engine)));
         panicStatus = new PanicStatus(IEngine(address(engine)));
-        frostbiteStatus = new FrostbiteStatus(IEngine(address(engine)));
+        statBoost = new StatBoosts(IEngine(address(engine)));
+        frostbiteStatus = new FrostbiteStatus(IEngine(address(engine)), statBoost);
     }
 
     function test_postWorkoutClearsPanicStatusAndGainsStamina() public {

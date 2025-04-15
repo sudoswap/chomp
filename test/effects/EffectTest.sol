@@ -36,7 +36,7 @@ import {StandardAttack} from "../../src/moves/StandardAttack.sol";
 import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
 import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
 
-contract EngineTest is Test {
+contract EffectTest is Test {
     CommitManager commitManager;
     Engine engine;
     DefaultValidator oneMonOneMoveValidator;
@@ -85,7 +85,7 @@ contract EngineTest is Test {
 
         // Deploy all effects
         statBoosts = new StatBoosts(engine);
-        frostbiteStatus = new FrostbiteStatus(engine);
+        frostbiteStatus = new FrostbiteStatus(engine, statBoosts);
         sleepStatus = new SleepStatus(engine);
         panicStatus = new PanicStatus(engine);
         burnStatus = new BurnStatus(engine, statBoosts);
@@ -192,10 +192,10 @@ contract EngineTest is Test {
         // Alice and Bob both select attacks, both of them are move index 0 (do frostbite damage)
         _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
 
-        // Check that both mons have an effect length of 1
+        // Check that both mons have an effect length of 2 (including stat boost)
         BattleState memory state = engine.getBattleState(battleKey);
-        assertEq(state.monStates[0][0].targetedEffects.length, 1);
-        assertEq(state.monStates[1][0].targetedEffects.length, 1);
+        assertEq(state.monStates[0][0].targetedEffects.length, 2);
+        assertEq(state.monStates[1][0].targetedEffects.length, 2);
 
         // Check that both mons took 1 damage (we should round down)
         assertEq(state.monStates[0][0].hpDelta, -1);
@@ -208,10 +208,10 @@ contract EngineTest is Test {
         // Alice and Bob both select attacks, both of them are move index 0 (do frostbite damage)
         _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
 
-        // Check that both mons still have an effect length of 1
+        // Check that both mons still have an effect length of 2 (including stat boost)
         state = engine.getBattleState(battleKey);
-        assertEq(state.monStates[0][0].targetedEffects.length, 1);
-        assertEq(state.monStates[1][0].targetedEffects.length, 1);
+        assertEq(state.monStates[0][0].targetedEffects.length, 2);
+        assertEq(state.monStates[1][0].targetedEffects.length, 2);
 
         assertEq(state.monStates[0][0].hpDelta, -2);
         assertEq(state.monStates[1][0].hpDelta, -2);
@@ -225,7 +225,7 @@ contract EngineTest is Test {
         assertEq(state.monStates[1][0].hpDelta, -3);
     }
 
-    function test_frostbite2() public {
+    function test_another_frostbite() public {
         // Deploy an attack with frostbite
         IMoveSet frostbiteAttack = standardAttackFactory.createAttack(
             ATTACK_PARAMS({

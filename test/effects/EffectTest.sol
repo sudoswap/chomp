@@ -28,6 +28,7 @@ import {PanicStatus} from "../../src/effects/status/PanicStatus.sol";
 import {FrostbiteStatus} from "../../src/effects/status/FrostbiteStatus.sol";
 import {SleepStatus} from "../../src/effects/status/SleepStatus.sol";
 import {BurnStatus} from "../../src/effects/status/BurnStatus.sol";
+import {StatBoosts} from "../../src/effects/StatBoosts.sol";
 
 // Import standard attack factory and template
 
@@ -43,6 +44,7 @@ contract EngineTest is Test {
     MockRandomnessOracle mockOracle;
     TestTeamRegistry defaultRegistry;
 
+    StatBoosts statBoosts;
     StandardAttackFactory standardAttackFactory;
     FrostbiteStatus frostbiteStatus;
     SleepStatus sleepStatus;
@@ -82,10 +84,11 @@ contract EngineTest is Test {
         standardAttackFactory = new StandardAttackFactory(engine, typeCalc);
 
         // Deploy all effects
+        statBoosts = new StatBoosts(engine);
         frostbiteStatus = new FrostbiteStatus(engine);
         sleepStatus = new SleepStatus(engine);
         panicStatus = new PanicStatus(engine);
-        burnStatus = new BurnStatus(engine);
+        burnStatus = new BurnStatus(engine, statBoosts);
     }
 
     function _commitRevealExecuteForAliceAndBob(
@@ -684,10 +687,10 @@ contract EngineTest is Test {
         // Alice and Bob both select attacks, both of them are move index 0 (apply burn status)
         _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
 
-        // Check that both mons have an effect length of 1
+        // Check that both mons have an effect length of 2 (including stat boost)
         BattleState memory state = engine.getBattleState(battleKey);
-        assertEq(state.monStates[0][0].targetedEffects.length, 1);
-        assertEq(state.monStates[1][0].targetedEffects.length, 1);
+        assertEq(state.monStates[0][0].targetedEffects.length, 2);
+        assertEq(state.monStates[1][0].targetedEffects.length, 2);
 
         // Check that the attack of both mons was reduced by 50% (32/2 = 16)
         assertEq(state.monStates[0][0].attackDelta, -16);
@@ -700,10 +703,10 @@ contract EngineTest is Test {
         // Alice and Bob both select attacks again to increase burn degree
         _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
 
-        // Check that both mons still have an effect length of 1
+        // Check that both mons still have an effect length of 2 (including stat boost)
         state = engine.getBattleState(battleKey);
-        assertEq(state.monStates[0][0].targetedEffects.length, 1);
-        assertEq(state.monStates[1][0].targetedEffects.length, 1);
+        assertEq(state.monStates[0][0].targetedEffects.length, 2);
+        assertEq(state.monStates[1][0].targetedEffects.length, 2);
 
         // Check that both mons took additional 1/8 damage (256/8 = 32)
         // Total damage should be 16 (first round) + 32 (second round) = 48
@@ -715,8 +718,8 @@ contract EngineTest is Test {
 
         // Check that both mons still have an effect length of 1
         state = engine.getBattleState(battleKey);
-        assertEq(state.monStates[0][0].targetedEffects.length, 1);
-        assertEq(state.monStates[1][0].targetedEffects.length, 1);
+        assertEq(state.monStates[0][0].targetedEffects.length, 2);
+        assertEq(state.monStates[1][0].targetedEffects.length, 2);
 
         // Check that both mons took additional 1/4 damage (256/4 = 64)
         // Total damage should be 16 (first round) + 32 (second round) + 64 (third round) = 112
@@ -728,8 +731,8 @@ contract EngineTest is Test {
 
         // Check that both mons still have an effect length of 1
         state = engine.getBattleState(battleKey);
-        assertEq(state.monStates[0][0].targetedEffects.length, 1);
-        assertEq(state.monStates[1][0].targetedEffects.length, 1);
+        assertEq(state.monStates[0][0].targetedEffects.length, 2);
+        assertEq(state.monStates[1][0].targetedEffects.length, 2);
 
         // Check that both mons took another 1/4 damage (max burn degree)
         // Total damage should be 16 (first round) + 32 (second round) + 64 (third round) + 64 (fourth round) = 176

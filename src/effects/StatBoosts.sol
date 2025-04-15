@@ -52,7 +52,9 @@ contract StatBoosts is BasicEffect {
         return keccak256(abi.encode(targetIndex, monIndex, statIndex, name(), uint256(boostFlag)));
     }
 
-    function _calculateExistingBoost(uint256 targetIndex, uint256 monIndex, uint256 statIndex, bool tempOnly) internal view returns (int32) {
+    event Foo(uint256 a);
+
+    function _calculateExistingBoost(uint256 targetIndex, uint256 monIndex, uint256 statIndex, bool tempOnly) internal returns (int32) {
         // First get the temporary boost
         bytes32 tempBoostKey = getKeyForMonIndexStat(targetIndex, monIndex, statIndex, StatBoostFlag.Temp);
         uint256 packedTempBoostValue = uint256(ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), tempBoostKey));
@@ -111,7 +113,7 @@ contract StatBoosts is BasicEffect {
             // Apply permanent divide boost
             if (numPermDivideBoosts > 0) {
                 uint256 permDivideDivisor = SCALE ** numPermDivideBoosts;
-                baseStat = (baseStat * permDivideDivisor) / totalPermDivideBoost;
+                baseStat = (baseStat * totalPermDivideBoost) / permDivideDivisor;
             }
         }
 
@@ -163,9 +165,9 @@ contract StatBoosts is BasicEffect {
         }
         else {
             // Clear the bottom 128 bits by masking with the top 128 bits
-            multiplyAndDivideTotal = (multiplyAndDivideTotal & (uint256(type(uint128).max) << 128));
+            uint256 topBits = (multiplyAndDivideTotal & (uint256(type(uint128).max) << 128));
             // Combine with the new packed value in the bottom 128 bits
-            multiplyAndDivideTotal = multiplyAndDivideTotal | newPackedBoostValue;
+            multiplyAndDivideTotal = topBits | newPackedBoostValue;
         }
         ENGINE.setGlobalKV(statKey, bytes32(multiplyAndDivideTotal));
 

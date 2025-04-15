@@ -1,22 +1,29 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import {EffectStep, MonStateIndexName} from "../../Enums.sol";
+import "../../Enums.sol";
 import {IEngine} from "../../IEngine.sol";
 import {IEffect} from "../IEffect.sol";
 
 import {StatusEffect} from "./StatusEffect.sol";
 import {StatusEffectLib} from "./StatusEffectLib.sol";
+import {StatBoosts} from "../StatBoosts.sol";
 
 contract BurnStatus is StatusEffect {
 
     uint256 public constant MAX_BURN_DEGREE = 3;
-    int32 public constant ATTACK_DENOM = 2;
+
+    int32 public constant ATTACK_PERCENT = 50;
+
     int32 public constant DEG1_DAMAGE_DENOM = 16;
     int32 public constant DEG2_DAMAGE_DENOM = 8;
     int32 public constant DEG3_DAMAGE_DENOM = 4;
 
-    constructor(IEngine engine) StatusEffect(engine) {}
+    StatBoosts immutable STAT_BOOSTS;
+
+    constructor(IEngine engine, StatBoosts statBoosts) StatusEffect(engine) {
+        STAT_BOOSTS = statBoosts;
+    }
 
     function name() public pure override returns (string memory) {
         return "Burn";
@@ -77,13 +84,7 @@ contract BurnStatus is StatusEffect {
         _increaseBurnDegree(targetIndex, monIndex);
 
         // Reduce attack by 1/ATTACK_DENOM of base attack stat
-        int32 attackAmountToReduce = -1
-            * int32(
-                ENGINE.getMonValueForBattle(
-                    ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.Attack
-                )
-            ) / ATTACK_DENOM;
-        ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Attack, attackAmountToReduce);
+        STAT_BOOSTS.addStatBoost(targetIndex, monIndex, uint256(MonStateIndexName.Attack), ATTACK_PERCENT, StatBoostType.Divide, StatBoostFlag.Perm);
 
         return ("", false);
     }
@@ -94,10 +95,7 @@ contract BurnStatus is StatusEffect {
         super.onRemove("", targetIndex, monIndex);
 
         // Reset the attack reduction
-        int32 attackAmountToIncrease = int32(
-            ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.Attack)
-        ) / ATTACK_DENOM;
-        ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName.Attack, attackAmountToIncrease);
+        STAT_BOOSTS.addStatBoost(targetIndex, monIndex, uint256(MonStateIndexName.Attack), (-1 * ATTACK_PERCENT), StatBoostType.Multiply, StatBoostFlag.Perm);
 
         // Reset the burn degree
         ENGINE.setGlobalKV(getKeyForMonIndex(targetIndex, monIndex), bytes32(0));

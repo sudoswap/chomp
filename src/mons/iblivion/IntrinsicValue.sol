@@ -11,7 +11,6 @@ import {StatBoosts} from "../../effects/StatBoosts.sol";
 import {Baselight} from "../iblivion/Baselight.sol";
 
 contract IntrinsicValue is IAbility, BasicEffect {
-
     IEngine immutable ENGINE;
     Baselight immutable BASELIGHT;
     StatBoosts immutable STAT_BOOST;

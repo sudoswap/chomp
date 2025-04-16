@@ -2,14 +2,14 @@
 
 pragma solidity ^0.8.0;
 
-import "../../Enums.sol";
 import "../../Constants.sol";
-import {IMoveSet} from "../../moves/IMoveSet.sol";
+import "../../Enums.sol";
+
 import {IEngine} from "../../IEngine.sol";
 import {StatBoosts} from "../../effects/StatBoosts.sol";
+import {IMoveSet} from "../../moves/IMoveSet.sol";
 
 contract EternalGrudge is IMoveSet {
-
     int32 public constant ATTACK_DEBUFF_PERCENT = 50;
     int32 public constant SP_ATTACK_DEBUFF_PERCENT = 50;
 
@@ -26,13 +26,26 @@ contract EternalGrudge is IMoveSet {
     }
 
     function move(bytes32, uint256 attackerPlayerIndex, bytes calldata, uint256) external {
-
         // Apply the debuff
         uint256 defenderPlayerIndex = (attackerPlayerIndex + 1) % 2;
         uint256 defenderMonIndex =
             ENGINE.getActiveMonIndexForBattleState(ENGINE.battleKeyForWrite())[defenderPlayerIndex];
-        STAT_BOOSTS.addStatBoost(defenderPlayerIndex, defenderMonIndex, uint256(MonStateIndexName.Attack), ATTACK_DEBUFF_PERCENT, StatBoostType.Divide, StatBoostFlag.Perm);
-        STAT_BOOSTS.addStatBoost(defenderPlayerIndex, defenderMonIndex, uint256(MonStateIndexName.SpecialAttack), SP_ATTACK_DEBUFF_PERCENT, StatBoostType.Divide, StatBoostFlag.Perm);
+        STAT_BOOSTS.addStatBoost(
+            defenderPlayerIndex,
+            defenderMonIndex,
+            uint256(MonStateIndexName.Attack),
+            ATTACK_DEBUFF_PERCENT,
+            StatBoostType.Divide,
+            StatBoostFlag.Perm
+        );
+        STAT_BOOSTS.addStatBoost(
+            defenderPlayerIndex,
+            defenderMonIndex,
+            uint256(MonStateIndexName.SpecialAttack),
+            SP_ATTACK_DEBUFF_PERCENT,
+            StatBoostType.Divide,
+            StatBoostFlag.Perm
+        );
 
         // KO self
         ENGINE.updateMonState(attackerPlayerIndex, defenderMonIndex, MonStateIndexName.IsKnockedOut, 1);

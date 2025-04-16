@@ -2,14 +2,16 @@
 
 pragma solidity ^0.8.0;
 
-import "../../Enums.sol";
 import "../../Constants.sol";
-import {IMoveSet} from "../../moves/IMoveSet.sol";
+import "../../Enums.sol";
+
 import {IEngine} from "../../IEngine.sol";
-import {ITypeCalculator} from "../../types/ITypeCalculator.sol";
+
+import {IEffect} from "../../effects/IEffect.sol";
+import {IMoveSet} from "../../moves/IMoveSet.sol";
 import {StandardAttack} from "../../moves/StandardAttack.sol";
 import {ATTACK_PARAMS} from "../../moves/StandardAttackStructs.sol";
-import {IEffect} from "../../effects/IEffect.sol";
+import {ITypeCalculator} from "../../types/ITypeCalculator.sol";
 
 contract WitherAway is StandardAttack {
     constructor(IEngine ENGINE, ITypeCalculator TYPE_CALCULATOR, IEffect PANIC_STATUS)
@@ -33,8 +35,10 @@ contract WitherAway is StandardAttack {
         )
     {}
 
-    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData, uint256 rng) public override {
-
+    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData, uint256 rng)
+        public
+        override
+    {
         // Deal the damage and inflict panic
         super.move(battleKey, attackerPlayerIndex, extraData, rng);
 

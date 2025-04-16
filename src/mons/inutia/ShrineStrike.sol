@@ -2,17 +2,18 @@
 
 pragma solidity ^0.8.0;
 
-import "../../Enums.sol";
 import "../../Constants.sol";
-import {IMoveSet} from "../../moves/IMoveSet.sol";
+import "../../Enums.sol";
+
 import {IEngine} from "../../IEngine.sol";
-import {ITypeCalculator} from "../../types/ITypeCalculator.sol";
+
+import {IEffect} from "../../effects/IEffect.sol";
+import {IMoveSet} from "../../moves/IMoveSet.sol";
 import {StandardAttack} from "../../moves/StandardAttack.sol";
 import {ATTACK_PARAMS} from "../../moves/StandardAttackStructs.sol";
-import {IEffect} from "../../effects/IEffect.sol";
+import {ITypeCalculator} from "../../types/ITypeCalculator.sol";
 
 contract ShrineStrike is StandardAttack {
-
     int32 public constant HEAL_DENOM = 16;
 
     constructor(IEngine ENGINE, ITypeCalculator TYPE_CALCULATOR)
@@ -36,17 +37,22 @@ contract ShrineStrike is StandardAttack {
         )
     {}
 
-    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData, uint256 rng) public override {
-
+    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata extraData, uint256 rng)
+        public
+        override
+    {
         // Deal the damage and inflict panic
         super.move(battleKey, attackerPlayerIndex, extraData, rng);
 
         // Heal HP for heal denom
         uint256 activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey)[attackerPlayerIndex];
-        int32 healAmount = int32(ENGINE.getMonValueForBattle(battleKey, attackerPlayerIndex, activeMonIndex, MonStateIndexName.Hp)) / HEAL_DENOM;
+        int32 healAmount = int32(
+            ENGINE.getMonValueForBattle(battleKey, attackerPlayerIndex, activeMonIndex, MonStateIndexName.Hp)
+        ) / HEAL_DENOM;
 
         // Prevent overhealing
-        int32 existingHpDelta = ENGINE.getMonStateForBattle(battleKey, attackerPlayerIndex, activeMonIndex, MonStateIndexName.Hp);
+        int32 existingHpDelta =
+            ENGINE.getMonStateForBattle(battleKey, attackerPlayerIndex, activeMonIndex, MonStateIndexName.Hp);
         if (existingHpDelta + healAmount > 0) {
             healAmount = 0 - existingHpDelta;
         }

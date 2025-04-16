@@ -2,13 +2,13 @@
 
 pragma solidity ^0.8.0;
 
-import "../../Enums.sol";
 import "../../Constants.sol";
-import {IMoveSet} from "../../moves/IMoveSet.sol";
+import "../../Enums.sol";
+
 import {IEngine} from "../../IEngine.sol";
+import {IMoveSet} from "../../moves/IMoveSet.sol";
 
 contract Loop is IMoveSet {
-
     IEngine immutable ENGINE;
 
     constructor(IEngine _ENGINE) {
@@ -21,16 +21,17 @@ contract Loop is IMoveSet {
 
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256) external {
         uint256 activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey)[attackerPlayerIndex];
-        int32 currentStaminaDelta = ENGINE.getMonStateForBattle(battleKey, attackerPlayerIndex, activeMonIndex, MonStateIndexName.Stamina);
+        int32 currentStaminaDelta =
+            ENGINE.getMonStateForBattle(battleKey, attackerPlayerIndex, activeMonIndex, MonStateIndexName.Stamina);
         if (currentStaminaDelta > 0) {
             return;
         }
-        // Reset all stamina costs
+        // Reset all stamina paid
         int32 staminaToHeal = -1 * currentStaminaDelta;
         ENGINE.updateMonState(attackerPlayerIndex, activeMonIndex, MonStateIndexName.Stamina, staminaToHeal);
     }
 
-    function stamina(bytes32, uint256, uint256 ) external pure returns (uint32) {
+    function stamina(bytes32, uint256, uint256) external pure returns (uint32) {
         return 1;
     }
 

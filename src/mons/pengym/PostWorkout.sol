@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.0;
 
-import "../../Structs.sol";
 import {NO_OP_MOVE_INDEX} from "../../Constants.sol";
 import {EffectStep, MonStateIndexName} from "../../Enums.sol";
 import {IEngine} from "../../IEngine.sol";
+import "../../Structs.sol";
 import {IAbility} from "../../abilities/IAbility.sol";
 import {BasicEffect} from "../../effects/BasicEffect.sol";
 import {IEffect} from "../../effects/IEffect.sol";
@@ -13,7 +13,6 @@ import {IEffect} from "../../effects/IEffect.sol";
 import {StatusEffectLib} from "../../effects/status/StatusEffectLib.sol";
 
 contract PostWorkout is IAbility, BasicEffect {
-
     IEngine immutable ENGINE;
 
     constructor(IEngine _ENGINE) {
@@ -58,7 +57,7 @@ contract PostWorkout is IAbility, BasicEffect {
             // Get the index of the effect and remove it
             uint256 effectIndex;
             (IEffect[] memory effects,) = ENGINE.getEffects(battleKey, targetIndex, monIndex);
-            for (uint i; i < effects.length; i++) {
+            for (uint256 i; i < effects.length; i++) {
                 if (effects[i] == statusEffect) {
                     effectIndex = i;
                     break;

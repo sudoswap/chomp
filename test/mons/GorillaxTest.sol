@@ -17,29 +17,27 @@ import {IRuleset} from "../../src/IRuleset.sol";
 import {IValidator} from "../../src/IValidator.sol";
 import {IAbility} from "../../src/abilities/IAbility.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
-import {Angery} from "../../src/mons/gorillax/Angery.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
-
 import {BattleHelper} from "../abstract/BattleHelper.sol";
-
 import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
-
 import {StandardAttack} from "../../src/moves/StandardAttack.sol";
 import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
 import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
 
+import {Angery} from "../../src/mons/gorillax/Angery.sol";
+import {RockPull} from "../../src/mons/gorillax/RockPull.sol";
+
 contract GorillaxTest is Test, BattleHelper {
+
     Engine engine;
     FastCommitManager commitManager;
     TestTypeCalculator typeCalc;
     MockRandomnessOracle mockOracle;
     TestTeamRegistry defaultRegistry;
-    FastValidator validator;
-    Angery angery;
     StandardAttackFactory attackFactory;
 
     function setUp() public {
@@ -47,24 +45,17 @@ contract GorillaxTest is Test, BattleHelper {
         mockOracle = new MockRandomnessOracle();
         defaultRegistry = new TestTeamRegistry();
         engine = new Engine();
-        validator = new FastValidator(
-            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: 10})
-        );
         commitManager = new FastCommitManager(IEngine(address(engine)));
         engine.setCommitManager(address(commitManager));
-        angery = new Angery(IEngine(address(engine)));
         attackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
     }
 
-    /*
-    - Assume we'll write a base functionality test for abilities that activate on switch, so dw abt those
-    - Normal attack yields one charge
-    - Strong attack yields 2 charges
-    - Consuming 3 charges correctly heals
-    - Consuming only 3 charges (and not more)
-    */
-
     function test_angery() public {
+        FastValidator validator = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: 10})
+        );
+        Angery angery = new Angery(IEngine(address(engine)));
+
         // Create a team with a mon that has Angery ability
         IMoveSet[] memory moves = new IMoveSet[](1);
         uint256 hpScale = 100;
@@ -144,5 +135,103 @@ contract GorillaxTest is Test, BattleHelper {
         // So it should have taken 2 * hpScale damage
         int32 bobMonHPDelta = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
         assertEq(bobMonHPDelta, int32(-2 * int32(uint32(hpScale))));
+    }
+
+    function test_rockPull() public {
+         FastValidator validator = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: 10})
+        );
+        RockPull rockPull = new RockPull(engine, typeCalc);
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = rockPull;
+
+        Mon memory gorillax = Mon({
+            stats: MonStats({
+                hp: 1000,
+                stamina: 6,
+                speed: 5,
+                attack: 10, // Our own ATK is 2x our defense
+                defense: 5,
+                specialAttack: 5,
+                specialDefense: 5,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        Mon memory otherMon = Mon({
+            stats: MonStats({
+                hp: 1000,
+                stamina: 5,
+                speed: 5,
+                attack: 10, 
+                defense: 10, // Same defense here to ensure things work as intended
+                specialAttack: 5,
+                specialDefense: 5,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        Mon[] memory aliceTeam = new Mon[](2);
+        aliceTeam[0] = gorillax;
+        aliceTeam[1] = otherMon;
+
+        Mon[] memory bobTeam = new Mon[](2);
+        bobTeam[0] = otherMon;
+        bobTeam[1] = otherMon;
+
+        defaultRegistry.setTeam(ALICE, aliceTeam);
+        defaultRegistry.setTeam(BOB, bobTeam);
+
+        // Start a battle
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: mockOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move: Both players select their first mon (index 0)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice uses Rock Pull, Bob switches to mon index 1
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(1)
+        );
+
+        // Assert that Bob's mon index 0 took damage
+        int32 bobMonHPDelta = -1 * engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
+        assertApproxEqRel(bobMonHPDelta, int32(rockPull.OPPONENT_BASE_POWER()), 2e17, "Damage dealt to opponent is within range");
+
+        // Alice uses Rock Pull, Bob does not switch
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Assert that Alice's mon index 0 took damage
+        int32 aliceMonHPDelta = -1 * engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+        // Note we multiply by 2 here to account for the self-damage, our stats are imbalanced to ensure the math is working as expected
+        assertApproxEqRel(aliceMonHPDelta, int32(2*rockPull.SELF_DAMAGE_BASE_POWER()), 2e17, "Damage dealt to self is within range");
     }
 }

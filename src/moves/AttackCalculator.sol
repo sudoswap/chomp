@@ -24,13 +24,14 @@ library AttackCalculator {
         MoveClass attackSupertype,
         uint256 rng,
         uint256 critRate // out of 100
-    ) public {
-        int32 damage = calculateDamageView(
-            ENGINE, TYPE_CALCULATOR, battleKey, attackerPlayerIndex, basePower, accuracy, volatility, attackType, attackSupertype, rng, critRate
-        );
+    ) public returns (int32) {
         uint256 defenderPlayerIndex = (attackerPlayerIndex + 1) % 2;
+        int32 damage = calculateDamageView(
+            ENGINE, TYPE_CALCULATOR, battleKey, attackerPlayerIndex, defenderPlayerIndex, basePower, accuracy, volatility, attackType, attackSupertype, rng, critRate
+        );
         uint256[] memory monIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
         ENGINE.dealDamage(defenderPlayerIndex, monIndex[defenderPlayerIndex], damage);
+        return damage;
     }
 
     function calculateDamageView(
@@ -38,6 +39,7 @@ library AttackCalculator {
         ITypeCalculator TYPE_CALCULATOR,
         bytes32 battleKey,
         uint256 attackerPlayerIndex,
+        uint256 defenderPlayerIndex,
         uint32 basePower,
         uint32 accuracy, // out of 100
         uint256 volatility,
@@ -54,7 +56,6 @@ library AttackCalculator {
         }
         uint256[] memory monIndex = ENGINE.getActiveMonIndexForBattleState(battleKey);
         int32 damage;
-        uint256 defenderPlayerIndex = (attackerPlayerIndex + 1) % 2;
         {
             uint32 attackStat;
             uint32 defenceStat;

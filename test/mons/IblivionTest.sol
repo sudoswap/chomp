@@ -9,7 +9,6 @@ import {Test} from "forge-std/Test.sol";
 import {Engine} from "../../src/Engine.sol";
 import {MonStateIndexName, MoveClass, Type, EffectStep} from "../../src/Enums.sol";
 import {FastCommitManager} from "../../src/FastCommitManager.sol";
-
 import {FastValidator} from "../../src/FastValidator.sol";
 import {IEngine} from "../../src/IEngine.sol";
 import {IFastCommitManager} from "../../src/IFastCommitManager.sol";
@@ -17,25 +16,23 @@ import {IRuleset} from "../../src/IRuleset.sol";
 import {IValidator} from "../../src/IValidator.sol";
 import {IAbility} from "../../src/abilities/IAbility.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
-
 import {StatBoosts} from "../../src/effects/StatBoosts.sol";
 import {IntrinsicValue} from "../../src/mons/iblivion/IntrinsicValue.sol";
-import {Baselight} from "../../src/mons/iblivion/Baselight.sol";
-import {Loop} from "../../src/mons/iblivion/Loop.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
-
 import {BattleHelper} from "../abstract/BattleHelper.sol";
-
 import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
-
 import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
 import {StandardAttack} from "../../src/moves/StandardAttack.sol";
 import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
 import {StatBoostsMove} from "../mocks/StatBoostsMove.sol";
+
+import {Baselight} from "../../src/mons/iblivion/Baselight.sol";
+import {Loop} from "../../src/mons/iblivion/Loop.sol";
+import {FirstResort} from "../../src/mons/iblivion/FirstResort.sol";
 
 contract IblivionTest is Test, BattleHelper {
     Engine engine;
@@ -406,30 +403,7 @@ contract IblivionTest is Test, BattleHelper {
         defaultRegistry.setTeam(BOB, bobTeam);
 
         // Start a battle
-        StartBattleArgs memory args = StartBattleArgs({
-            p0: ALICE,
-            p1: BOB,
-            validator: twoMovesValidator, // Use the validator with 2 moves per mon
-            rngOracle: mockOracle,
-            ruleset: IRuleset(address(0)),
-            teamRegistry: defaultRegistry,
-            p0TeamHash: keccak256(
-                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
-            )
-        });
-
-        vm.prank(ALICE);
-        bytes32 battleKey = engine.proposeBattle(args);
-
-        bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
-        );
-
-        vm.prank(BOB);
-        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
-
-        vm.prank(ALICE);
-        engine.startBattle(battleKey, "", 0);
+        bytes32 battleKey = _startBattle(twoMovesValidator, engine, mockOracle, defaultRegistry);
 
         // First move: Both players select their first mon (index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -453,5 +427,95 @@ contract IblivionTest is Test, BattleHelper {
         // Check that Alice's mon's stamina delta is reset
         int32 staminaDeltaAfterLoop = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Stamina);
         assertEq(staminaDeltaAfterLoop, 0, "Stamina delta should be reset to 0 after using Loop");
+    }
+
+    function test_firstResort() public {
+        // Create a new validator with 2 moves per mon
+        FastValidator validatorToUse = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 2, TIMEOUT_DURATION: 10})
+        );
+
+        // Deploy First Resort
+        FirstResort firstResort = new FirstResort(engine, typeCalc, baselight);
+
+        // Set up moves array
+        IMoveSet[] memory moves = new IMoveSet[](2);
+        moves[0] = baselight;
+        moves[1] = firstResort;
+
+        Mon memory firstResortMon = Mon({
+            stats: MonStats({
+                hp: 1,
+                stamina: 6,
+                speed: 10,
+                attack: 10,
+                defense: 10,
+                specialAttack: 10,
+                specialDefense: 10,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon memory fastMon = Mon({
+            stats: MonStats({
+                hp: 1000,
+                stamina: 6,
+                speed: 100, // Much faster than alice
+                attack: 10,
+                defense: 10,
+                specialAttack: 10,
+                specialDefense: 10,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        Mon[] memory team = new Mon[](2);
+        team[0] = firstResortMon;
+        team[1] = firstResortMon;
+        Mon[] memory fastTeam = new Mon[](2);
+        fastTeam[0] = fastMon;
+        fastTeam[1] = fastMon;
+
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, fastTeam);
+
+        // Start a battle
+        bytes32 battleKey = _startBattle(validatorToUse, engine, mockOracle, defaultRegistry);
+
+        // First move: Both players select their first mon (index 0)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice chooses move index 1 (First Resort), Bob chooses move index 0 (Baselight)
+        // Bob should move first and KO Alice's mon index 0 without taking damage
+        // (even though both choose to attack)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 1, 0, abi.encode(0), abi.encode(0)
+        );
+
+        // Assert Bob's mon index 0's HP delta is also 0 (Bob took no damage)
+        int32 hpDelta = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
+        assertEq(hpDelta, 0, "Bob should have taken zero damage");
+
+        // Alice swaps in mon index 1
+        vm.startPrank(ALICE);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, "", abi.encode(1), true);
+
+        // Alice levels up Baselight to level 2, Bob does nothing
+        for (uint i; i < firstResort.BASELIGHT_THRESHOLD(); i++) {
+            _commitRevealExecuteForAliceAndBob(
+                engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+            );
+        }
+
+        // Assert that Bob has taken damage
+        hpDelta = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
+        assertGt(0, hpDelta, "Bob should have taken damage now");
     }
 }

@@ -2,19 +2,18 @@
 
 pragma solidity ^0.8.0;
 
-import "../../Structs.sol";
 import {NO_OP_MOVE_INDEX} from "../../Constants.sol";
 import {EffectStep, MonStateIndexName} from "../../Enums.sol";
 import {IEngine} from "../../IEngine.sol";
+import "../../Structs.sol";
 import {IAbility} from "../../abilities/IAbility.sol";
 import {BasicEffect} from "../../effects/BasicEffect.sol";
 import {IEffect} from "../../effects/IEffect.sol";
 
 contract ActusReus is IAbility, BasicEffect {
-
     IEngine immutable ENGINE;
-    int32 constant public SPEED_DEBUFF_DENOM = 2;
-    bytes32 constant public INDICTMENT = bytes32("INDICTMENT");
+    int32 public constant SPEED_DEBUFF_DENOM = 2;
+    bytes32 public constant INDICTMENT = bytes32("INDICTMENT");
 
     constructor(IEngine _ENGINE) {
         ENGINE = _ENGINE;
@@ -50,7 +49,11 @@ contract ActusReus is IAbility, BasicEffect {
         return keccak256(abi.encode(targetIndex, monIndex, INDICTMENT, name()));
     }
 
-    function getIndictmentFlag(bytes32 battleKey, uint256 targetIndex, uint256 monIndex) public view returns (bytes32) {
+    function getIndictmentFlag(bytes32 battleKey, uint256 targetIndex, uint256 monIndex)
+        public
+        view
+        returns (bytes32)
+    {
         return ENGINE.getGlobalKV(battleKey, _indictmentKey(targetIndex, monIndex));
     }
 
@@ -71,7 +74,7 @@ contract ActusReus is IAbility, BasicEffect {
             ENGINE.battleKeyForWrite(), otherPlayerIndex, otherPlayerActiveMonIndex, MonStateIndexName.IsKnockedOut
         ) == 1;
         if (isOtherMonKOed) {
-            if (getIndictmentFlag(ENGINE.battleKeyForWrite(),targetIndex, monIndex) == bytes32(0)) {
+            if (getIndictmentFlag(ENGINE.battleKeyForWrite(), targetIndex, monIndex) == bytes32(0)) {
                 // Set indictment flag for this mon
                 setIndictmentFlag(targetIndex, monIndex, bytes32("1"));
             }
@@ -79,20 +82,30 @@ contract ActusReus is IAbility, BasicEffect {
         return ("", false);
     }
 
-    function onAfterDamage(uint256, bytes memory, uint256 targetIndex, uint256 monIndex, int32) external override returns (bytes memory, bool) {
+    function onAfterDamage(uint256, bytes memory, uint256 targetIndex, uint256 monIndex, int32)
+        external
+        override
+        returns (bytes memory, bool)
+    {
         // Check if we have an indictment
         if (getIndictmentFlag(ENGINE.battleKeyForWrite(), targetIndex, monIndex) == bytes32("1")) {
-
             // Reset the indictment flag
             setIndictmentFlag(targetIndex, monIndex, bytes32(0));
 
             // If we are KO'ed, set a speed delta of half of the opposing mon's base speed
-            bool isKOed = ENGINE.getMonStateForBattle(ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.IsKnockedOut) == 1;
+            bool isKOed = ENGINE.getMonStateForBattle(
+                ENGINE.battleKeyForWrite(), targetIndex, monIndex, MonStateIndexName.IsKnockedOut
+            ) == 1;
             if (isKOed) {
                 uint256 otherPlayerIndex = (targetIndex + 1) % 2;
                 uint256 otherPlayerActiveMonIndex =
                     ENGINE.getActiveMonIndexForBattleState(ENGINE.battleKeyForWrite())[otherPlayerIndex];
-                int32 speedDelta = -1 * int32(ENGINE.getMonValueForBattle(ENGINE.battleKeyForWrite(), otherPlayerIndex, otherPlayerActiveMonIndex, MonStateIndexName.Speed)) / SPEED_DEBUFF_DENOM;
+                int32 speedDelta = -1
+                    * int32(
+                        ENGINE.getMonValueForBattle(
+                            ENGINE.battleKeyForWrite(), otherPlayerIndex, otherPlayerActiveMonIndex, MonStateIndexName.Speed
+                        )
+                    ) / SPEED_DEBUFF_DENOM;
                 ENGINE.updateMonState(otherPlayerIndex, otherPlayerActiveMonIndex, MonStateIndexName.Speed, speedDelta);
             }
         }

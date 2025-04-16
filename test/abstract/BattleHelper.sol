@@ -2,8 +2,14 @@
 
 pragma solidity ^0.8.0;
 
+import "../../src/Structs.sol";
+
 import {Engine} from "../../src/Engine.sol";
 import {FastCommitManager} from "../../src/FastCommitManager.sol";
+import {IValidator} from "../../src/IValidator.sol";
+import {IRandomnessOracle} from "../../src/rng/IRandomnessOracle.sol";
+import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
+
 import {Test} from "forge-std/Test.sol";
 
 abstract contract BattleHelper is Test {
@@ -40,5 +46,35 @@ abstract contract BattleHelper is Test {
             vm.startPrank(BOB);
             commitManager.revealMove(battleKey, bobMoveIndex, salt, bobExtraData, true);
         }
+    }
+
+    function _startBattle(
+        IValidator validator,
+        Engine engine,
+        IRandomnessOracle rngOracle,
+        ITeamRegistry defaultRegistry
+    ) internal returns (bytes32) {
+        // Start a battle
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: validator,
+            rngOracle: rngOracle,
+            ruleset: IRuleset(address(0)),
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+        return battleKey;
     }
 }

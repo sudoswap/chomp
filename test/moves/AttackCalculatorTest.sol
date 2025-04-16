@@ -133,6 +133,7 @@ contract AttackCalculatorTest is Test {
             typeCalc,
             battleKey,
             0, // Alice's index
+            1, // Bob's index
             basePower,
             accuracy,
             volatility,
@@ -165,6 +166,7 @@ contract AttackCalculatorTest is Test {
             typeCalc,
             battleKey,
             1, // Bob's index
+            0, // ALice's index
             basePower,
             accuracy,
             volatility,
@@ -192,12 +194,12 @@ contract AttackCalculatorTest is Test {
 
         // With rng = 49, attack should hit (rng < accuracy)
         int32 damage1 = AttackCalculator.calculateDamageView(
-            engine, typeCalc, battleKey, 0, basePower, accuracy, volatility, attackType, attackSupertype, 49, critRate
+            engine, typeCalc, battleKey, 0, 1, basePower, accuracy, volatility, attackType, attackSupertype, 49, critRate
         );
 
         // With rng = 50, attack should miss (rng >= accuracy)
         int32 damage2 = AttackCalculator.calculateDamageView(
-            engine, typeCalc, battleKey, 0, basePower, accuracy, volatility, attackType, attackSupertype, 50, critRate
+            engine, typeCalc, battleKey, 0, 1, basePower, accuracy, volatility, attackType, attackSupertype, 50, critRate
         );
 
         assertGt(damage1, 0, "Attack should hit with rng < accuracy");
@@ -225,6 +227,7 @@ contract AttackCalculatorTest is Test {
             typeCalc,
             battleKey,
             0,
+            1,
             basePower,
             accuracy,
             volatility,
@@ -240,6 +243,7 @@ contract AttackCalculatorTest is Test {
             typeCalc,
             battleKey,
             0,
+            1,
             basePower,
             accuracy,
             volatility,
@@ -268,6 +272,7 @@ contract AttackCalculatorTest is Test {
             typeCalc,
             battleKey,
             0,
+            1,
             basePower,
             accuracy,
             volatility,
@@ -283,6 +288,7 @@ contract AttackCalculatorTest is Test {
             typeCalc,
             battleKey,
             0,
+            1,
             basePower,
             accuracy,
             volatility,
@@ -298,6 +304,7 @@ contract AttackCalculatorTest is Test {
             typeCalc,
             battleKey,
             0,
+            1,
             basePower,
             accuracy,
             0, // No volatility

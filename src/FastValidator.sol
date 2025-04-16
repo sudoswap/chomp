@@ -160,7 +160,7 @@ contract FastValidator is IValidator {
                 return false;
             }
         }
-        // If it is no op move, it's valid as long as we don't force a switch
+        // If it is no op move, it's valid
         else if (moveIndex == NO_OP_MOVE_INDEX) {
             return true;
         }

@@ -2,17 +2,18 @@
 
 pragma solidity ^0.8.0;
 
-import "../../Enums.sol";
 import "../../Constants.sol";
-import {IMoveSet} from "../../moves/IMoveSet.sol";
+import "../../Enums.sol";
+
 import {IEngine} from "../../IEngine.sol";
-import {ITypeCalculator} from "../../types/ITypeCalculator.sol";
+
+import {IEffect} from "../../effects/IEffect.sol";
+import {IMoveSet} from "../../moves/IMoveSet.sol";
 import {StandardAttack} from "../../moves/StandardAttack.sol";
 import {ATTACK_PARAMS} from "../../moves/StandardAttackStructs.sol";
-import {IEffect} from "../../effects/IEffect.sol";
+import {ITypeCalculator} from "../../types/ITypeCalculator.sol";
 
 contract Blow is StandardAttack {
-
     constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR)
         StandardAttack(
             address(msg.sender),
@@ -33,5 +34,4 @@ contract Blow is StandardAttack {
             })
         )
     {}
-
 }

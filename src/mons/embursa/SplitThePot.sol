@@ -2,16 +2,16 @@
 
 pragma solidity ^0.8.0;
 
-import "../../Structs.sol";
 import {NO_OP_MOVE_INDEX} from "../../Constants.sol";
 import {EffectStep, MonStateIndexName} from "../../Enums.sol";
 import {IEngine} from "../../IEngine.sol";
+import "../../Structs.sol";
 import {IAbility} from "../../abilities/IAbility.sol";
 import {BasicEffect} from "../../effects/BasicEffect.sol";
 import {IEffect} from "../../effects/IEffect.sol";
 
 contract SplitThePot is IAbility, BasicEffect {
-    int32 constant public HEAL_DENOM = 16;
+    int32 public constant HEAL_DENOM = 16;
     IEngine immutable ENGINE;
 
     constructor(IEngine _ENGINE) {
@@ -52,11 +52,13 @@ contract SplitThePot is IAbility, BasicEffect {
         );
         if (move.moveIndex == NO_OP_MOVE_INDEX) {
             uint256 teamSize = ENGINE.getTeamSize(battleKey, targetIndex);
-            for (uint i; i < teamSize; i++) {
-                bool isKOed = ENGINE.getMonStateForBattle(battleKey, targetIndex, i, MonStateIndexName.IsKnockedOut) == 1;
+            for (uint256 i; i < teamSize; i++) {
+                bool isKOed =
+                    ENGINE.getMonStateForBattle(battleKey, targetIndex, i, MonStateIndexName.IsKnockedOut) == 1;
                 if (!isKOed) {
                     // Calculate base heal amount
-                    int32 healAmount = int32(ENGINE.getMonValueForBattle(battleKey, targetIndex, i, MonStateIndexName.Hp)) / HEAL_DENOM;
+                    int32 healAmount =
+                        int32(ENGINE.getMonValueForBattle(battleKey, targetIndex, i, MonStateIndexName.Hp)) / HEAL_DENOM;
 
                     // But don't overheal
                     int32 existingHpDelta = ENGINE.getMonStateForBattle(battleKey, targetIndex, i, MonStateIndexName.Hp);

@@ -28,7 +28,14 @@ contract Interweaving is IAbility, BasicEffect {
         uint256 otherPlayerIndex = (playerIndex + 1) % 2;
         uint256 otherPlayerActiveMonIndex =
             ENGINE.getActiveMonIndexForBattleState(ENGINE.battleKeyForWrite())[otherPlayerIndex];
-        STAT_BOOST.addStatBoost(otherPlayerIndex, otherPlayerActiveMonIndex, uint256(MonStateIndexName.Attack), DECREASE_PERCENTAGE, StatBoostType.Divide, StatBoostFlag.Temp);
+        STAT_BOOST.addStatBoost(
+            otherPlayerIndex,
+            otherPlayerActiveMonIndex,
+            uint256(MonStateIndexName.Attack),
+            DECREASE_PERCENTAGE,
+            StatBoostType.Divide,
+            StatBoostFlag.Temp
+        );
 
         // Check if the effect has already been set for this mon
         bytes32 monEffectId = keccak256(abi.encode(playerIndex, monIndex, name()));
@@ -56,7 +63,14 @@ contract Interweaving is IAbility, BasicEffect {
         uint256 otherPlayerIndex = (targetIndex + 1) % 2;
         uint256 otherPlayerActiveMonIndex =
             ENGINE.getActiveMonIndexForBattleState(ENGINE.battleKeyForWrite())[otherPlayerIndex];
-        STAT_BOOST.addStatBoost(otherPlayerIndex, otherPlayerActiveMonIndex, uint256(MonStateIndexName.SpecialAttack), DECREASE_PERCENTAGE, StatBoostType.Divide, StatBoostFlag.Temp);
+        STAT_BOOST.addStatBoost(
+            otherPlayerIndex,
+            otherPlayerActiveMonIndex,
+            uint256(MonStateIndexName.SpecialAttack),
+            DECREASE_PERCENTAGE,
+            StatBoostType.Divide,
+            StatBoostFlag.Temp
+        );
         return ("", false);
     }
 }

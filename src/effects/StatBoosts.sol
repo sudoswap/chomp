@@ -52,8 +52,6 @@ contract StatBoosts is BasicEffect {
         return keccak256(abi.encode(targetIndex, monIndex, statIndex, name(), uint256(boostFlag)));
     }
 
-    event Foo(uint256 a);
-
     function calculateExistingBoost(uint256 targetIndex, uint256 monIndex, uint256 statIndex, bool tempOnly) public view returns (int32) {
         // First get the temporary boost
         bytes32 tempBoostKey = getKeyForMonIndexStat(targetIndex, monIndex, statIndex, StatBoostFlag.Temp);

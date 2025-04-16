@@ -33,6 +33,7 @@ import {StatBoostsMove} from "../mocks/StatBoostsMove.sol";
 import {Baselight} from "../../src/mons/iblivion/Baselight.sol";
 import {Loop} from "../../src/mons/iblivion/Loop.sol";
 import {FirstResort} from "../../src/mons/iblivion/FirstResort.sol";
+import {Brightback} from "../../src/mons/iblivion/Brightback.sol";
 
 contract IblivionTest is Test, BattleHelper {
     Engine engine;
@@ -517,5 +518,79 @@ contract IblivionTest is Test, BattleHelper {
         // Assert that Bob has taken damage
         hpDelta = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
         assertGt(0, hpDelta, "Bob should have taken damage now");
+    }
+
+    function test_brightback() public {
+        // Create a new validator with 2 moves per mon
+        FastValidator validatorToUse = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 2, TIMEOUT_DURATION: 10})
+        );
+
+        Brightback brightback = new Brightback(engine, typeCalc, baselight);
+
+        // Set up moves array
+        IMoveSet[] memory moves = new IMoveSet[](2);
+        moves[0] = baselight;
+        moves[1] = brightback;
+
+        Mon memory mon = Mon({
+            stats: MonStats({
+                hp: 1000,
+                stamina: 6,
+                speed: 10,
+                attack: 10,
+                defense: 10,
+                specialAttack: 10,
+                specialDefense: 10,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        Mon[] memory team = new Mon[](1);
+        team[0] = mon;
+
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        // Start a battle
+        bytes32 battleKey = _startBattle(validatorToUse, engine, mockOracle, defaultRegistry);
+
+        // First move: Both players select their first mon (index 0)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Bob deals damage to Alice, Alice does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, NO_OP_MOVE_INDEX, 1, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice does Brightback, no hp should be regained
+        int32 aliceDamageBefore = -1 * engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+         _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 1, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+        int32 aliceDamageAfter = -1 * engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+        assertEq(aliceDamageBefore, aliceDamageAfter, "No healing yet, Baselight is lv 0");
+
+        // Alice levels up Baselight, Bob does nothing
+        for (uint i; i < brightback.BASELIGHT_THRESHOLD(); i++) {
+            _commitRevealExecuteForAliceAndBob(
+                engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+            );
+        }
+
+        // Get hp beforehand
+        aliceDamageBefore = -1 * engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+
+        // Alice uses Brightback, should heal some HP, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 1, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+        aliceDamageAfter = -1 * engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+        assertGt(aliceDamageBefore, aliceDamageAfter, "Alice should have healed");
     }
 }

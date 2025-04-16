@@ -196,30 +196,4 @@ contract LazyTeamRegistry is ITeamRegistry {
     function getMonRegistry() external view returns (IMonRegistry) {
         return REGISTRY;
     }
-
-    function getTeamData(address player, uint256 teamIndex) external view returns (string[] memory, uint256[] memory) {
-        Mon[] storage team = teams[player][teamIndex];
-        string[] memory teamDataNames = new string[](team.length * (MOVES_PER_MON + 2));
-        uint256[] memory moveMetadata = new uint256[](team.length * MOVES_PER_MON * 2);
-        for (uint256 i; i < team.length; i++) {
-            uint256 monId = _getMonRegistryIndex(player, teamIndex, i);
-            teamDataNames[i * (MOVES_PER_MON + 2)] = REGISTRY.getMonMetadata(monId, bytes32("name"));
-            teamDataNames[i * (MOVES_PER_MON + 2) + 1] = (team[i].ability).name();
-
-            bytes32 mockBattleKey = bytes32(0);
-
-            for (uint256 j; j < MOVES_PER_MON; j++) {
-                teamDataNames[i * (MOVES_PER_MON + 2) + j + 2] = (team[i].moves[j]).name();
-
-                uint256 baseIndex = i * MOVES_PER_MON * 2 + j * 2;
-
-                // Set priority
-                moveMetadata[baseIndex] = (team[i].moves[j]).priority(mockBattleKey);
-
-                // Set type
-                moveMetadata[baseIndex + 1] = uint256((team[i].moves[j]).moveType(mockBattleKey));
-            }
-        }
-        return (teamDataNames, moveMetadata);
-    }
 }

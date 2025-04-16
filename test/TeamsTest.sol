@@ -830,7 +830,6 @@ contract TeamsTest is Test {
         allAbilities[4] = ability;
         allAbilities[5] = ability;
         teamRegistry2.createTeam(monIndices, moves, allAbilities);
-        teamRegistry2.getTeamData(ALICE, 0);
     }
 
     function test_lazyTeamRegistryFlow() public {

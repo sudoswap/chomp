@@ -33,7 +33,13 @@ contract RockPull is IMoveSet {
         return 3;
     }
 
-    function priority(bytes32 battleKey) external view returns (uint32) {
+    function priority(bytes32 battleKey, uint256 attackerPlayerIndex) external view returns (uint32) {
+        if (_didOtherPlayerChooseSwitch(battleKey, attackerPlayerIndex)) {
+            return uint32(SWITCH_PRIORITY) + 1;
+        }
+        else {
+            return DEFAULT_PRIORITY;
+        }
     }
 
     function moveType(bytes32) public pure returns (Type) {

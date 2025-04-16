@@ -25,7 +25,7 @@ contract InvalidMove is IMoveSet {
         // No-op
     }
 
-    function priority(bytes32) external pure returns (uint32) {
+    function priority(bytes32, uint256) external pure returns (uint32) {
         return 1;
     }
 

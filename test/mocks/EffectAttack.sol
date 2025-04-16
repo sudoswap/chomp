@@ -41,7 +41,7 @@ contract EffectAttack is IMoveSet {
         ENGINE.addEffect(targetIndex, activeMonIndex, EFFECT, extraData);
     }
 
-    function priority(bytes32) external view returns (uint32) {
+    function priority(bytes32, uint256) external view returns (uint32) {
         return PRIORITY;
     }
 

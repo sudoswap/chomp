@@ -42,7 +42,7 @@ contract EternalGrudge is IMoveSet {
         return 2;
     }
 
-    function priority(bytes32) external pure returns (uint32) {
+    function priority(bytes32, uint256) external pure returns (uint32) {
         return DEFAULT_PRIORITY;
     }
 

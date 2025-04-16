@@ -79,7 +79,7 @@ contract StandardAttack is IMoveSet, Ownable {
         return true;
     }
 
-    function priority(bytes32) public view returns (uint32) {
+    function priority(bytes32, uint256) public view returns (uint32) {
         return _priority;
     }
 

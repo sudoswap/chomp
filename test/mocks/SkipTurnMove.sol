@@ -38,7 +38,7 @@ contract SkipTurnMove is IMoveSet {
         ENGINE.updateMonState(targetIndex, activeMonIndex, MonStateIndexName.ShouldSkipTurn, 1);
     }
 
-    function priority(bytes32) external view returns (uint32) {
+    function priority(bytes32, uint256) external view returns (uint32) {
         return PRIORITY;
     }
 

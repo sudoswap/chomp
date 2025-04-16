@@ -47,7 +47,7 @@ contract StatBoostsMove is IMoveSet {
         );
     }
 
-    function priority(bytes32) external pure returns (uint32) {
+    function priority(bytes32, uint256) external pure returns (uint32) {
         return 0;
     }
 

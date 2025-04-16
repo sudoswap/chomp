@@ -287,14 +287,14 @@ contract DefaultValidator is IValidator {
                 p0Priority = SWITCH_PRIORITY;
             } else {
                 IMoveSet p0MoveSet = ENGINE.getMoveForMonForBattle(battleKey, 0, activeMonIndex[0], p0Move.moveIndex);
-                p0Priority = p0MoveSet.priority(battleKey);
+                p0Priority = p0MoveSet.priority(battleKey, 0);
             }
 
             if (p1Move.moveIndex == SWITCH_MOVE_INDEX || p1Move.moveIndex == NO_OP_MOVE_INDEX) {
                 p1Priority = SWITCH_PRIORITY;
             } else {
                 IMoveSet p1MoveSet = ENGINE.getMoveForMonForBattle(battleKey, 1, activeMonIndex[1], p1Move.moveIndex);
-                p1Priority = p1MoveSet.priority(battleKey);
+                p1Priority = p1MoveSet.priority(battleKey, 1);
             }
         }
 

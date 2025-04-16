@@ -57,7 +57,7 @@ contract StandardAttackFactoryTest is Test {
         assertEq(attack.basePower(TEST_BATTLE_KEY), basePower, "Base power mismatch");
         assertEq(attack.stamina(TEST_BATTLE_KEY, 0, 0), staminaCost, "Stamina cost mismatch");
         assertEq(attack.accuracy(TEST_BATTLE_KEY), accuracy, "Crit rate mismatch");
-        assertEq(attack.priority(TEST_BATTLE_KEY), priority, "Priority mismatch");
+        assertEq(attack.priority(TEST_BATTLE_KEY, 0), priority, "Priority mismatch");
         assertEq(uint32(attack.moveType(TEST_BATTLE_KEY)), uint32(moveType), "Move type mismatch");
         assertEq(attack.effectAccuracy(TEST_BATTLE_KEY), effectAccuracy, "Effect accuracy mismatch");
         assertEq(uint32(attack.moveClass(TEST_BATTLE_KEY)), uint32(moveClass), "Move class mismatch");
@@ -177,7 +177,7 @@ contract StandardAttackFactoryTest is Test {
         attack.changeVar(2, 90); // Change accuracy
         assertEq(attack.accuracy(TEST_BATTLE_KEY), 90, "Accuracy mismatch");
         attack.changeVar(3, 4); // Change priority
-        assertEq(attack.priority(TEST_BATTLE_KEY), 4, "Priority mismatch");
+        assertEq(attack.priority(TEST_BATTLE_KEY, 0), 4, "Priority mismatch");
         attack.changeVar(4, uint256(Type.Water)); // Change move type
         assertEq(uint32(attack.moveType(TEST_BATTLE_KEY)), uint32(Type.Water), "Move type mismatch");
         attack.changeVar(5, 90); // Change effect accuracy

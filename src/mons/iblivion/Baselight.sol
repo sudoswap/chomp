@@ -71,7 +71,7 @@ contract Baselight is IMoveSet {
         return uint32(getBaselightLevel(battleKey, attackerPlayerIndex, monIndex));
     }
 
-    function priority(bytes32) external pure returns (uint32) {
+    function priority(bytes32, uint256) external pure returns (uint32) {
         return DEFAULT_PRIORITY;
     }
 

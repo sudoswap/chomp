@@ -36,6 +36,9 @@ import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
 import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
 import {StatBoosts} from "../../src/effects/StatBoosts.sol";
 
+import {ChillOut} from "../../src/mons/pengym/ChillOut.sol";
+import {DeepFreeze} from "../../src/mons/pengym/DeepFreeze.sol";
+
 contract PengymTest is Test, BattleHelper {
 
     Engine engine;
@@ -472,5 +475,77 @@ contract PengymTest is Test, BattleHelper {
         // Check that special attack was restored
         int32 specialAttackAfterCure = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.SpecialAttack);
         assertTrue(specialAttackAfterCure > specialAttackAfterFrostbite, "Special attack should be restored after Frostbite is cured");
+    }
+
+    function test_chillOutAndDeepFreeze() public {
+        // Create a new validator with 2 moves per mon
+        FastValidator validatorToUse = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 2, TIMEOUT_DURATION: 10})
+        );
+
+        ChillOut chillOut = new ChillOut(engine, typeCalc, frostbiteStatus);
+        DeepFreeze deepFreeze = new DeepFreeze(engine, typeCalc, frostbiteStatus);
+
+        IMoveSet[] memory moves = new IMoveSet[](2);
+        moves[0] = chillOut;
+        moves[1] = deepFreeze;
+
+        Mon memory mon = Mon({
+            stats: MonStats({
+                hp: 1000,
+                stamina: 10,
+                speed: 10,
+                attack: 10,
+                defense: 10,
+                specialAttack: 10,
+                specialDefense: 10,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        Mon[] memory team = new Mon[](1);
+        team[0] = mon;
+
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        // Start a battle
+        bytes32 battleKey = _startBattle(validatorToUse, engine, mockOracle, defaultRegistry);
+
+        // First move: Both players select their first mon (index 0)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice deals damage to Bob, record the damage dealt
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 1, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+        int32 deepFreezeDamage = -1 * engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
+
+        // Alice inflicts frostbite on Bob, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        int32 bobDamageBefore = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
+
+        // Alice uses deep freeze, record the damage dealt
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 1, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        int32 bobDamageAfter = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
+        int32 deepFreezeDoubleDamage = (-1 * bobDamageAfter) + bobDamageBefore;
+
+        // Damage dealt should be greater
+        assertGt(deepFreezeDoubleDamage, deepFreezeDamage, "Should have dealt more");
+        
+        // Frostbite should be cleared
+        (IEffect[] memory effects, ) = engine.getEffects(battleKey, 1, 0);
+        assertEq(effects.length, 1, "Frostbite should be cleared, so only StatBoosts left");
     }
 }

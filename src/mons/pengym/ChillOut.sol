@@ -23,7 +23,7 @@ contract ChillOut is StandardAttack {
                 NAME: "Chill Out",
                 BASE_POWER: 0,
                 STAMINA_COST: 2,
-                ACCURACY: 100,
+                ACCURACY: 90,
                 MOVE_TYPE: Type.Ice,
                 MOVE_CLASS: MoveClass.Other,
                 PRIORITY: DEFAULT_PRIORITY,

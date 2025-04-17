@@ -22,11 +22,15 @@ import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
+import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
+import {StandardAttack} from "../../src/moves/StandardAttack.sol";
+import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
 
 import {BattleHelper} from "../abstract/BattleHelper.sol";
 
 import {CarrotHarvest} from "../../src/mons/sofabbi/CarrotHarvest.sol";
 import {GuestFeature} from "../../src/mons/sofabbi/GuestFeature.sol";
+import {SnackBreak} from "../../src/mons/sofabbi/SnackBreak.sol";
 
 contract SofabbiTest is Test, BattleHelper {
     Engine engine;
@@ -376,5 +380,111 @@ contract SofabbiTest is Test, BattleHelper {
         bobDmg = bobDmg - newBobDmg;
         assertApproxEqRel(bobDmg, int32(gf.BASE_POWER()/2), 2e17);
 
+    }
+
+    function test_snackBreak() public {
+        FastValidator validator = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 2, TIMEOUT_DURATION: 10})
+        );
+        StandardAttackFactory attackFactory = new StandardAttackFactory(IEngine(address(engine)), typeCalc);
+        SnackBreak sb = new SnackBreak(engine);
+        StandardAttack bigAttack = attackFactory.createAttack(
+            ATTACK_PARAMS({
+                BASE_POWER: 127,
+                STAMINA_COST: 1,
+                ACCURACY: 100,
+                PRIORITY: 0,
+                MOVE_TYPE: Type.Water,
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Physical,
+                CRIT_RATE: 0,
+                VOLATILITY: 0,
+                NAME: "foo",
+                EFFECT: IEffect(address(0))
+            })
+        );
+        IMoveSet[] memory moves = new IMoveSet[](2);
+        moves[0] = sb;
+        moves[1] = bigAttack;
+        Mon memory chunkyMon = Mon({
+            stats: MonStats({
+                hp: 128,
+                stamina: 5,
+                speed: 5,
+                attack: 5,
+                defense: 5,
+                specialAttack: 5,
+                specialDefense: 5,
+                type1: Type.Nature,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(carrotHarvest))
+        });
+
+        Mon[] memory team = new Mon[](1);
+        team[0] = chunkyMon;
+
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        bytes32 battleKey = _startBattle(validator, engine, mockOracle, defaultRegistry);
+
+        // Both players send in mon index 0
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice uses nothing, Bob uses move index 1, puts Alice at 1 HP
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, NO_OP_MOVE_INDEX, 1, "", ""
+        );
+
+        int32 hpBefore = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+
+        // Alice uses Snack Break, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+        );
+
+        int32 hpAfter = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+
+        assertEq(hpAfter - hpBefore, 64, "Healing worked");
+
+        // Alice uses Snack Break, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+        );
+
+        int32 hpAfter2 = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+
+        assertEq(hpAfter2 - hpAfter, 32, "Healing worked, went down");
+
+        // Alice uses Snack Break, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+        );
+
+        int32 hpAfter3 = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+
+        assertEq(hpAfter3 - hpAfter2, 16, "Healing worked, went down");
+
+        // Alice uses Snack Break, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+        );
+
+        int32 hpAfter4 = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+
+        assertEq(hpAfter4 - hpAfter3, 8, "Healing worked, went down");
+
+        // Alice uses Snack Break, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+        );
+
+        int32 hpAfter5 = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+
+        assertEq(hpAfter5, 0, "All healed up");
     }
 }

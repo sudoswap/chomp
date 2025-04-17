@@ -29,18 +29,18 @@ contract DeepFreeze is IMoveSet {
         return "Deep Freeze";
     }
 
-    function _frostbiteExists(bytes32 battleKey, uint256 targetIndex, uint256 monIndex) internal view returns (uint256, bool) {
+    function _frostbiteExists(bytes32 battleKey, uint256 targetIndex, uint256 monIndex) internal view returns (int32) {
         (IEffect[] memory effects, ) = ENGINE.getEffects(battleKey, targetIndex, monIndex);
         uint256 numEffects = effects.length;
         for (uint i; i < numEffects;) {
             if (address(effects[i]) == address(FROSTBITE)) {
-                return (i, true);
+                return int32(int256(i));
             }
             unchecked {
                  ++i;
             }
         }
-        return (0, false);
+        return -1;
     }
 
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng) external {
@@ -48,10 +48,10 @@ contract DeepFreeze is IMoveSet {
         uint256 otherPlayerActiveMonIndex =
             ENGINE.getActiveMonIndexForBattleState(ENGINE.battleKeyForWrite())[otherPlayerIndex];
         uint32 damageToDeal = BASE_POWER;
-        (uint256 frostbiteIndex, bool hasFrostbite) = _frostbiteExists(battleKey, otherPlayerIndex, otherPlayerActiveMonIndex);
+        int32 frostbiteIndex = _frostbiteExists(battleKey, otherPlayerIndex, otherPlayerActiveMonIndex);
         // Remove frostbite if it exists, and double the damage dealt
-        if (hasFrostbite) {
-            ENGINE.removeEffect(otherPlayerIndex, otherPlayerActiveMonIndex, frostbiteIndex);
+        if (frostbiteIndex != -1) {
+            ENGINE.removeEffect(otherPlayerIndex, otherPlayerActiveMonIndex, uint256(uint32(frostbiteIndex)));
             damageToDeal = damageToDeal * 2;
         }
         // Deal damage

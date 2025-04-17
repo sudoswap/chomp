@@ -38,6 +38,7 @@ import {StatBoosts} from "../../src/effects/StatBoosts.sol";
 
 import {ChillOut} from "../../src/mons/pengym/ChillOut.sol";
 import {DeepFreeze} from "../../src/mons/pengym/DeepFreeze.sol";
+import {PistolSquat} from "../../src/mons/pengym/PistolSquat.sol";
 
 contract PengymTest is Test, BattleHelper {
 
@@ -547,5 +548,164 @@ contract PengymTest is Test, BattleHelper {
         // Frostbite should be cleared
         (IEffect[] memory effects, ) = engine.getEffects(battleKey, 1, 0);
         assertEq(effects.length, 1, "Frostbite should be cleared, so only StatBoosts left");
+    }
+
+    function test_pistolSquat() public {
+        FastValidator validatorToUse = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 4, MOVES_PER_MON: 2, TIMEOUT_DURATION: 10})
+        );
+        PistolSquat ps = new PistolSquat(engine, typeCalc);
+        IMoveSet[] memory moves = new IMoveSet[](2);
+        moves[0] = ps;
+        moves[1] = attackFactory.createAttack(
+            ATTACK_PARAMS({
+                BASE_POWER: 100, // designed to auto KO
+                STAMINA_COST: 1,
+                ACCURACY: 100,
+                PRIORITY: DEFAULT_PRIORITY,
+                MOVE_TYPE: Type.Water,
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Physical,
+                CRIT_RATE: 0,
+                VOLATILITY: 0,
+                NAME: "test",
+                EFFECT: IEffect(address(0))
+            })
+        );
+        Mon memory slowMon = Mon({
+            stats: MonStats({
+                hp: 100,
+                stamina: 100,
+                speed: 10,
+                attack: 10,
+                defense: 10,
+                specialAttack: 10,
+                specialDefense: 10,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon memory fastMon = Mon({
+            stats: MonStats({
+                hp: 100,
+                stamina: 100,
+                speed: 11,
+                attack: 10,
+                defense: 10,
+                specialAttack: 10,
+                specialDefense: 10,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        Mon[] memory aliceTeam = new Mon[](4);
+        aliceTeam[0] = slowMon;
+        aliceTeam[1] = slowMon;
+        aliceTeam[2] = slowMon;
+        aliceTeam[3] = slowMon;
+
+        Mon[] memory bobTeam = new Mon[](4);
+        bobTeam[0] = fastMon;
+        bobTeam[1] = fastMon;
+        bobTeam[2] = fastMon;
+        bobTeam[3] = fastMon;
+
+        defaultRegistry.setTeam(ALICE, aliceTeam);
+        defaultRegistry.setTeam(BOB, bobTeam);
+
+        // Start a battle
+        bytes32 battleKey = _startBattle(validatorToUse, engine, mockOracle, defaultRegistry);
+
+        // First move: Both players select their first mon (index 0)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice selects pistol squat, Bob selects move index 1 and outspeeds
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, 1, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice should be KO'ed
+        int32 koFlag = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut);
+        assertEq(koFlag, 1, "Alice should be KO'ed");
+
+        // Alice swaps to mon index 1
+        vm.startPrank(ALICE);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, "", abi.encode(1), true);
+
+        // Alice selects pistol squat, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Active mon for Bob should be 1
+        uint256 bobActiveMonIndex = engine.getActiveMonIndexForBattleState(battleKey)[1];
+        assertEq(bobActiveMonIndex, 1, "Swap succeeded (0 -> 1)");
+
+        // Alice selects pistol squat, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Active mon for Bob should be 0
+        bobActiveMonIndex = engine.getActiveMonIndexForBattleState(battleKey)[1];
+        assertEq(bobActiveMonIndex, 0, "Swap succeeded (1 -> 0)");
+
+        // Alice selects pistol squat, Bob does nothing (and dies)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        bobActiveMonIndex = engine.getActiveMonIndexForBattleState(battleKey)[1];
+        assertEq(bobActiveMonIndex, 0, "No swap because KO");
+
+        // Bob sends in mon index 1
+        vm.startPrank(BOB);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, "", abi.encode(1), true);
+
+        // Alice selects pistol squat, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Now Bob's mon index 1 is KOed
+        // Bob sends in mon index 2
+        vm.startPrank(BOB);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, "", abi.encode(2), true);
+
+        // Alice selects pistol squat, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Now Bob has mon index 2 (already took damage) and mon index 3
+        bobActiveMonIndex = engine.getActiveMonIndexForBattleState(battleKey)[1];
+        assertEq(bobActiveMonIndex, 3, "Switch forced");
+
+        // Bob switches back to mon index 2, Alice does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, NO_OP_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(2)
+        );
+
+        // Alice KOs Bob's mon index 2
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 1, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Bob sends in mon index 3
+        vm.startPrank(BOB);
+        commitManager.revealMove(battleKey, SWITCH_MOVE_INDEX, "", abi.encode(3), true);
+        
+        // Alice tries to force a switch, but active mon should not change
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+        bobActiveMonIndex = engine.getActiveMonIndexForBattleState(battleKey)[1];
+        assertEq(bobActiveMonIndex, 3, "No mons left");
     }
 }

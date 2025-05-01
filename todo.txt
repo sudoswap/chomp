@@ -1,5 +1,9 @@
 # TODO
 
+1) add a way for anything to return a generic event of the form (bytes32 eventType, bytes extradata)
+This allows for more flexibly encoded standards, and as long as eventType is followed, clients can know how to decode
+Makes it easier for e.g. moves to return additional information that can make it easier for clients to understand what happened in a battle.
+
 2) Allow restricting/enforcement of move selection
 3) Add a OnBeforeDamage hook to the Engine, add tests for it as well, allow editing of damage on the stack, also put the damage source on the stack
 4) right now, _handleSwitch runs a bunch of effects before handling control flow back. in some future edge cases this will mess things up, just don't worry about it for now. we'll need more fine grained control later on though.

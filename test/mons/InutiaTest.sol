@@ -21,6 +21,7 @@ import {IEffect} from "../../src/effects/IEffect.sol";
 import {StatBoosts} from "../../src/effects/StatBoosts.sol";
 import {Interweaving} from "../../src/mons/inutia/Interweaving.sol";
 import {ShrineStrike} from "../../src/mons/inutia/ShrineStrike.sol";
+import {Initialize} from "../../src/mons/inutia/Initialize.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
@@ -41,26 +42,20 @@ contract InutiaTest is Test, BattleHelper {
     TestTypeCalculator typeCalc;
     MockRandomnessOracle mockOracle;
     TestTeamRegistry defaultRegistry;
-    FastValidator validator;
     Interweaving interweaving;
     StatBoosts statBoost;
     StandardAttackFactory attackFactory;
-    ShrineStrike shrineStrike;
 
     function setUp() public {
         typeCalc = new TestTypeCalculator();
         mockOracle = new MockRandomnessOracle();
         defaultRegistry = new TestTeamRegistry();
         engine = new Engine();
-        validator = new FastValidator(
-            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 0, TIMEOUT_DURATION: 10})
-        );
         commitManager = new FastCommitManager(IEngine(address(engine)));
         engine.setCommitManager(address(commitManager));
         statBoost = new StatBoosts(IEngine(address(engine)));
         interweaving = new Interweaving(IEngine(address(engine)), statBoost);
         attackFactory = new StandardAttackFactory(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
-        shrineStrike = new ShrineStrike(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
     }
 
     function test_interweaving() public {
@@ -111,6 +106,10 @@ contract InutiaTest is Test, BattleHelper {
 
         defaultRegistry.setTeam(ALICE, aliceTeam);
         defaultRegistry.setTeam(BOB, bobTeam);
+
+        FastValidator validator = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 0, TIMEOUT_DURATION: 10})
+        );
 
         // Start a battle
         StartBattleArgs memory args = StartBattleArgs({
@@ -167,6 +166,8 @@ contract InutiaTest is Test, BattleHelper {
     }
 
     function test_shrineStrike() public {
+        ShrineStrike shrineStrike = new ShrineStrike(IEngine(address(engine)), ITypeCalculator(address(typeCalc)));
+
         // Create a validator with 1 mon and 1 move per mon
         FastValidator oneMonOneMove = new FastValidator(
             IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: 10})
@@ -289,5 +290,104 @@ contract InutiaTest is Test, BattleHelper {
         int32 actualHealAmount = aliceHpAfterHealing - aliceHpAfterDamage;
 
         assertEq(actualHealAmount, expectedHealAmount, "ShrineStrike should heal for 1/HEAL_DENOM of max HP");
+    }
+
+    function test_initialize() public {
+        Initialize initialize = new Initialize(engine, statBoost);
+
+        // Create a validator with 2 mons and 1 move per mon
+        FastValidator validator = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: 10})
+        );
+
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = initialize;
+
+         // Create mon with initialize
+        Mon memory initializeMon = Mon({
+            stats: MonStats({
+                hp: 1,
+                stamina: 10,
+                speed: 1,
+                attack: 64,
+                defense: 1,
+                specialAttack: 128,
+                specialDefense: 1,
+                type1: Type.Water,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        Mon[] memory team = new Mon[](2);
+        team[0] = initializeMon;
+        team[1] = initializeMon;
+
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        bytes32 battleKey = _startBattle(validator, engine, mockOracle, defaultRegistry);
+
+        // Send in mons
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Both players select move index 0
+        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, 0, 0, "", "");
+
+        // Assert both mons have a sp atk / atk buff of 64 (half of 128) and 32 (half of 64)
+        int32 aliceSpAtk = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.SpecialAttack);
+        int32 aliceAtk = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Attack);
+        int32 bobSpAtk = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.SpecialAttack);
+        int32 bobAtk = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Attack);
+        assertEq(aliceSpAtk, 64);
+        assertEq(bobSpAtk, 64);
+        assertEq(aliceAtk, 32);
+        assertEq(bobAtk, 32);
+
+        // Both players select move index 0 again (nothing should happen)
+        aliceSpAtk = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.SpecialAttack);
+        aliceAtk = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Attack);
+        bobSpAtk = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.SpecialAttack);
+        bobAtk = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Attack);
+        assertEq(aliceSpAtk, 64);
+        assertEq(bobSpAtk, 64);
+        assertEq(aliceAtk, 32);
+        assertEq(bobAtk, 32);
+
+        // Now both players swap to mon index 1
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(1), abi.encode(1)
+        );
+
+        // The stat boost should carry over
+        aliceSpAtk = engine.getMonStateForBattle(battleKey, 0, 1, MonStateIndexName.SpecialAttack);
+        aliceAtk = engine.getMonStateForBattle(battleKey, 0, 1, MonStateIndexName.Attack);
+        bobSpAtk = engine.getMonStateForBattle(battleKey, 1, 1, MonStateIndexName.SpecialAttack);
+        bobAtk = engine.getMonStateForBattle(battleKey, 1, 1, MonStateIndexName.Attack);
+        assertEq(aliceSpAtk, 64);
+        assertEq(bobSpAtk, 64);
+        assertEq(aliceAtk, 32);
+        assertEq(bobAtk, 32);
+
+        // Now both players swap back to mon index 0
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Both players select move index 0
+        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, 0, 0, "", "");
+
+        // It should do something again, as the global effect is cleared
+        aliceSpAtk = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.SpecialAttack);
+        aliceAtk = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Attack);
+        bobSpAtk = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.SpecialAttack);
+        bobAtk = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Attack);
+        assertEq(aliceSpAtk, 64);
+        assertEq(bobSpAtk, 64);
+        assertEq(aliceAtk, 32);
+        assertEq(bobAtk, 32);
     }
 }

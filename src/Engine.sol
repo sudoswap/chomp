@@ -597,14 +597,17 @@ contract Engine is IEngine {
         MonState storage currentMonState = state.monStates[playerIndex][state.activeMonIndex[playerIndex]];
         uint256 rng = state.pRNGStream[state.pRNGStream.length - 1];
 
-        // If the current mon is not knocked out:
+        // If the current mon is not KO'ed
         // Go through each effect to see if it should be cleared after a switch,
         // If so, remove the effect and the extra data
         if (!currentMonState.isKnockedOut) {
             _runEffects(battleKey, rng, playerIndex, playerIndex, EffectStep.OnMonSwitchOut);
+
+            // Then run the global on mon switch out hook as well
+            _runEffects(battleKey, rng, 2, playerIndex, EffectStep.OnMonSwitchOut);
         }
 
-        // Update to new active mon (we assume validate already resolved and gives us a valid target)
+        // Update to new active mon (we assume validateSwitch already resolved and gives us a valid target)
         state.activeMonIndex[playerIndex] = monToSwitchIndex;
 
         // Run onMonSwitchIn hook for local effects

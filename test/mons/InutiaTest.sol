@@ -5,11 +5,9 @@ pragma solidity ^0.8.0;
 import "../../src/Constants.sol";
 import "../../src/Structs.sol";
 import {Test} from "forge-std/Test.sol";
-
 import {Engine} from "../../src/Engine.sol";
 import {MonStateIndexName, MoveClass, Type} from "../../src/Enums.sol";
 import {FastCommitManager} from "../../src/FastCommitManager.sol";
-
 import {FastValidator} from "../../src/FastValidator.sol";
 import {IEngine} from "../../src/IEngine.sol";
 import {IFastCommitManager} from "../../src/IFastCommitManager.sol";
@@ -17,24 +15,23 @@ import {IRuleset} from "../../src/IRuleset.sol";
 import {IValidator} from "../../src/IValidator.sol";
 import {IAbility} from "../../src/abilities/IAbility.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
-
 import {StatBoosts} from "../../src/effects/StatBoosts.sol";
-import {Interweaving} from "../../src/mons/inutia/Interweaving.sol";
-import {ShrineStrike} from "../../src/mons/inutia/ShrineStrike.sol";
-import {Initialize} from "../../src/mons/inutia/Initialize.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
-
+import {TypeCalculator} from "../../src/types/TypeCalculator.sol";
 import {BattleHelper} from "../abstract/BattleHelper.sol";
-
 import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
-
 import {StandardAttack} from "../../src/moves/StandardAttack.sol";
 import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
 import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
+
+import {Interweaving} from "../../src/mons/inutia/Interweaving.sol";
+import {ShrineStrike} from "../../src/mons/inutia/ShrineStrike.sol";
+import {Initialize} from "../../src/mons/inutia/Initialize.sol";
+import {ChainExpansion} from "../../src/mons/inutia/ChainExpansion.sol";
 
 contract InutiaTest is Test, BattleHelper {
     Engine engine;
@@ -389,5 +386,100 @@ contract InutiaTest is Test, BattleHelper {
         assertEq(bobSpAtk, 64);
         assertEq(aliceAtk, 32);
         assertEq(bobAtk, 32);
+    }
+
+    function test_chainExpansion() public {
+        TypeCalculator tc = new TypeCalculator();
+        ChainExpansion ce = new ChainExpansion(engine, tc);
+        FastValidator v = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 3, MOVES_PER_MON: 2, TIMEOUT_DURATION: 10})
+        );
+
+        IMoveSet[] memory moves = new IMoveSet[](2);
+        moves[0] = ce;
+        moves[1] = attackFactory.createAttack(ATTACK_PARAMS({
+            BASE_POWER: 64,
+            STAMINA_COST: 0,
+            ACCURACY: 100,
+            PRIORITY: 1,
+            MOVE_TYPE: Type.Fire,
+            EFFECT_ACCURACY: 0,
+            MOVE_CLASS: MoveClass.Physical,
+            CRIT_RATE: 0,
+            VOLATILITY: 0,
+            NAME: "Damage Attack",
+            EFFECT: IEffect(address(0))
+        }));
+
+        // 1/8 damage
+        Mon memory m1 = Mon({
+            stats: MonStats({
+                hp: 1024,
+                stamina: 10,
+                speed: 1,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Metal,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        // 1/16 damage
+        Mon memory m2 = Mon({
+            stats: MonStats({
+                hp: 1024,
+                stamina: 10,
+                speed: 1,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Nature,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        // 1/4 damage
+        Mon memory m3 = Mon({
+            stats: MonStats({
+                hp: 1024,
+                stamina: 10,
+                speed: 1,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Yang,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        Mon[] memory team = new Mon[](3);
+        team[0] = m1;
+        team[1] = m2;
+        team[2] = m3;
+
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        bytes32 battleKey = _startBattle(v, engine, mockOracle, defaultRegistry);
+
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Using Chain Expansion twice will not lead to two global effects
+
+        // Test the damage
+        // Test the heal
+        // Test the duration
     }
 }

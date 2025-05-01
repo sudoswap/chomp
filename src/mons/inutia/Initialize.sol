@@ -87,12 +87,14 @@ contract Initialize is IMoveSet, BasicEffect {
         return true;
     }
 
-    // Effect implementations
+    /**
+     Effect implementation
+     */
     function _encodeState(uint256 playerIndex, uint256 monIndex) internal pure returns (bytes memory) {
         return abi.encode(playerIndex, monIndex);
     }
 
-    function _decodeStat(bytes memory data) internal pure returns (uint256 playerIndex, uint256 monIndex) {
+    function _decodeState(bytes memory data) internal pure returns (uint256 playerIndex, uint256 monIndex) {
         return abi.decode(data, (uint256, uint256));
     }
 
@@ -105,7 +107,7 @@ contract Initialize is IMoveSet, BasicEffect {
         override
         returns (bytes memory updatedExtraData, bool removeAfterRun) {
         // Clear the initialize lock, but do not remove effect
-        (uint256 attackerPlayerIndex, uint256 attackingMonIndex) = _decodeStat(extraData);
+        (uint256 attackerPlayerIndex, uint256 attackingMonIndex) = _decodeState(extraData);
         if ((attackerPlayerIndex == targetIndex) && (attackingMonIndex == monIndex)) {
             ENGINE.setGlobalKV(_initializeKey(attackerPlayerIndex, attackingMonIndex), 0);
         }
@@ -116,7 +118,7 @@ contract Initialize is IMoveSet, BasicEffect {
         external
         override
         returns (bytes memory updatedExtraData, bool removeAfterRun) {
-        (uint256 attackerPlayerIndex,) = _decodeStat(extraData);
+        (uint256 attackerPlayerIndex,) = _decodeState(extraData);
         if (attackerPlayerIndex == targetIndex) {
             // Give the buff to the next mon
             _applyBuff(attackerPlayerIndex, monIndex);

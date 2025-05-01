@@ -31,6 +31,7 @@ import {BattleHelper} from "../abstract/BattleHelper.sol";
 import {CarrotHarvest} from "../../src/mons/sofabbi/CarrotHarvest.sol";
 import {GuestFeature} from "../../src/mons/sofabbi/GuestFeature.sol";
 import {SnackBreak} from "../../src/mons/sofabbi/SnackBreak.sol";
+import {Gachachacha} from "../../src/mons/sofabbi/Gachachacha.sol";
 
 contract SofabbiTest is Test, BattleHelper {
     Engine engine;
@@ -409,7 +410,7 @@ contract SofabbiTest is Test, BattleHelper {
         Mon memory chunkyMon = Mon({
             stats: MonStats({
                 hp: 128,
-                stamina: 5,
+                stamina: 10,
                 speed: 5,
                 attack: 5,
                 defense: 5,
@@ -419,7 +420,7 @@ contract SofabbiTest is Test, BattleHelper {
                 type2: Type.None
             }),
             moves: moves,
-            ability: IAbility(address(carrotHarvest))
+            ability: IAbility(address(0))
         });
 
         Mon[] memory team = new Mon[](1);
@@ -486,5 +487,69 @@ contract SofabbiTest is Test, BattleHelper {
         int32 hpAfter5 = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
 
         assertEq(hpAfter5, 0, "All healed up");
+    }
+
+    function test_gachachacha() public {
+        Gachachacha gacha = new Gachachacha(engine, typeCalc);
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = gacha;
+        Mon memory mon = Mon({
+            stats: MonStats({
+                hp: 1024,
+                stamina: 100,
+                speed: 5,
+                attack: 5,
+                defense: 5,
+                specialAttack: 5,
+                specialDefense: 5,
+                type1: Type.Nature,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+        FastValidator validator = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: 10})
+        );
+        Mon[] memory team = new Mon[](2);
+        team[0] = mon;
+        team[1] = mon;
+
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        bytes32 battleKey = _startBattle(validator, engine, mockOracle, defaultRegistry);
+
+        // Both players send in mon index 0
+         _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Set rng to be 10
+        mockOracle.setRNG(10);
+
+        // Alice uses an attack, it should do minimal damage
+        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", "");
+
+        // Check damage dealt to Bob
+        int32 bobDamage = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
+
+        assertApproxEqRel(bobDamage, -10, 2e17, "low damage from rng");
+
+        // Set rng to be MAX BASE POWER
+        mockOracle.setRNG(gacha.MAX_BASE_POWER() + 1);
+
+        // Alice uses an attack, it should hurt themselves for a lot
+        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", "");
+        int32 aliceDamage = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+        assertApproxEqRel(aliceDamage, -1024, 2e17, "high self damage from rng");
+
+        // Set rng to be MAX BASE POWER + SELF KO CHANCE + 1
+        mockOracle.setRNG(gacha.SELF_KO_THRESHOLD_R() + 1);
+
+        // Opponent should be close to death (maybe not due to variance)
+        _commitRevealExecuteForAliceAndBob(engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", "");
+        bobDamage = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
+        assertApproxEqRel(bobDamage, -1024, 2e17, "low damage from rng");
     }
 }

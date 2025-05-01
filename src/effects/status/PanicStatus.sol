@@ -22,7 +22,7 @@ contract PanicStatus is StatusEffect {
             || r == EffectStep.OnRemove;
     }
 
-    // At the start of the turn, check to see if we should apply fright or end early
+    // At the start of the turn, check to see if we should apply stamina debuff or end early
     function onRoundStart(uint256 rng, bytes memory extraData, uint256, uint256)
         external
         pure
@@ -36,7 +36,7 @@ contract PanicStatus is StatusEffect {
         return (extraData, false);
     }
 
-    // On apply, checks to apply the fright flag, and then sets the extraData to be the duration
+    // On apply, checks to apply the flag, and then sets the extraData to be the duration
     function onApply(uint256, bytes memory, uint256, uint256)
         external
         pure
@@ -46,7 +46,7 @@ contract PanicStatus is StatusEffect {
         return (abi.encode(DURATION), false);
     }
 
-    // Apply fright on end of turn, and then check how many turns are left
+    // Apply effect on end of turn, and then check how many turns are left
     function onRoundEnd(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         override

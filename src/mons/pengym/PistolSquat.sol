@@ -27,7 +27,7 @@ contract PistolSquat is StandardAttack {
                 ACCURACY: 100,
                 MOVE_TYPE: Type.Metal,
                 MOVE_CLASS: MoveClass.Physical,
-                PRIORITY: DEFAULT_PRIORITY - 1,
+                PRIORITY: DEFAULT_PRIORITY - 1, // This is -1 priority
                 CRIT_RATE: DEFAULT_CRIT_RATE,
                 VOLATILITY: DEFAULT_VOL,
                 EFFECT_ACCURACY: 0,

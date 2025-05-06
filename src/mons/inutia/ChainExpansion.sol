@@ -42,7 +42,7 @@ contract ChainExpansion is IMoveSet, BasicEffect {
         if (flag == bytes32(0)) {
 
             // Apply this effect globaly
-            ENGINE.addEffect(2, 2, this, _encodeState(attackerPlayerIndex));
+            ENGINE.addEffect(2, 2, this, _encodeState(DURATION, attackerPlayerIndex));
 
             // Set the new flag
             uint256 newFlag = 1;
@@ -74,8 +74,8 @@ contract ChainExpansion is IMoveSet, BasicEffect {
      Effect implementation
      */
 
-    function _encodeState(uint256 playerIndex) internal pure returns (bytes memory) {
-        return abi.encode(DURATION, playerIndex);
+    function _encodeState(uint256 turnsLeft, uint256 playerIndex) internal pure returns (bytes memory) {
+        return abi.encode(turnsLeft, playerIndex);
     }
 
     function _decodeState(bytes memory data) internal pure returns (uint256 turnsLeft, uint256 playerIndex) {
@@ -88,22 +88,25 @@ contract ChainExpansion is IMoveSet, BasicEffect {
 
     function onRoundEnd(uint256, bytes memory extraData, uint256, uint256)
         external
-        pure
         override
-        returns (bytes memory, bool removeAfterRun)
+        returns (bytes memory, bool)
     {
-        (uint256 turnsLeft, ) = _decodeState(extraData);
+        (uint256 turnsLeft, uint256 playerIndex) = _decodeState(extraData);
         if (turnsLeft == 1) {
+            // Unset the global KV
+            bytes32 battleKey = ENGINE.battleKeyForWrite();
+            uint256 activeMonIndex = ENGINE.getActiveMonIndexForBattleState(battleKey)[playerIndex];
+            ENGINE.setGlobalKV(_key(playerIndex, activeMonIndex), bytes32(0));
             return (extraData, true);
         } else {
-            return (abi.encode(turnsLeft - 1), false);
+            return (_encodeState(turnsLeft - 1, playerIndex), false);
         }
     }
 
     function onMonSwitchIn(uint256, bytes memory extraData, uint256 targetIndex, uint256 monIndex)
         external
         override
-        returns (bytes memory updatedExtraData, bool removeAfterRun) {
+        returns (bytes memory, bool) {
         bytes32 battleKey = ENGINE.battleKeyForWrite();
         (, uint256 ownerIndex) = _decodeState(extraData);
         // If it's a friendly mon, then we heal (flat 1/8 of max HP)
@@ -139,6 +142,6 @@ contract ChainExpansion is IMoveSet, BasicEffect {
             int32 damageToDeal = int32(ENGINE.getMonValueForBattle(battleKey, targetIndex, monIndex, MonStateIndexName.Hp)) / damageDenom;
             ENGINE.dealDamage(targetIndex, monIndex, damageToDeal);
         }
-        return (updatedExtraData, false);
+        return (extraData, false);
     }
 }

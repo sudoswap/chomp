@@ -2,9 +2,10 @@
 
 pragma solidity ^0.8.0;
 
+import "../../lib/forge-std/src/Test.sol";
+
 import "../../src/Constants.sol";
 import "../../src/Structs.sol";
-import {Test} from "forge-std/Test.sol";
 import {Engine} from "../../src/Engine.sol";
 import {MonStateIndexName, MoveClass, Type} from "../../src/Enums.sol";
 import {FastCommitManager} from "../../src/FastCommitManager.sol";
@@ -415,7 +416,7 @@ contract InutiaTest is Test, BattleHelper {
         Mon memory m1 = Mon({
             stats: MonStats({
                 hp: 1024,
-                stamina: 10,
+                stamina: 100,
                 speed: 1,
                 attack: 1,
                 defense: 1,
@@ -432,7 +433,7 @@ contract InutiaTest is Test, BattleHelper {
         Mon memory m2 = Mon({
             stats: MonStats({
                 hp: 1024,
-                stamina: 10,
+                stamina: 100,
                 speed: 1,
                 attack: 1,
                 defense: 1,
@@ -449,7 +450,7 @@ contract InutiaTest is Test, BattleHelper {
         Mon memory m3 = Mon({
             stats: MonStats({
                 hp: 1024,
-                stamina: 10,
+                stamina: 100,
                 speed: 1,
                 attack: 1,
                 defense: 1,
@@ -476,10 +477,75 @@ contract InutiaTest is Test, BattleHelper {
             engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
         );
 
-        // Using Chain Expansion twice will not lead to two global effects
+        // Alice uses CE, Bob does nothing (turn 1)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+        );
 
-        // Test the damage
+        // Using Chain Expansion twice will not lead to two global effects (turn 2)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+        );
+        (IEffect[] memory effects,) = engine.getEffects(battleKey, 2, 0);
+        assertEq(effects.length, 1, "Chain Expansion should only be applied once");
+
+        // Bob swaps to mon index 1 (turn 3)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, NO_OP_MOVE_INDEX, SWITCH_MOVE_INDEX, "", abi.encode(1)
+        );
+
+        // Verify damage dealt to Bob's mon index 1 is 1/16 of max HP
+        int32 damageToBobMon1 = engine.getMonStateForBattle(battleKey, 1, 1, MonStateIndexName.Hp);
+        assertEq(damageToBobMon1, -64, "Damage dealt to Bob's mon index 1 should be 1/16 of max HP");
+
+        // Bob swaps to mon index 2 (turn 4)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, NO_OP_MOVE_INDEX, SWITCH_MOVE_INDEX, "", abi.encode(2)
+        );
+
+        // Verify damage dealt to Bob's mon index 2 is 1/4 of max HP
+        int32 damageToBobMon2 = engine.getMonStateForBattle(battleKey, 1, 2, MonStateIndexName.Hp);
+        assertEq(damageToBobMon2, -256, "Damage dealt to Bob's mon index 2 should be 1/4 of max HP");
+
+        // Bob swaps back to mon index 0 (turn 5)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, NO_OP_MOVE_INDEX, SWITCH_MOVE_INDEX, "", abi.encode(0)
+        );
+
+        // Verify damage dealt to Bob's mon index 0 is 1/8 of max HP
+        int32 damageToBobMon0 = engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp);
+        assertEq(damageToBobMon0, -128, "Damage dealt to Bob's mon index 0 should be 1/8 of max HP");
+
+        // Verify the global effects are now empty (CE is finished)
+        (effects,) = engine.getEffects(battleKey, 2, 0);
+        assertEq(effects.length, 0, "Chain Expansion should be removed from global effects");
+
         // Test the heal
-        // Test the duration
+        // Alice uses CE, Bob deals damage
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, 1, "", ""
+        );
+
+        // Verify that CE is back in global effects
+        (effects,) = engine.getEffects(battleKey, 2, 0);
+        assertEq(effects.length, 1, "Chain Expansion should be added back to global effects");
+
+        // Verify Alice's mon index 0 took damage
+        int32 aliceDamageBeforeHeal = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+        assertEq(aliceDamageBeforeHeal, -64, "Alice's mon index 0 should take 1/16 of max HP");
+
+        // Alice swaps to mon index 1, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, NO_OP_MOVE_INDEX, abi.encode(1), ""
+        );
+
+        // Alice swaps back to mon index 0, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, NO_OP_MOVE_INDEX, abi.encode(0), ""
+        );
+
+        // Verify Alice's mon index 0 is healed by 1/16 of max HP
+        int32 aliceDamageAfterHeal = engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Hp);
+        assertEq(aliceDamageAfterHeal, 0, "Alice's mon index 0 should be healed by 1/16 of max HP");
     }
 }

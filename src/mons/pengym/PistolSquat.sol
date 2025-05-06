@@ -56,7 +56,7 @@ contract PistolSquat is StandardAttack {
         public
         override
     {
-        // Deal the damage and inflict panic
+        // Deal the damage
         super.move(battleKey, attackerPlayerIndex, extraData, rng);
 
         // Deal damage and then force a switch if the opposing mon is not KO'ed

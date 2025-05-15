@@ -14,7 +14,8 @@ import {ITypeCalculator} from "../../types/ITypeCalculator.sol";
 
 contract MegaStarBlast is IMoveSet {
 
-    uint32 constant public ACCURACY = 50;
+    uint32 constant public DEFAULT_ACCURACY = 50;
+    uint32 constant public ZAP_ACCURACY = 30;
     uint32 constant public BASE_POWER = 150;
 
     IEngine immutable ENGINE;
@@ -46,12 +47,11 @@ contract MegaStarBlast is IMoveSet {
 
     function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata, uint256 rng) external {
         // Check if Storm is active
-        uint32 acc = DEFAULT_ACCRUACY;
+        uint32 acc = DEFAULT_ACCURACY;
         int32 stormIndex = _checkForOverclock(battleKey);
         if (stormIndex >= 0) {
             // Remove Storm
             ENGINE.removeEffect(2, 2, uint256(uint32(stormIndex)));
-
             // Upgrade accuracy
             acc = 100;
         }
@@ -69,6 +69,14 @@ contract MegaStarBlast is IMoveSet {
             rng,
             DEFAULT_CRIT_RATE
         );
+        // Apply Zap if rng allows
+        uint256 rng2 = uint256(keccak256(abi.encode(rng)));
+        if (rng2 % 100 < ZAP_ACCURACY) {
+            uint256 defenderPlayerIndex = (attackerPlayerIndex + 1) % 2;
+            uint256 defenderMonIndex =
+                ENGINE.getActiveMonIndexForBattleState(ENGINE.battleKeyForWrite())[defenderPlayerIndex];
+            ENGINE.addEffect(defenderPlayerIndex, defenderMonIndex, ZAP_STATUS, "");
+        }
     }
 
     function stamina(bytes32, uint256, uint256) external pure returns (uint32) {

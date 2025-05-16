@@ -17,7 +17,6 @@ import {IRuleset} from "../../src/IRuleset.sol";
 import {IValidator} from "../../src/IValidator.sol";
 import {IAbility} from "../../src/abilities/IAbility.sol";
 import {IEffect} from "../../src/effects/IEffect.sol";
-import {SplitThePot} from "../../src/mons/embursa/SplitThePot.sol";
 import {IMoveSet} from "../../src/moves/IMoveSet.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
 import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
@@ -31,6 +30,9 @@ import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 import {StandardAttack} from "../../src/moves/StandardAttack.sol";
 import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
 import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
+
+import {SplitThePot} from "../../src/mons/embursa/SplitThePot.sol";
+import {Q5} from "../../src/mons/embursa/Q5.sol";
 
 contract EmbursaTest is Test, BattleHelper {
     Engine engine;
@@ -219,5 +221,72 @@ contract EmbursaTest is Test, BattleHelper {
             -1 * hpScale,
             "Mon 1 should be healed by 1/DENOM of max HP"
         );
+    }
+
+    function test_q5() public {
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = new Q5(engine, typeCalc);
+
+        Mon memory mon = Mon({
+            stats: MonStats({
+                hp: 1000,
+                stamina: 10,
+                speed: 5,
+                attack: 5,
+                defense: 5,
+                specialAttack: 5,
+                specialDefense: 5,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        Mon[] memory team = new Mon[](1);
+        team[0] = mon;
+
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        IValidator validatorToUse = new FastValidator(
+            IEngine(address(engine)), FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 1, TIMEOUT_DURATION: 10})
+        );
+
+        // Start battle
+        bytes32 battleKey = _startBattle(validatorToUse, engine, mockOracle, defaultRegistry);
+
+        // First move: Both players select their first mon (index 0)
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice uses Q5, Bob does nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Verify no damage occurred
+        assertEq(engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp), 0, "No damage should have occurred");
+
+        // Wait 4 turns
+        for (uint256 i = 0; i < 4; i++) {
+            _commitRevealExecuteForAliceAndBob(
+                engine, commitManager, battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+            );
+        }
+        // Verify no damage occurred
+        assertEq(engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp), 0, "No damage should have occurred");
+
+        // Set rng to be 2 (magic number that cancels out the damage calc volatility stuff)
+        mockOracle.setRNG(2);
+
+        // Alice and Bob both do nothing
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Verify damage occurred
+        assertEq(engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp), -150, "Damage should have occurred");
     }
 }

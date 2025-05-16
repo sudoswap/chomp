@@ -126,7 +126,7 @@ contract StatBoosts is BasicEffect {
         bytes32 statKey = getKeyForMonIndexStat(targetIndex, monIndex, statIndex, StatBoostFlag(boostFlag));
         uint256 multiplyAndDivideTotal = uint256(ENGINE.getGlobalKV(ENGINE.battleKeyForWrite(), statKey));
 
-        // The packed boost value is either the first or last 128 bits
+        // The packed boost value is either the first or last 128 bits, depending on if we are multiplying or dividing
         uint128 packedBoostValue = uint128(multiplyAndDivideTotal);
         if (boostType == StatBoostType.Multiply) {
             packedBoostValue = uint128(multiplyAndDivideTotal >> 128);
@@ -174,6 +174,7 @@ contract StatBoosts is BasicEffect {
         ENGINE.updateMonState(targetIndex, monIndex, MonStateIndexName(statIndex), newBoostAmount - existingBoostAmount);
     }
 
+    // boostAmount is in percent, specify if it should scale up or down by that % amount
     function addStatBoost(uint256 targetIndex, uint256 monIndex, uint256 statIndex, int32 boostAmount, StatBoostType boostType, StatBoostFlag boostFlag) public {
         if (boostType == StatBoostType.Divide) {
             boostAmount = -1 * boostAmount;

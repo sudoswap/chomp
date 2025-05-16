@@ -54,7 +54,7 @@ contract RockPull is IMoveSet {
             );
         } else {
             // Deal damage to ourselves
-            int32 selfDamage = AttackCalculator.calculateDamageView(
+            (int32 selfDamage, ) = AttackCalculator.calculateDamageView(
                 ENGINE,
                 TYPE_CALCULATOR,
                 battleKey,

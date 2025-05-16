@@ -74,3 +74,9 @@ enum StatBoostFlag {
     Perm,
     Existence
 }
+
+enum EngineEventType {
+    MoveMiss, 
+    MoveCrit,
+    None
+}

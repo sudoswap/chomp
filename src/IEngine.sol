@@ -11,12 +11,22 @@ import "./moves/IMoveSet.sol";
 interface IEngine {
     // Global battle key to determine which battle to apply state mutations
     function battleKeyForWrite() external view returns (bytes32);
+    
+    // State mutating effects
+    function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int32 valueToAdd)
+        external;
+    function addEffect(uint256 targetIndex, uint256 monIndex, IEffect effect, bytes memory extraData) external;
+    function removeEffect(uint256 targetIndex, uint256 monIndex, uint256 effectIndex) external;
+    function setGlobalKV(bytes32 key, bytes32 value) external;
+    function dealDamage(uint256 playerIndex, uint256 monIndex, int32 damage) external;
+    function switchActiveMon(uint256 playerIndex, uint256 monToSwitchIndex) external;
+    function execute(bytes32 battleKey) external;
+    function emitEngineEvent(EngineEventType eventType, bytes memory extraData) external;
 
     // Getters
     function commitManager() external view returns (IFastCommitManager);
     function getBattle(bytes32 battleKey) external view returns (Battle memory);
     function getBattleState(bytes32 battleKey) external view returns (BattleState memory);
-
     function getMonValueForBattle(
         bytes32 battleKey,
         uint256 playerIndex,
@@ -46,14 +56,4 @@ interface IEngine {
         view
         returns (IEffect[] memory, bytes[] memory);
     function getMonKOCount(bytes32 battleKey, uint256 playerIndex) external view returns (uint256);
-
-    // State mutating effects
-    function updateMonState(uint256 playerIndex, uint256 monIndex, MonStateIndexName stateVarIndex, int32 valueToAdd)
-        external;
-    function addEffect(uint256 targetIndex, uint256 monIndex, IEffect effect, bytes memory extraData) external;
-    function removeEffect(uint256 targetIndex, uint256 monIndex, uint256 effectIndex) external;
-    function setGlobalKV(bytes32 key, bytes32 value) external;
-    function dealDamage(uint256 playerIndex, uint256 monIndex, int32 damage) external;
-    function switchActiveMon(uint256 playerIndex, uint256 monToSwitchIndex) external;
-    function execute(bytes32 battleKey) external;
 }

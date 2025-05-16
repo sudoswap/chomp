@@ -78,6 +78,7 @@ contract Engine is IEngine {
         uint256 step
     );
     event BattleComplete(bytes32 indexed battleKey, address winner);
+    event EngineEvent(bytes32 indexed battleKey, EngineEventType eventType, bytes eventData);
 
     /**
      * - Core game functions
@@ -528,6 +529,11 @@ contract Engine is IEngine {
             // Also upstreaming more updates from `_handleSwitch` and change it to also add `_handleEffects`
         }
         // If the switch is invalid, we simply do nothing and continue execution
+    }
+
+    function emitEngineEvent(EngineEventType eventType, bytes memory eventData) external {
+        bytes32 battleKey = battleKeyForWrite;
+        emit EngineEvent(battleKey, eventType, eventData);
     }
 
     /**

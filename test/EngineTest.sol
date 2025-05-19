@@ -15,7 +15,7 @@ import {IAbility} from "../src/abilities/IAbility.sol";
 import {CommitManager} from "../src/deprecated/CommitManager.sol";
 import {DefaultValidator} from "../src/deprecated/DefaultValidator.sol";
 
-import {DefaultStaminaRegen} from "../src/effects/DefaultStaminaRegen.sol";
+import {StaminaRegen} from "../src/effects/StaminaRegen.sol";
 import {IEffect} from "../src/effects/IEffect.sol";
 
 import {IMoveSet} from "../src/moves/IMoveSet.sol";
@@ -1050,8 +1050,10 @@ contract EngineTest is Test {
         DefaultValidator twoMonValidator = new DefaultValidator(
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
-        DefaultStaminaRegen regen = new DefaultStaminaRegen(engine);
-        DefaultRuleset rules = new DefaultRuleset(engine, IEffect(address(regen)));
+        StaminaRegen regen = new StaminaRegen(engine);
+        IEffect[] memory effects = new IEffect[](1);
+        effects[0] = regen;
+        DefaultRuleset rules = new DefaultRuleset(engine, effects);
         // Register teams
         defaultRegistry.setTeam(ALICE, teams[0]);
         defaultRegistry.setTeam(BOB, teams[1]);

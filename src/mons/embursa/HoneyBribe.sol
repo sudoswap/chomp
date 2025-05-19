@@ -11,6 +11,7 @@ import {IEffect} from "../../effects/IEffect.sol";
 import {AttackCalculator} from "../../moves/AttackCalculator.sol";
 import {ITypeCalculator} from "../../types/ITypeCalculator.sol";
 import {StatBoosts} from "../../effects/StatBoosts.sol";
+import {HeatBeaconLib} from "./HeatBeaconLib.sol";
 
 contract HoneyBribe is IMoveSet {
 
@@ -77,14 +78,19 @@ contract HoneyBribe is IMoveSet {
 
         // Update the bribe level
         _increaseBribeLevel(battleKey, attackerPlayerIndex, activeMonIndex);
+
+        // Clear the priority boost
+        if (HeatBeaconLib.getPriorityBoost(ENGINE, attackerPlayerIndex) == 1) {
+            HeatBeaconLib.clearPriorityBoost(ENGINE, attackerPlayerIndex);
+        }
     }
 
     function stamina(bytes32, uint256, uint256) external pure returns (uint32) {
         return 2;
     }
 
-    function priority(bytes32, uint256) external pure returns (uint32) {
-        return DEFAULT_PRIORITY;
+    function priority(bytes32, uint256 attackerPlayerIndex) external view returns (uint32) {
+        return DEFAULT_PRIORITY + HeatBeaconLib.getPriorityBoost(ENGINE, attackerPlayerIndex);
     }
 
     function moveType(bytes32) public pure returns (Type) {

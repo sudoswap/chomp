@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.0;
 
-import {DefaultRuleset} from "../../src/DefaultRuleset.sol";
 import {Engine} from "../../src/Engine.sol";
 import {IEngine} from "../../src/IEngine.sol";
 import {MoveClass, Type, EngineEventType} from "../../src/Enums.sol";

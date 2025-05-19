@@ -10,6 +10,7 @@ import {IMoveSet} from "../../moves/IMoveSet.sol";
 import {BasicEffect} from "../../effects/BasicEffect.sol";
 import {AttackCalculator} from "../../moves/AttackCalculator.sol";
 import {ITypeCalculator} from "../../types/ITypeCalculator.sol";
+import {HeatBeaconLib} from "./HeatBeaconLib.sol";
 
 contract Q5 is IMoveSet, BasicEffect {
 
@@ -31,14 +32,19 @@ contract Q5 is IMoveSet, BasicEffect {
     function move(bytes32, uint256 attackerPlayerIndex, bytes calldata, uint256) external {
         // Add effect to global effects
         ENGINE.addEffect(2, 2, this, abi.encode(1, attackerPlayerIndex));
+
+        // Clear the priority boost
+        if (HeatBeaconLib.getPriorityBoost(ENGINE, attackerPlayerIndex) == 1) {
+            HeatBeaconLib.clearPriorityBoost(ENGINE, attackerPlayerIndex);
+        }
     }
 
     function stamina(bytes32, uint256, uint256) external pure returns (uint32) {
         return 5;
     }
 
-    function priority(bytes32, uint256) external pure returns (uint32) {
-        return DEFAULT_PRIORITY;
+    function priority(bytes32, uint256 attackerPlayerIndex) external view returns (uint32) {
+        return DEFAULT_PRIORITY + HeatBeaconLib.getPriorityBoost(ENGINE, attackerPlayerIndex);
     }
 
     function moveType(bytes32) public pure returns (Type) {

@@ -12,6 +12,7 @@ import {IMoveSet} from "../../moves/IMoveSet.sol";
 import {StandardAttack} from "../../moves/StandardAttack.sol";
 import {ATTACK_PARAMS} from "../../moves/StandardAttackStructs.sol";
 import {ITypeCalculator} from "../../types/ITypeCalculator.sol";
+import {HeatBeaconLib} from "./HeatBeaconLib.sol";
 
 contract SetAblaze is StandardAttack {
     constructor(IEngine ENGINE, ITypeCalculator TYPE_CALCULATOR, IEffect BURN_STATUS)
@@ -34,4 +35,16 @@ contract SetAblaze is StandardAttack {
             })
         )
     {}
+
+    function move(bytes32 battleKey, uint256 attackerPlayerIndex, bytes calldata args, uint256 rng) public override {
+        super.move(battleKey, attackerPlayerIndex, args, rng);
+        // Clear the priority boost
+        if (HeatBeaconLib.getPriorityBoost(ENGINE, attackerPlayerIndex) == 1) {
+            HeatBeaconLib.clearPriorityBoost(ENGINE, attackerPlayerIndex);
+        }
+    }
+
+    function priority(bytes32, uint256 attackerPlayerIndex) public view override returns (uint32) {
+        return DEFAULT_PRIORITY + HeatBeaconLib.getPriorityBoost(ENGINE, attackerPlayerIndex);
+    }
 }

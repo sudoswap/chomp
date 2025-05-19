@@ -11,17 +11,20 @@ import {IRuleset} from "./IRuleset.sol";
 import {IEffect} from "./effects/IEffect.sol";
 
 contract DefaultRuleset is IRuleset {
-    IEngine immutable ENGINE;
-    IEffect[] STAMINA_EFFECT;
 
-    constructor(IEngine _ENGINE, IEffect _STAMINA_REGEN) {
+    IEngine immutable ENGINE;
+
+    IEffect[] public effects;
+
+    constructor(IEngine _ENGINE, IEffect[] memory _effects) {
         ENGINE = _ENGINE;
-        STAMINA_EFFECT.push();
-        STAMINA_EFFECT[0] = _STAMINA_REGEN;
+        for (uint i; i < _effects.length; i++) {
+            effects.push(_effects[i]);
+        }
     }
 
     function getInitialGlobalEffects() external view returns (IEffect[] memory, bytes[] memory) {
         bytes[] memory data = new bytes[](1);
-        return (STAMINA_EFFECT, data);
+        return (effects, data);
     }
 }

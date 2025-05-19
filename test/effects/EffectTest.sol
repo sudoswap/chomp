@@ -7,8 +7,6 @@ import "../../src/Constants.sol";
 import "../../src/Enums.sol";
 import "../../src/Structs.sol";
 
-import {DefaultRuleset} from "../../src/DefaultRuleset.sol";
-
 import {Engine} from "../../src/Engine.sol";
 import {IValidator} from "../../src/IValidator.sol";
 import {IAbility} from "../../src/abilities/IAbility.sol";

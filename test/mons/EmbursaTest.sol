@@ -33,6 +33,11 @@ import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
 
 import {SplitThePot} from "../../src/mons/embursa/SplitThePot.sol";
 import {Q5} from "../../src/mons/embursa/Q5.sol";
+import {HeatBeacon} from "../../src/mons/embursa/HeatBeacon.sol";
+import {SetAblaze} from "../../src/mons/embursa/SetAblaze.sol";
+import {DummyStatus} from "../mocks/DummyStatus.sol";
+import {HoneyBribe} from "../../src/mons/embursa/HoneyBribe.sol";
+import {StatBoosts} from "../../src/effects/StatBoosts.sol";
 
 contract EmbursaTest is Test, BattleHelper {
     Engine engine;
@@ -289,4 +294,170 @@ contract EmbursaTest is Test, BattleHelper {
         // Verify damage occurred
         assertEq(engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp), -150, "Damage should have occurred");
     }
+
+    function test_heatBeacon() public {
+        DummyStatus dummyStatus = new DummyStatus();
+        HeatBeacon heatBeacon = new HeatBeacon(IEngine(address(engine)), IEffect(address(dummyStatus)));
+        Q5 q5 = new Q5(engine, typeCalc);
+        SetAblaze setAblaze = new SetAblaze(engine, typeCalc, IEffect(address(dummyStatus)));
+        StatBoosts statBoosts = new StatBoosts(engine);
+        HoneyBribe honeyBribe = new HoneyBribe(engine, statBoosts);
+
+        IMoveSet koMove = attackFactory.createAttack(
+            ATTACK_PARAMS({
+                BASE_POWER: 200,
+                STAMINA_COST: 1,
+                ACCURACY: 100,
+                PRIORITY: 1,
+                MOVE_TYPE: Type.Fire,
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Physical,
+                CRIT_RATE: 0,
+                VOLATILITY: 0,
+                NAME: "KO Move",
+                EFFECT: IEffect(address(0))
+            })
+        );
+
+        IMoveSet[] memory aliceMoves = new IMoveSet[](5);
+        aliceMoves[0] = heatBeacon;
+        aliceMoves[1] = q5;
+        aliceMoves[2] = setAblaze;
+        aliceMoves[3] = honeyBribe;
+        aliceMoves[4] = koMove;
+
+        Mon memory aliceMon = Mon({
+            stats: MonStats({
+                hp: 100,
+                stamina: 10,
+                speed: 1,
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: aliceMoves,
+            ability: IAbility(address(0))
+        });
+
+        // 5. Create Bob's mon with higher speed
+        IMoveSet[] memory bobMoves = new IMoveSet[](5);
+        bobMoves[0] = heatBeacon;
+        bobMoves[1] = q5;
+        bobMoves[2] = setAblaze;
+        bobMoves[3] = honeyBribe;
+        bobMoves[4] = koMove;
+
+        Mon memory bobMon = Mon({
+            stats: MonStats({
+                hp: 100,
+                stamina: 10,
+                speed: 2, // Higher speed than Alice
+                attack: 1,
+                defense: 1,
+                specialAttack: 1,
+                specialDefense: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: bobMoves,
+            ability: IAbility(address(0))
+        });
+        Mon[] memory aliceTeam = new Mon[](1);
+        aliceTeam[0] = aliceMon;
+        Mon[] memory bobTeam = new Mon[](1);
+        bobTeam[0] = bobMon;
+        defaultRegistry.setTeam(ALICE, aliceTeam);
+        defaultRegistry.setTeam(BOB, bobTeam);
+        IValidator validatorToUse = new FastValidator(
+            IEngine(address(engine)),
+            FastValidator.Args({MONS_PER_TEAM: 1, MOVES_PER_MON: 5, TIMEOUT_DURATION: 10})
+        );
+
+        // Set Ablaze test
+        // Start battle
+        // Alice uses Heat Beacon, Bob does nothing
+        // Verify dummy status was applied to Bob's mon
+        // Verify Alice's priority boost
+        // Alice uses Set Ablaze, Bob uses KO move
+        // Verify Alice's priority boost is cleared
+        // Verify Alice's mon is KO'ed but Bob has taken damage
+        bytes32 battleKey = _startBattle(validatorToUse, engine, mockOracle, defaultRegistry);
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+        );
+        (IEffect[] memory effects, ) = engine.getEffects(battleKey, 1, 0);
+        assertEq(effects.length, 1, "Bob's mon should have 1 effect (Dummy status)");
+        assertEq(address(effects[0]), address(dummyStatus), "Bob's mon should have Dummy status");
+        assertEq(heatBeacon.priority(battleKey, 0), DEFAULT_PRIORITY + 1, "Alice should have priority boost");
+        mockOracle.setRNG(2); // Magic number to cancel out volatility
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 2, 4, "", ""
+        );
+        assertEq(heatBeacon.priority(battleKey, 0), DEFAULT_PRIORITY, "Alice's priority boost should be cleared");
+        assertEq(engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut), 1, "Alice's mon should be KOed");
+        assertEq(engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Hp), -1 * int32(setAblaze.basePower(battleKey)), "Bob's mon should take damage");
+
+        // Heat Beacon test
+        // Start a new battle
+        // Alice uses Heat Beacon, Bob does nothing
+        // Alice uses Heat Beacon again, Bob uses KO Move
+        // Verify Alice's mon is KO'ed but Bob's mon now has 2x Dummy status
+        battleKey = _startBattle(validatorToUse, engine, mockOracle, defaultRegistry);
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+        );
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, 4, "", ""
+        );
+        (effects,) = engine.getEffects(battleKey, 1, 0);
+        assertEq(effects.length, 2, "Bob's mon should have 2x Dummy status");
+
+        // Q5 test
+        // Start a new battle
+        // Alice uses Heat Beacon, Bob does nothing
+        // Alice uses Q5, Bob uses KO move
+        // Verify Q5 was applied to global effects, verify Alice is KOed
+        battleKey = _startBattle(validatorToUse, engine, mockOracle, defaultRegistry);
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+        );
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 1, 4, "", ""
+        );
+        (effects,) = engine.getEffects(battleKey, 2, 0);
+        assertEq(address(effects[0]), address(q5), "Q5 should be applied to global effects");
+        assertEq(engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut), 1, "Alice's mon should be KOed");
+
+        // Honey Bribe test
+        // Start a new battle
+        // Alice uses Heat Beacon, Bob does nothing
+        // Alice uses Honey Bribe, Bob uses KO move
+        // Verify Honey Bribe applied stat boost to Bob's mon, verify Alice is KOed
+        battleKey = _startBattle(validatorToUse, engine, mockOracle, defaultRegistry);
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 0, NO_OP_MOVE_INDEX, "", ""
+        );
+        _commitRevealExecuteForAliceAndBob(
+            engine, commitManager, battleKey, 3, 4, "", ""
+        );
+        (effects,) = engine.getEffects(battleKey, 1, 0);
+        assertEq(address(effects[1]), address(statBoosts), "StatBoosts should be applied to Bob's mon");
+        assertEq(engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.IsKnockedOut), 1, "Alice's mon should be KOed");
+    }
+
 }

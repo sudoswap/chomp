@@ -66,14 +66,14 @@ abstract contract BattleHelper is Test {
                 abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
             )
         });
-        vm.prank(ALICE);
+        vm.startPrank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
         bytes32 battleIntegrityHash = keccak256(
             abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
         );
-        vm.prank(BOB);
+        vm.startPrank(BOB);
         engine.acceptBattle(battleKey, 0, battleIntegrityHash);
-        vm.prank(ALICE);
+        vm.startPrank(ALICE);
         engine.startBattle(battleKey, "", 0);
         return battleKey;
     }

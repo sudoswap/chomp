@@ -15,7 +15,7 @@ library HeatBeaconLib {
 
     function getPriorityBoost(IEngine engine, uint256 playerIndex) external view returns (uint32) {
         bytes32 value = engine.getGlobalKV(engine.battleKeyForWrite(), _getKey(playerIndex));
-        return value == bytes32("1") ? 1 : DEFAULT_PRIORITY;
+        return value == bytes32("1") ? 1 : 0;
     }
 
     function setPriorityBoost(IEngine engine, uint256 playerIndex) external {

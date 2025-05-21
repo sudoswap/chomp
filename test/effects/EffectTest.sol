@@ -20,22 +20,24 @@ import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
 
-// Import effects
+import {BattleHelper} from "../abstract/BattleHelper.sol";
 
+// Import effects
 import {PanicStatus} from "../../src/effects/status/PanicStatus.sol";
 import {FrostbiteStatus} from "../../src/effects/status/FrostbiteStatus.sol";
 import {SleepStatus} from "../../src/effects/status/SleepStatus.sol";
 import {BurnStatus} from "../../src/effects/status/BurnStatus.sol";
 import {StatBoosts} from "../../src/effects/StatBoosts.sol";
 import {ZapStatus} from "../../src/effects/status/ZapStatus.sol";
+import {StaminaRegen} from "../../src/effects/StaminaRegen.sol";
+import {DefaultRuleset} from "../../src/DefaultRuleset.sol";
 
 // Import standard attack factory and template
-
 import {StandardAttack} from "../../src/moves/StandardAttack.sol";
 import {StandardAttackFactory} from "../../src/moves/StandardAttackFactory.sol";
 import {ATTACK_PARAMS} from "../../src/moves/StandardAttackStructs.sol";
 
-contract EffectTest is Test {
+contract EffectTest is Test, BattleHelper {
     CommitManager commitManager;
     Engine engine;
     DefaultValidator oneMonOneMoveValidator;
@@ -51,8 +53,6 @@ contract EffectTest is Test {
     BurnStatus burnStatus;
     ZapStatus zapStatus;
 
-    address constant ALICE = address(1);
-    address constant BOB = address(2);
     uint256 constant TIMEOUT_DURATION = 100;
 
     Mon dummyMon;
@@ -870,5 +870,94 @@ contract EffectTest is Test {
 
         (, extraData) = engine.getEffects(battleKey, 1, 0);
         assertEq(extraData.length, 0);
+    }
+
+    function test_staminaRegen() public {
+        StaminaRegen regen = new StaminaRegen(engine);
+        IEffect[] memory effects = new IEffect[](1);
+        effects[0] = regen;
+        DefaultRuleset rules = new DefaultRuleset(engine, effects);
+
+        // Deploy an attack that does 0 damage but consumes 5 stamina
+        IMoveSet noDamageAttack = standardAttackFactory.createAttack(
+            ATTACK_PARAMS({
+                BASE_POWER: 0,
+                STAMINA_COST: 5,
+                ACCURACY: 100,
+                PRIORITY: 1,
+                MOVE_TYPE: Type.Fire,
+                EFFECT_ACCURACY: 0,
+                MOVE_CLASS: MoveClass.Physical,
+                CRIT_RATE: 0,
+                VOLATILITY: 0,
+                NAME: "NoDamage",
+                EFFECT: IEffect(address(0))
+            })
+        );
+
+        IMoveSet[] memory moves = new IMoveSet[](1);
+        moves[0] = noDamageAttack;
+        Mon memory mon = Mon({
+            stats: MonStats({
+                hp: 20,
+                stamina: 10,
+                speed: 2,
+                attack: 1,
+                defense: 1,
+                specialAttack: 20,
+                specialDefense: 1,
+                type1: Type.Fire,
+                type2: Type.None
+            }),
+            moves: moves,
+            ability: IAbility(address(0))
+        });
+
+        Mon[] memory team = new Mon[](1);
+        team[0] = mon;
+
+        defaultRegistry.setTeam(ALICE, team);
+        defaultRegistry.setTeam(BOB, team);
+
+        // Create new battle with ruleset
+        StartBattleArgs memory args = StartBattleArgs({
+            p0: ALICE,
+            p1: BOB,
+            validator: oneMonOneMoveValidator,
+            rngOracle: mockOracle,
+            ruleset: rules,
+            teamRegistry: defaultRegistry,
+            p0TeamHash: keccak256(
+                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
+            )
+        });
+
+        vm.prank(ALICE);
+        bytes32 battleKey = engine.proposeBattle(args);
+        bytes32 battleIntegrityHash = keccak256(
+            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
+        );
+        vm.prank(BOB);
+        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
+        vm.prank(ALICE);
+        engine.startBattle(battleKey, "", 0);
+
+        // First move of the game has to be selecting their mons (both index 0)
+        _commitRevealExecuteForAliceAndBob(
+            battleKey, SWITCH_MOVE_INDEX, SWITCH_MOVE_INDEX, abi.encode(0), abi.encode(0)
+        );
+
+        // Alice uses NoDamage, Bob does as well
+        _commitRevealExecuteForAliceAndBob(battleKey, 0, 0, "", "");
+
+        // Both should have -4 stamina delta because of end of turn regen
+        assertEq(engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Stamina), -4);
+        assertEq(engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Stamina), -4);
+
+        // Both players No Op, and this should heal them by an extra 1 stamina
+        // So at end of turn, both players should have -2 stamina delta
+        _commitRevealExecuteForAliceAndBob(battleKey, NO_OP_MOVE_INDEX, NO_OP_MOVE_INDEX, "", "");
+        assertEq(engine.getMonStateForBattle(battleKey, 0, 0, MonStateIndexName.Stamina), -2);
+        assertEq(engine.getMonStateForBattle(battleKey, 1, 0, MonStateIndexName.Stamina), -2);
     }
 }

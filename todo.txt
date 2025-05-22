@@ -1,13 +1,30 @@
 # TODO
 
-1) add a way for anything to return a generic event of the form (bytes32 eventType, bytes extradata)
-This allows for more flexibly encoded standards, and as long as eventType is followed, clients can know how to decode
-Makes it easier for e.g. moves to return additional information that can make it easier for clients to understand what happened in a battle.
+1) Progression system:
+- figure out NOMs
+- figure out gacha
+- figure out post-game hook
 
-2) add updated ruleset (+1 energy per rest), 4 mons per team validator, initial team creator, simple method to gain more mons
+2) Go from mon stat csv to actual deploy script
+- do rest of deploy script
+
+3) (later) validation from changing move csv to checking if the changes are reflected in the contracts
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ---------------------------------------------------------------------------------------------
-
 LATER FEATURES
 
 2) Allow restricting/enforcement of move selection

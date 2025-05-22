@@ -34,3 +34,6 @@ drool/*
 !drool/mons.csv
 !drool/moves.csv
 !drool/style.css
+!drool/types.csv
+!drool/type-data.js
+!drool/utils.js

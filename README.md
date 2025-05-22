@@ -2,6 +2,9 @@
 
 on-chain turn-based pvp battling game, (heavily) inspired by pokemon showdown x mugen
 
+![gorillax back img](drool/imgs/ghouliath_back.gif)
+![gorillax front img](drool/imgs/ghouliath_front.gif)
+
 designed to be highly extensible
 
 general flow of the game is: 

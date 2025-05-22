@@ -1,5 +1,7 @@
 # System Architecture Overview
 
+(summarized by ai, bls be careful)
+
 CHOMP is built as a modular, extensible battle engine that allows for custom mons, moves, abilities, and effects.
 
 ```
@@ -75,24 +77,19 @@ The central component of the system that manages the battle state and coordinate
                             └─────────────────┘
 ```
 
-### FastCommitManager.sol
+### ICommitManager.sol
 Manages the commit-reveal mechanism for player moves:
 - Players commit a hash of their move
 - After both players commit, they reveal their moves
 - Ensures fair play by preventing players from changing their moves after seeing the opponent's choice
 
-### FastValidator.sol
+### IValidator.sol
 Validates game rules and player actions:
 - Ensures teams are valid at game start
 - Validates that moves are legal
 - Checks for game over conditions
 - Handles timeout conditions
 - Computes priority between players
-
-### DefaultRuleset.sol
-Defines the rules for a specific game mode:
-- Provides initial global effects
-- Can be customized for different game modes
 
 ## Game Components
 
@@ -219,61 +216,3 @@ The battle system follows a turn-based structure with simultaneous move selectio
 3. **Battle Resolution**
    - Battle ends when one player has all mons KOed.
    - Winner is determined and recorded
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         Battle Flow                                 │
-└─────────────────────────────────────────────────────────────────────┘
-                                   │
-                                   ▼
-                          ┌─────────────────┐
-                          │ Initialize Game │
-                          └─────────────────┘
-                                   │
-                                   ▼
-                          ┌─────────────────┐
-                          │  Select Teams   │
-                          └─────────────────┘
-                                   │
-                                   ▼
-                          ┌─────────────────┐
-                          │  Start Battle   │◄───────┐
-                          └─────────────────┘        │
-                                   │                 │
-                                   ▼                 │
-                          ┌─────────────────┐        │
-                          │ P1 Commits Move │        │
-                          └─────────────────┘        │
-                                   │                 │
-                                   ▼                 │
-                          ┌─────────────────┐        │
-                          │ P2 Commits Move │        │
-                          └─────────────────┘        │
-                                   │                 │
-                                   ▼                 │
-                          ┌─────────────────┐        │
-                          │ P1 Reveals Move │        │
-                          └─────────────────┘        │
-                                   │                 │
-                                   ▼                 │
-                          ┌─────────────────┐        │
-                          │ P2 Reveals Move │        │
-                          └─────────────────┘        │
-                                   │                 │
-                                   ▼                 │
-                          ┌─────────────────┐        │
-                          │  Execute Turn   │        │
-                          └─────────────────┘        │
-                                   │                 │
-                                   ▼                 │
-                          ┌─────────────────┐        │
-                          │  Game Over?     │───No───┘
-                          └─────────────────┘
-                                   │
-                                  Yes
-                                   │
-                                   ▼
-                          ┌─────────────────┐
-                          │  End Battle     │
-                          └─────────────────┘
-```

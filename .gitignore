@@ -17,3 +17,20 @@ log.txt
 
 # Setup
 processing/
+
+# Everything in drool
+drool/*
+
+# Keep imgs/
+!drool/imgs
+!drool/imgs/**
+
+!drool/abilities.csv
+!drool/index.html
+!drool/mon-analysis.js
+!drool/mon-full.js
+!drool/mon-moves.js
+!drool/mon-stats.js
+!drool/mons.csv
+!drool/moves.csv
+!drool/style.css

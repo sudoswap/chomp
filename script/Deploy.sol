@@ -78,20 +78,20 @@ contract Deploy is Script {
         uint256 deployerPrivateKey = uint256(vm.envBytes32("PRIVATE_KEY"));
         vm.startBroadcast(deployerPrivateKey);
         engine = new Engine();
-        commitManager = new FastCommitManager(engine);
-        engine.setCommitManager(address(commitManager));
-        typeCalc = new TypeCalculator();
-        statBoosts = new StatBoosts(engine);
-        storm = new Storm(engine, statBoosts);
-        sleepStatus = new SleepStatus(engine);
-        panicStatus = new PanicStatus(engine);
-        frostbiteStatus = new FrostbiteStatus(engine, statBoosts);
-        burnStatus = new BurnStatus(engine, statBoosts);
-        zapStatus = new ZapStatus(engine);
-        staminaRegen = new StaminaRegen(engine);
-        IEffect[] memory effects = new IEffect[](1);
-        effects[0] = staminaRegen;
-        ruleset = new DefaultRuleset(engine, effects);
+        // commitManager = new FastCommitManager(engine);
+        // engine.setCommitManager(address(commitManager));
+        // typeCalc = new TypeCalculator();
+        // statBoosts = new StatBoosts(engine);
+        // storm = new Storm(engine, statBoosts);
+        // sleepStatus = new SleepStatus(engine);
+        // panicStatus = new PanicStatus(engine);
+        // frostbiteStatus = new FrostbiteStatus(engine, statBoosts);
+        // burnStatus = new BurnStatus(engine, statBoosts);
+        // zapStatus = new ZapStatus(engine);
+        // staminaRegen = new StaminaRegen(engine);
+        // IEffect[] memory effects = new IEffect[](1);
+        // effects[0] = staminaRegen;
+        // ruleset = new DefaultRuleset(engine, effects);
         vm.stopBroadcast();
     }
 }

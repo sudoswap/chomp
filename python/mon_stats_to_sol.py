@@ -151,35 +151,127 @@ def analyze_contract_dependencies(contract_path: str) -> List[str]:
     return dependencies
 
 
+def get_contracts_for_mon(mon: MonData, base_path: str) -> Dict[str, ContractInfo]:
+    """Get all contracts needed for a specific mon"""
+    contracts = {}
+    mon_dir = get_mon_directory_name(mon.name)
+
+    # Collect move contracts
+    for move_name in mon.moves:
+        contract_name = contract_name_from_move_or_ability(move_name)
+        contract_path = os.path.join(base_path, "src", "mons", mon_dir, f"{contract_name}.sol")
+
+        if contract_name not in contracts:
+            dependencies = analyze_contract_dependencies(contract_path)
+            contracts[contract_name] = ContractInfo(move_name, contract_path, dependencies)
+
+    # Collect ability contracts
+    for ability_name in mon.abilities:
+        contract_name = contract_name_from_move_or_ability(ability_name)
+        contract_path = os.path.join(base_path, "src", "mons", mon_dir, f"{contract_name}.sol")
+
+        if contract_name not in contracts:
+            dependencies = analyze_contract_dependencies(contract_path)
+            contracts[contract_name] = ContractInfo(ability_name, contract_path, dependencies)
+
+    return contracts
+
+
 def collect_all_contracts(mons: Dict[str, MonData], base_path: str) -> Dict[str, ContractInfo]:
     """Collect all unique contracts that need to be deployed"""
     contracts = {}
 
     for mon in mons.values():
-        mon_dir = get_mon_directory_name(mon.name)
-
-        # Collect move contracts
-        for move_name in mon.moves:
-            contract_name = contract_name_from_move_or_ability(move_name)
-            contract_path = os.path.join(base_path, "src", "mons", mon_dir, f"{contract_name}.sol")
-
-            if contract_name not in contracts:
-                dependencies = analyze_contract_dependencies(contract_path)
-                contracts[contract_name] = ContractInfo(move_name, contract_path, dependencies)
-
-        # Collect ability contracts
-        for ability_name in mon.abilities:
-            contract_name = contract_name_from_move_or_ability(ability_name)
-            contract_path = os.path.join(base_path, "src", "mons", mon_dir, f"{contract_name}.sol")
-
-            if contract_name not in contracts:
-                dependencies = analyze_contract_dependencies(contract_path)
-                contracts[contract_name] = ContractInfo(ability_name, contract_path, dependencies)
+        mon_contracts = get_contracts_for_mon(mon, base_path)
+        contracts.update(mon_contracts)
 
     return contracts
 
 
-def generate_solidity_script(mons: Dict[str, MonData], contracts: Dict[str, ContractInfo]) -> str:
+def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
+    """Generate the deploy function for a specific mon"""
+    function_name = f"deploy{mon.name.replace(' ', '')}"
+    lines = []
+    
+    lines.append(f"    function {function_name}(DefaultMonRegistry registry) internal {{")
+    
+    # Get contracts for this mon
+    mon_contracts = get_contracts_for_mon(mon, base_path)
+    mon_dir = get_mon_directory_name(mon.name)
+    
+    if mon_contracts:
+        lines.append(f"        // Deploy contracts for {mon.name}")
+        
+        # Deploy contracts
+        for contract in mon_contracts.values():
+            contract_name = contract_name_from_move_or_ability(contract.name)
+            
+            # Build constructor arguments
+            constructor_args = []
+            for dep in contract.dependencies:
+                constructor_args.append(f"vm.envAddress(\"{dep}\")")
+            
+            args_str = ", ".join(constructor_args)
+            lines.append(f"        {contract_name} {contract.variable_name} = new {contract_name}({args_str});")
+        
+        lines.append("")
+    
+    # Generate MonStats
+    type1 = convert_type_to_solidity(mon.type1)
+    type2 = convert_type_to_solidity(mon.type2)
+    
+    lines.append(f"        // Create {mon.name}")
+    lines.extend([
+        "        MonStats memory stats = MonStats({",
+        f"            hp: {mon.hp},",
+        f"            stamina: {mon.stamina},",
+        f"            speed: {mon.speed},",
+        f"            attack: {mon.attack},",
+        f"            defense: {mon.defense},",
+        f"            specialAttack: {mon.special_attack},",
+        f"            specialDefense: {mon.special_defense},",
+        f"            type1: {type1},",
+        f"            type2: {type2}",
+        "        });"
+    ])
+    
+    # Generate moves array
+    if mon.moves:
+        lines.append(f"        IMoveSet[] memory moves = new IMoveSet[]({len(mon.moves)});")
+        for i, move_name in enumerate(mon.moves):
+            contract_name = contract_name_from_move_or_ability(move_name)
+            if contract_name in mon_contracts:
+                var_name = mon_contracts[contract_name].variable_name
+                lines.append(f"        moves[{i}] = IMoveSet(address({var_name}));")
+    else:
+        lines.append("        IMoveSet[] memory moves = new IMoveSet[](0);")
+    
+    # Generate abilities array
+    if mon.abilities:
+        lines.append(f"        IAbility[] memory abilities = new IAbility[]({len(mon.abilities)});")
+        for i, ability_name in enumerate(mon.abilities):
+            contract_name = contract_name_from_move_or_ability(ability_name)
+            if contract_name in mon_contracts:
+                var_name = mon_contracts[contract_name].variable_name
+                lines.append(f"        abilities[{i}] = IAbility(address({var_name}));")
+    else:
+        lines.append("        IAbility[] memory abilities = new IAbility[](0);")
+    
+    # Generate metadata arrays (empty for now)
+    lines.extend([
+        "        bytes32[] memory keys = new bytes32[](0);",
+        "        string[] memory values = new string[](0);"
+    ])
+    
+    # Generate createMon call
+    lines.append(f"        registry.createMon({mon.mon_id}, stats, moves, abilities, keys, values);")
+    lines.append("    }")
+    lines.append("")
+    
+    return lines
+
+
+def generate_solidity_script(mons: Dict[str, MonData], contracts: Dict[str, ContractInfo], base_path: str) -> str:
     """Generate the complete Solidity deployment script"""
 
     # Generate imports
@@ -211,8 +303,8 @@ def generate_solidity_script(mons: Dict[str, MonData], contracts: Dict[str, Cont
 
     imports.append("")
 
-    # Generate contract header
-    contract_header = [
+    # Generate contract header and main run function
+    contract_lines = [
         "contract SetupMons is Script {",
         "    function run() external {",
         "        vm.startBroadcast();",
@@ -221,88 +313,30 @@ def generate_solidity_script(mons: Dict[str, MonData], contracts: Dict[str, Cont
         "        DefaultMonRegistry registry = DefaultMonRegistry(vm.envAddress(\"DEFAULT_MON_REGISTRY\"));",
         ""
     ]
-
-    # Generate contract deployments
-    deployments = ["        // Deploy all required contracts"]
-    for contract in contracts.values():
-        contract_name = contract_name_from_move_or_ability(contract.name)
-
-        # Build constructor arguments
-        constructor_args = []
-        for dep in contract.dependencies:
-            constructor_args.append(f"vm.envAddress(\"{dep}\")")
-
-        args_str = ", ".join(constructor_args)
-        deployments.append(f"        {contract_name} {contract.variable_name} = new {contract_name}({args_str});")
-
-    deployments.append("")
-
-    # Generate createMon calls
-    create_mon_calls = ["        // Create all mons in the registry"]
-
+    
+    # Add calls to individual deploy functions
+    contract_lines.append("        // Deploy all mons")
     for mon in sorted(mons.values(), key=lambda m: m.mon_id):
-        create_mon_calls.append(f"        // Create {mon.name}")
-
-        # Generate MonStats
-        type1 = convert_type_to_solidity(mon.type1)
-        type2 = convert_type_to_solidity(mon.type2)
-
-        mon_stats = [
-            "        MonStats memory stats = MonStats({",
-            f"            hp: {mon.hp},",
-            f"            stamina: {mon.stamina},",
-            f"            speed: {mon.speed},",
-            f"            attack: {mon.attack},",
-            f"            defense: {mon.defense},",
-            f"            specialAttack: {mon.special_attack},",
-            f"            specialDefense: {mon.special_defense},",
-            f"            type1: {type1},",
-            f"            type2: {type2}",
-            "        });"
-        ]
-        create_mon_calls.extend(mon_stats)
-
-        # Generate moves array
-        if mon.moves:
-            create_mon_calls.append(f"        IMoveSet[] memory moves = new IMoveSet[]({len(mon.moves)});")
-            for i, move_name in enumerate(mon.moves):
-                contract_name = contract_name_from_move_or_ability(move_name)
-                if contract_name in contracts:
-                    var_name = contracts[contract_name].variable_name
-                    create_mon_calls.append(f"        moves[{i}] = IMoveSet(address({var_name}));")
-        else:
-            create_mon_calls.append("        IMoveSet[] memory moves = new IMoveSet[](0);")
-
-        # Generate abilities array
-        if mon.abilities:
-            create_mon_calls.append(f"        IAbility[] memory abilities = new IAbility[]({len(mon.abilities)});")
-            for i, ability_name in enumerate(mon.abilities):
-                contract_name = contract_name_from_move_or_ability(ability_name)
-                if contract_name in contracts:
-                    var_name = contracts[contract_name].variable_name
-                    create_mon_calls.append(f"        abilities[{i}] = IAbility(address({var_name}));")
-        else:
-            create_mon_calls.append("        IAbility[] memory abilities = new IAbility[](0);")
-
-        # Generate metadata arrays (empty for now)
-        create_mon_calls.extend([
-            "        bytes32[] memory keys = new bytes32[](0);",
-            "        string[] memory values = new string[](0);"
-        ])
-
-        # Generate createMon call
-        create_mon_calls.append(f"        registry.createMon({mon.mon_id}, stats, moves, abilities, keys, values);")
-        create_mon_calls.append("")
-
-    # Generate contract footer
-    contract_footer = [
+        function_name = f"deploy{mon.name.replace(' ', '')}"
+        contract_lines.append(f"        {function_name}(registry);")
+    
+    contract_lines.extend([
+        "",
         "        vm.stopBroadcast();",
         "    }",
-        "}"
-    ]
+        ""
+    ])
+    
+    # Generate individual deploy functions for each mon
+    deploy_functions = []
+    for mon in sorted(mons.values(), key=lambda m: m.mon_id):
+        deploy_functions.extend(generate_deploy_function_for_mon(mon, base_path))
+    
+    # Generate contract footer
+    contract_footer = ["}"]
 
     # Combine all parts
-    all_lines = imports + contract_header + deployments + create_mon_calls + contract_footer
+    all_lines = imports + contract_lines + deploy_functions + contract_footer
     return "\n".join(all_lines)
 
 
@@ -325,7 +359,7 @@ def main():
 
     # Generate Solidity script
     print("Generating Solidity script...")
-    solidity_code = generate_solidity_script(mons, contracts)
+    solidity_code = generate_solidity_script(mons, contracts, base_path)
 
     # Write to output file
     output_path = os.path.join(base_path, "script", "SetupMons.s.sol")

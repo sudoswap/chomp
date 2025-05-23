@@ -137,11 +137,16 @@ def analyze_contract_dependencies(contract_path: str) -> List[str]:
             constructor_text = constructor_match.group(0)
 
             # Extract parameter names that start with underscore
-            param_matches = re.findall(r'(\w+)\s+(_\w+)', constructor_text)
+            param_matches = re.findall(r'(\w+)\s+(\w+)', constructor_text)
             for param_type, param_name in param_matches:
                 # Remove leading underscore for environment variable name
-                env_name = param_name[1:].upper()
-                dependencies.append(env_name)
+                env_name = param_name.upper()
+                if env_name.startswith("_"):
+                    env_name = env_name[1:]
+                dependencies.append({
+                    "name": env_name,
+                    "type": param_type
+                })
 
     except FileNotFoundError:
         print(f"Warning: Contract file not found: {contract_path}")
@@ -196,9 +201,8 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
     lines.append(f"    function {function_name}(DefaultMonRegistry registry) internal {{")
     
     # Get contracts for this mon
-    mon_contracts = get_contracts_for_mon(mon, base_path)
-    mon_dir = get_mon_directory_name(mon.name)
-    
+    mon_contracts = get_contracts_for_mon(mon, base_path)  
+
     if mon_contracts:
         lines.append(f"        // Deploy contracts for {mon.name}")
         
@@ -209,7 +213,9 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
             # Build constructor arguments
             constructor_args = []
             for dep in contract.dependencies:
-                constructor_args.append(f"vm.envAddress(\"{dep}\")")
+                contract_type = dep["type"]
+                env_name = dep["name"]
+                constructor_args.append(f"{contract_type}(vm.envAddress(\"{env_name}\"))")
             
             args_str = ", ".join(constructor_args)
             lines.append(f"        {contract_name} {contract.variable_name} = new {contract_name}({args_str});")

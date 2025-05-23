@@ -10,7 +10,7 @@ import {Ownable} from "../lib/Ownable.sol";
 contract DefaultMonRegistry is IMonRegistry, Ownable {
     using EnumerableSetLib for *;
 
-    uint256 private numMons;
+    EnumerableSetLib.Uint256Set private monIds;
     mapping(uint256 monId => MonStats) public monStats;
     mapping(uint256 monId => EnumerableSetLib.AddressSet) private monMoves;
     mapping(uint256 monId => EnumerableSetLib.AddressSet) private monAbilities;
@@ -24,17 +24,19 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
     }
 
     function createMon(
+        uint256 monId,
         MonStats memory _monStats,
         IMoveSet[] memory allowedMoves,
         IAbility[] memory allowedAbilities,
         bytes32[] memory keys,
         string[] memory values
     ) external onlyOwner {
-        uint256 monId = numMons;
         MonStats storage existingMon = monStats[monId];
+        // No mon has 0 hp and 0 stamina
         if (existingMon.hp != 0 && existingMon.stamina != 0) {
             revert MonAlreadyCreated();
         }
+        monIds.add(monId);
         monStats[monId] = _monStats;
         EnumerableSetLib.AddressSet storage moves = monMoves[monId];
         uint256 numMoves = allowedMoves.length;
@@ -47,7 +49,6 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
             abilities.add(address(allowedAbilities[i]));
         }
         _modifyMonMetadata(monId, keys, values);
-        numMons += 1;
     }
 
     function modifyMon(
@@ -152,6 +153,6 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
     }
 
     function getMonCount() external view returns (uint256) {
-        return numMons;
+        return monIds.length();
     }
 }

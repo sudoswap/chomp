@@ -59,7 +59,7 @@ import {ZapStatus} from "../src/effects/status/ZapStatus.sol";
 // import {ChainExpansion} from "../src/mons/inutia/ChainExpansion.sol";
 // import {BigBite} from "../src/mons/inutia/BigBite.sol";
 
-contract Deploy is Script {
+contract EngineAndPeriphery is Script {
     function run()
         external
         returns (
@@ -70,7 +70,6 @@ contract Deploy is Script {
             FastValidator validator,
             StaminaRegen staminaRegen,
             DefaultRuleset ruleset,
-
             StatBoosts statBoosts,
             Storm storm,
             SleepStatus sleepStatus,
@@ -94,14 +93,13 @@ contract Deploy is Script {
         validator = new FastValidator(
             engine, FastValidator.Args({MONS_PER_TEAM: 4, MOVES_PER_MON: 4, TIMEOUT_DURATION: 30})
         );
-
-        // statBoosts = new StatBoosts(engine);
-        // storm = new Storm(engine, statBoosts);
-        // sleepStatus = new SleepStatus(engine);
-        // panicStatus = new PanicStatus(engine);
-        // frostbiteStatus = new FrostbiteStatus(engine, statBoosts);
-        // burnStatus = new BurnStatus(engine, statBoosts);
-        // zapStatus = new ZapStatus(engine);
+        statBoosts = new StatBoosts(engine);
+        storm = new Storm(engine, statBoosts);
+        sleepStatus = new SleepStatus(engine);
+        panicStatus = new PanicStatus(engine);
+        frostbiteStatus = new FrostbiteStatus(engine, statBoosts);
+        burnStatus = new BurnStatus(engine, statBoosts);
+        zapStatus = new ZapStatus(engine);
         vm.stopBroadcast();
     }
 }

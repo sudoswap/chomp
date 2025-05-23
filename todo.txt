@@ -8,7 +8,6 @@
 2) Go from mon stat csv to actual deploy script
 - do rest of deploy script
 
-3) (later) validation from changing move csv to checking if the changes are reflected in the contracts
 
 
 
@@ -67,49 +66,5 @@ Ways to mitigate
 - Future iterations of the engine can do additional validation before letting SWITCH_MOVE_INDEX be considered valid on move reveal
 
 6) Committing
-
----------------------------------------------------------------------------------------------
-
-Later features:
-- disabled / anti switch status effect
-
-Status effects:
-
-(Auto cure)
-- Sleep, cannot take action, 33% chance of cure every turn, max 3 turns [x]
-- Fright, takes 1 stamina damage every turn, 33% chance of cure every turn, max 3 turns [x]
-
-(No cure)
-- Frostbite, takes 1/16 damage every turn, reduces special attack by 50% [x]
-- Burn, takes 1/16 damage every turn, reduces attack by 50% []
-- Poison, takes 1/8 damage every turn []
-- Shock, reduces speed by 50%, 25% chance cannot move []
-
-Missing from attack calculator:
-- critical hits
-- variance
-- STAB
-
-Add accuracy to IMoveSet interface
-For prod, add variance, STAB, and critical hit into AttackCalculator
-
----------------------------------------------------------------------------------------------
-
-### random thoughts
-
-- to think about move implementations:
-    - tricky moves to use as examples for edge cases:
-        - parting shot
-        - destiny bond
-        - substitute
-        - volt switch
-        - barrier/frost veil
-
-    - categorizing move types
-        - normal damaging moves (trade-off between accuracy and damage)
-        - normal damaging move + % to inflict additional effect (status, stat boost, stamina, etc.)
-        - stat boost (2 stages to any one stat) / (1 stage to two stats)
-        - healing (reduced healing over time)
-        - environmental (hazards/weather/etc.)
 
 ---------------------------------------------------------------------------------------------

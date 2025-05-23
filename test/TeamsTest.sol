@@ -74,7 +74,7 @@ contract TeamsTest is Test {
 
         // Create a mon in the mon registry
         vm.startPrank(ALICE);
-        monRegistry.createMon(stats, moves, abilities, nameKey, nameValue);
+        monRegistry.createMon(0, stats, moves, abilities, nameKey, nameValue);
 
         // Assert that the metadata exists
         string memory monName = monRegistry.getMonMetadata(0, bytes32("name"));
@@ -83,7 +83,7 @@ contract TeamsTest is Test {
         // Assert that Bob cannot create a mon
         vm.startPrank(BOB);
         vm.expectRevert();
-        monRegistry.createMon(stats, moves, abilities, nameKey, nameValue);
+        monRegistry.createMon(1, stats, moves, abilities, nameKey, nameValue);
 
         MonStats memory newStats = MonStats({
             hp: 2,
@@ -173,7 +173,7 @@ contract TeamsTest is Test {
         string[] memory values = new string[](0);
 
         vm.startPrank(ALICE);
-        monRegistry.createMon(stats, moves, abilities, keys, values);
+        monRegistry.createMon(0, stats, moves, abilities, keys, values);
 
         uint256[] memory monIndices = new uint256[](1);
         monIndices[0] = 0;
@@ -224,12 +224,12 @@ contract TeamsTest is Test {
 
         // Ids 0 to 5 are all the mon
         vm.startPrank(ALICE);
-        monRegistry.createMon(stats, moves, abilities, keys, values);
-        monRegistry.createMon(stats, moves, abilities, keys, values);
-        monRegistry.createMon(stats, moves, abilities, keys, values);
-        monRegistry.createMon(stats, moves, abilities, keys, values);
-        monRegistry.createMon(stats, moves, abilities, keys, values);
-        monRegistry.createMon(stats, moves, abilities, keys, values);
+        monRegistry.createMon(0, stats, moves, abilities, keys, values);
+        monRegistry.createMon(1, stats, moves, abilities, keys, values);
+        monRegistry.createMon(2, stats, moves, abilities, keys, values);
+        monRegistry.createMon(3, stats, moves, abilities, keys, values);
+        monRegistry.createMon(4, stats, moves, abilities, keys, values);
+        monRegistry.createMon(5, stats, moves, abilities, keys, values);
 
         // Create new team registry with team size of 6 and move size of 0
         DefaultTeamRegistry teamRegistry2 = new DefaultTeamRegistry(
@@ -316,9 +316,9 @@ contract TeamsTest is Test {
         bytes32[] memory keys = new bytes32[](0);
         string[] memory values = new string[](0);
 
-        // Ids 0 to 5 are all the mon
+        // Team IDs 0 to 5 are all the mon
         vm.startPrank(ALICE);
-        monRegistry.createMon(stats, moves, abilities, keys, values);
+        monRegistry.createMon(0, stats, moves, abilities, keys, values);
 
         uint256[] memory monIndices = new uint256[](2);
         monIndices[0] = 0;
@@ -421,7 +421,7 @@ contract TeamsTest is Test {
         values[0] = "m0";
 
         vm.startPrank(ALICE);
-        monRegistry.createMon(stats, moves0, abilities, keys, values);
+        monRegistry.createMon(0, stats, moves0, abilities, keys, values);
 
         IMoveSet[] memory moves1 = new IMoveSet[](4);
         moves1[0] = attackFactory.createAttack(
@@ -496,7 +496,7 @@ contract TeamsTest is Test {
             type2: Type.None
         });
         values[0] = "m1";
-        monRegistry.createMon(stats, moves1, abilities, keys, values);
+        monRegistry.createMon(1, stats, moves1, abilities, keys, values);
 
         IMoveSet[] memory moves2 = new IMoveSet[](4);
         moves2[0] = attackFactory.createAttack(
@@ -571,7 +571,7 @@ contract TeamsTest is Test {
             type2: Type.None
         });
         values[0] = "m2";
-        monRegistry.createMon(stats, moves2, abilities, keys, values);
+        monRegistry.createMon(2, stats, moves2, abilities, keys, values);
 
         IMoveSet[] memory moves3 = new IMoveSet[](4);
         moves3[0] = attackFactory.createAttack(
@@ -646,7 +646,7 @@ contract TeamsTest is Test {
             type2: Type.None
         });
         values[0] = "m3";
-        monRegistry.createMon(stats, moves3, abilities, keys, values);
+        monRegistry.createMon(3, stats, moves3, abilities, keys, values);
 
         IMoveSet[] memory moves4 = new IMoveSet[](4);
         moves4[0] = attackFactory.createAttack(
@@ -721,7 +721,7 @@ contract TeamsTest is Test {
             type2: Type.None
         });
         values[0] = "m4";
-        monRegistry.createMon(stats, moves4, abilities, keys, values);
+        monRegistry.createMon(4, stats, moves4, abilities, keys, values);
 
         IMoveSet[] memory moves5 = new IMoveSet[](4);
         moves5[0] = attackFactory.createAttack(
@@ -796,7 +796,7 @@ contract TeamsTest is Test {
             type2: Type.None
         });
         values[0] = "m5";
-        monRegistry.createMon(stats, moves5, abilities, keys, values);
+        monRegistry.createMon(5, stats, moves5, abilities, keys, values);
 
         DefaultTeamRegistry teamRegistry2 = new DefaultTeamRegistry(
             DefaultTeamRegistry.Args({REGISTRY: monRegistry, MONS_PER_TEAM: 6, MOVES_PER_MON: 4})
@@ -865,7 +865,7 @@ contract TeamsTest is Test {
         string[] memory values = new string[](0);
 
         vm.startPrank(ALICE);
-        monRegistry.createMon(stats, moves, abilities, keys, values);
+        monRegistry.createMon(0, stats, moves, abilities, keys, values);
 
         uint256[] memory monIndices = new uint256[](1);
         monIndices[0] = 0;

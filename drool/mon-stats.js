@@ -400,19 +400,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
 
-    function hasRequiredColumns() {
-      const requiredColumns = [
-        "HP",
-        "Attack",
-        "Defense",
-        "SpecialAttack",
-        "SpecialDefense",
-      ];
-      return requiredColumns.every((col) =>
-        columns.some((c) => c.name === col)
-      );
-    }
-
     function updateBST(rowIndex) {
       const statsToSum = [
         "HP",
@@ -501,6 +488,7 @@ document.addEventListener("DOMContentLoaded", function () {
           "specialdefense",
           "speed",
           "bst",
+          "id"
         ].includes(header.toLowerCase());
 
         columns.push({

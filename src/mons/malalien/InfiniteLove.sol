@@ -13,7 +13,7 @@ import {StandardAttack} from "../../moves/StandardAttack.sol";
 import {ATTACK_PARAMS} from "../../moves/StandardAttackStructs.sol";
 import {ITypeCalculator} from "../../types/ITypeCalculator.sol";
 
-contract InfiniteLive is StandardAttack {
+contract InfiniteLove is StandardAttack {
     constructor(IEngine _ENGINE, ITypeCalculator _TYPE_CALCULATOR, IEffect _SLEEP_STATUS)
         StandardAttack(
             address(msg.sender),

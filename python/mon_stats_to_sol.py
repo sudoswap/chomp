@@ -10,7 +10,7 @@ Script to generate a Foundry deployment script (SetupMons.s.sol) that:
 import csv
 import os
 import re
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 
 class MonData:
@@ -35,10 +35,11 @@ class MonData:
 
 class ContractInfo:
     """Represents information about a contract to be deployed"""
-    def __init__(self, name: str, contract_path: str, dependencies: List[str]):
+    def __init__(self, name: str, contract_path: str, dependencies: List[str], import_paths: List[str] = None):
         self.name = name
         self.contract_path = contract_path
         self.dependencies = dependencies
+        self.import_paths = import_paths or []  # File paths of contracts that need to be imported
         self.variable_name = self._generate_variable_name()
 
     def _generate_variable_name(self) -> str:
@@ -123,15 +124,22 @@ def get_mon_directory_name(mon_name: str) -> str:
     return mon_name.lower()
 
 
-def analyze_contract_dependencies(contract_path: str) -> List[str]:
-    """Analyze a contract file to determine its constructor dependencies"""
+def analyze_contract_dependencies(contract_path: str, base_path: str) -> Tuple[List[str], List[str]]:
+    """Analyze a contract file to determine its constructor dependencies and import paths
+
+    Returns:
+        tuple: (dependencies, import_paths) where dependencies is a list of dependency info
+               and import_paths is a list of contract file paths that need to be imported
+    """
     dependencies = []
+    import_paths = []
 
     try:
         with open(contract_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        # Look for constructor parameters
+        # Look for constructor parameters to determine deployment dependencies
+        contracts_imported = set()
         constructor_match = re.search(r'constructor\s*\([^)]*\)', content, re.MULTILINE | re.DOTALL)
         if constructor_match:
             constructor_text = constructor_match.group(0)
@@ -147,13 +155,29 @@ def analyze_contract_dependencies(contract_path: str) -> List[str]:
                     "name": env_name,
                     "type": param_type
                 })
+                contracts_imported.add(param_type)
+
+        # Parse import statements to get the contracts that need to be imported
+        import_pattern = r'import\s+\{([^}]+)\}\s+from\s+"([^"]+)"'
+        import_matches = re.findall(import_pattern, content)
+        for contracts_str, import_path in import_matches:    
+            if contracts_str not in contracts_imported:
+                continue
+            # Convert relative import path to absolute file path
+            if import_path.startswith("../../"):
+                path = import_path.replace("../../", "src/")
+                import_paths.append(path)
+            elif not import_path.startswith("forge-std/"):
+                # Handle relative imports without "../"
+                abs_path = os.path.join(os.path.dirname(contract_path), import_path)
+                import_paths.append(abs_path)
 
     except FileNotFoundError:
         print(f"Warning: Contract file not found: {contract_path}")
     except Exception as e:
         print(f"Warning: Error analyzing contract {contract_path}: {e}")
 
-    return dependencies
+    return dependencies, import_paths
 
 
 def get_contracts_for_mon(mon: MonData, base_path: str) -> Dict[str, ContractInfo]:
@@ -167,8 +191,8 @@ def get_contracts_for_mon(mon: MonData, base_path: str) -> Dict[str, ContractInf
         contract_path = os.path.join(base_path, "src", "mons", mon_dir, f"{contract_name}.sol")
 
         if contract_name not in contracts:
-            dependencies = analyze_contract_dependencies(contract_path)
-            contracts[contract_name] = ContractInfo(move_name, contract_path, dependencies)
+            dependencies, import_paths = analyze_contract_dependencies(contract_path, base_path)
+            contracts[contract_name] = ContractInfo(move_name, contract_path, dependencies, import_paths)
 
     # Collect ability contracts
     for ability_name in mon.abilities:
@@ -176,8 +200,8 @@ def get_contracts_for_mon(mon: MonData, base_path: str) -> Dict[str, ContractInf
         contract_path = os.path.join(base_path, "src", "mons", mon_dir, f"{contract_name}.sol")
 
         if contract_name not in contracts:
-            dependencies = analyze_contract_dependencies(contract_path)
-            contracts[contract_name] = ContractInfo(ability_name, contract_path, dependencies)
+            dependencies, import_paths = analyze_contract_dependencies(contract_path, base_path)
+            contracts[contract_name] = ContractInfo(ability_name, contract_path, dependencies, import_paths)
 
     return contracts
 
@@ -197,35 +221,35 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
     """Generate the deploy function for a specific mon"""
     function_name = f"deploy{mon.name.replace(' ', '')}"
     lines = []
-    
+
     lines.append(f"    function {function_name}(DefaultMonRegistry registry) internal {{")
-    
+
     # Get contracts for this mon
-    mon_contracts = get_contracts_for_mon(mon, base_path)  
+    mon_contracts = get_contracts_for_mon(mon, base_path)
 
     if mon_contracts:
         lines.append(f"        // Deploy contracts for {mon.name}")
-        
+
         # Deploy contracts
         for contract in mon_contracts.values():
             contract_name = contract_name_from_move_or_ability(contract.name)
-            
+
             # Build constructor arguments
             constructor_args = []
             for dep in contract.dependencies:
                 contract_type = dep["type"]
                 env_name = dep["name"]
                 constructor_args.append(f"{contract_type}(vm.envAddress(\"{env_name}\"))")
-            
+
             args_str = ", ".join(constructor_args)
             lines.append(f"        {contract_name} {contract.variable_name} = new {contract_name}({args_str});")
-        
+
         lines.append("")
-    
+
     # Generate MonStats
     type1 = convert_type_to_solidity(mon.type1)
     type2 = convert_type_to_solidity(mon.type2)
-    
+
     lines.append(f"        // Create {mon.name}")
     lines.extend([
         "        MonStats memory stats = MonStats({",
@@ -240,7 +264,7 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
         f"            type2: {type2}",
         "        });"
     ])
-    
+
     # Generate moves array
     if mon.moves:
         lines.append(f"        IMoveSet[] memory moves = new IMoveSet[]({len(mon.moves)});")
@@ -251,7 +275,7 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
                 lines.append(f"        moves[{i}] = IMoveSet(address({var_name}));")
     else:
         lines.append("        IMoveSet[] memory moves = new IMoveSet[](0);")
-    
+
     # Generate abilities array
     if mon.abilities:
         lines.append(f"        IAbility[] memory abilities = new IAbility[]({len(mon.abilities)});")
@@ -262,18 +286,18 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
                 lines.append(f"        abilities[{i}] = IAbility(address({var_name}));")
     else:
         lines.append("        IAbility[] memory abilities = new IAbility[](0);")
-    
+
     # Generate metadata arrays (empty for now)
     lines.extend([
         "        bytes32[] memory keys = new bytes32[](0);",
         "        string[] memory values = new string[](0);"
     ])
-    
+
     # Generate createMon call
     lines.append(f"        registry.createMon({mon.mon_id}, stats, moves, abilities, keys, values);")
     lines.append("    }")
     lines.append("")
-    
+
     return lines
 
 
@@ -294,7 +318,10 @@ def generate_solidity_script(mons: Dict[str, MonData], contracts: Dict[str, Cont
         ""
     ]
 
-    # Add contract imports
+    # Collect all import paths and deduplicate
+    all_import_paths = set()
+
+    # Add contract imports for main contracts (moves/abilities)
     for contract in contracts.values():
         mon_dir = None
         for mon in mons.values():
@@ -305,7 +332,22 @@ def generate_solidity_script(mons: Dict[str, MonData], contracts: Dict[str, Cont
         if mon_dir:
             contract_name = contract_name_from_move_or_ability(contract.name)
             import_path = f"../src/mons/{mon_dir}/{contract_name}.sol"
-            imports.append(f"import {{{contract_name}}} from \"{import_path}\";")
+            all_import_paths.add((contract_name, import_path))
+
+            # Add imports for dependencies of this contract
+            for dep_path in contract.import_paths:
+                # Convert absolute path to relative import path
+                rel_path = os.path.relpath(dep_path, base_path)
+                rel_path = "../" + rel_path.replace("\\", "/")  # Convert to relative and use forward slashes
+
+                # Extract contract name from file path
+                dep_contract_name = os.path.splitext(os.path.basename(dep_path))[0]
+                all_import_paths.add((dep_contract_name, rel_path))
+
+    # Sort imports for consistent output
+    sorted_imports = sorted(all_import_paths, key=lambda x: x[1])
+    for contract_name, import_path in sorted_imports:
+        imports.append(f"import {{{contract_name}}} from \"{import_path}\";")
 
     imports.append("")
 
@@ -319,25 +361,25 @@ def generate_solidity_script(mons: Dict[str, MonData], contracts: Dict[str, Cont
         "        DefaultMonRegistry registry = DefaultMonRegistry(vm.envAddress(\"DEFAULT_MON_REGISTRY\"));",
         ""
     ]
-    
+
     # Add calls to individual deploy functions
     contract_lines.append("        // Deploy all mons")
     for mon in sorted(mons.values(), key=lambda m: m.mon_id):
         function_name = f"deploy{mon.name.replace(' ', '')}"
         contract_lines.append(f"        {function_name}(registry);")
-    
+
     contract_lines.extend([
         "",
         "        vm.stopBroadcast();",
         "    }",
         ""
     ])
-    
+
     # Generate individual deploy functions for each mon
     deploy_functions = []
     for mon in sorted(mons.values(), key=lambda m: m.mon_id):
         deploy_functions.extend(generate_deploy_function_for_mon(mon, base_path))
-    
+
     # Generate contract footer
     contract_footer = ["}"]
 

@@ -228,8 +228,6 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
     mon_contracts = get_contracts_for_mon(mon, base_path)
 
     if mon_contracts:
-        lines.append(f"        // Deploy contracts for {mon.name}")
-
         # Deploy contracts
         for contract in mon_contracts.values():
             contract_name = contract_name_from_move_or_ability(contract.name)
@@ -249,8 +247,6 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
     # Generate MonStats
     type1 = convert_type_to_solidity(mon.type1)
     type2 = convert_type_to_solidity(mon.type2)
-
-    lines.append(f"        // Create {mon.name}")
     lines.extend([
         "        MonStats memory stats = MonStats({",
         f"            hp: {mon.hp},",
@@ -353,8 +349,12 @@ def generate_solidity_script(mons: Dict[str, MonData], contracts: Dict[str, Cont
 
     # Generate contract header and main run function
     contract_lines = [
+        "struct DeployData {",
+        "    string name;",
+        "    address contractAddress;",
+        "}",
         "contract SetupMons is Script {",
-        "    function run() external {",
+        "    function run() external returns (DeployData[] memory deployedContracts) {",
         "        vm.startBroadcast();",
         "",
         "        // Get the DefaultMonRegistry address",

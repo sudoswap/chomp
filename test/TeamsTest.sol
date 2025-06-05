@@ -69,16 +69,16 @@ contract TeamsTest is Test {
 
         bytes32[] memory nameKey = new bytes32[](1);
         nameKey[0] = bytes32("name");
-        string[] memory nameValue = new string[](1);
-        nameValue[0] = "sus";
+        bytes32[] memory nameValue = new bytes32[](1);
+        nameValue[0] = bytes32("sus");
 
         // Create a mon in the mon registry
         vm.startPrank(ALICE);
         monRegistry.createMon(0, stats, moves, abilities, nameKey, nameValue);
 
         // Assert that the metadata exists
-        string memory monName = monRegistry.getMonMetadata(0, bytes32("name"));
-        assertEq(monName, "sus");
+        bytes32 monName = monRegistry.getMonMetadata(0, bytes32("name"));
+        assertEq(monName, bytes32("sus"));
 
         // Assert that Bob cannot create a mon
         vm.startPrank(BOB);
@@ -130,8 +130,8 @@ contract TeamsTest is Test {
         vm.startPrank(ALICE);
         bytes32[] memory keys = new bytes32[](1);
         keys[0] = "test";
-        string[] memory values = new string[](1);
-        values[0] = "test";
+        bytes32[] memory values = new bytes32[](1);
+        values[0] = bytes32("test");
         monRegistry.modifyMonMetadata(0, keys, values);
 
         // Assert that Bob cannot set additional metadata
@@ -170,7 +170,7 @@ contract TeamsTest is Test {
         });
 
         bytes32[] memory keys = new bytes32[](0);
-        string[] memory values = new string[](0);
+        bytes32[] memory values = new bytes32[](0);
 
         vm.startPrank(ALICE);
         monRegistry.createMon(0, stats, moves, abilities, keys, values);
@@ -220,7 +220,7 @@ contract TeamsTest is Test {
             type2: Type.None
         });
         bytes32[] memory keys = new bytes32[](0);
-        string[] memory values = new string[](0);
+        bytes32[] memory values = new bytes32[](0);
 
         // Ids 0 to 5 are all the mon
         vm.startPrank(ALICE);
@@ -314,7 +314,7 @@ contract TeamsTest is Test {
             type2: Type.None
         });
         bytes32[] memory keys = new bytes32[](0);
-        string[] memory values = new string[](0);
+        bytes32[] memory values = new bytes32[](0);
 
         // Team IDs 0 to 5 are all the mon
         vm.startPrank(ALICE);
@@ -416,9 +416,9 @@ contract TeamsTest is Test {
             type2: Type.None
         });
         bytes32[] memory keys = new bytes32[](1);
-        string[] memory values = new string[](1);
+        bytes32[] memory values = new bytes32[](1);
         keys[0] = bytes32("name");
-        values[0] = "m0";
+        values[0] = bytes32("m0");
 
         vm.startPrank(ALICE);
         monRegistry.createMon(0, stats, moves0, abilities, keys, values);
@@ -495,7 +495,7 @@ contract TeamsTest is Test {
             type1: Type.Cosmic,
             type2: Type.None
         });
-        values[0] = "m1";
+        values[0] = bytes32("m1");
         monRegistry.createMon(1, stats, moves1, abilities, keys, values);
 
         IMoveSet[] memory moves2 = new IMoveSet[](4);
@@ -570,7 +570,7 @@ contract TeamsTest is Test {
             type1: Type.Cyber,
             type2: Type.None
         });
-        values[0] = "m2";
+        values[0] = bytes32("m2");
         monRegistry.createMon(2, stats, moves2, abilities, keys, values);
 
         IMoveSet[] memory moves3 = new IMoveSet[](4);
@@ -645,7 +645,7 @@ contract TeamsTest is Test {
             type1: Type.Earth,
             type2: Type.None
         });
-        values[0] = "m3";
+        values[0] = bytes32("m3");
         monRegistry.createMon(3, stats, moves3, abilities, keys, values);
 
         IMoveSet[] memory moves4 = new IMoveSet[](4);
@@ -720,7 +720,7 @@ contract TeamsTest is Test {
             type1: Type.Fire,
             type2: Type.None
         });
-        values[0] = "m4";
+        values[0] = bytes32("m4");
         monRegistry.createMon(4, stats, moves4, abilities, keys, values);
 
         IMoveSet[] memory moves5 = new IMoveSet[](4);
@@ -795,7 +795,7 @@ contract TeamsTest is Test {
             type1: Type.Ice,
             type2: Type.None
         });
-        values[0] = "m5";
+        values[0] = bytes32("m5");
         monRegistry.createMon(5, stats, moves5, abilities, keys, values);
 
         DefaultTeamRegistry teamRegistry2 = new DefaultTeamRegistry(
@@ -862,7 +862,7 @@ contract TeamsTest is Test {
         });
 
         bytes32[] memory keys = new bytes32[](0);
-        string[] memory values = new string[](0);
+        bytes32[] memory values = new bytes32[](0);
 
         vm.startPrank(ALICE);
         monRegistry.createMon(0, stats, moves, abilities, keys, values);

@@ -298,7 +298,7 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
     # Generate metadata arrays (empty for now)
     lines.extend([
         "        bytes32[] memory keys = new bytes32[](0);",
-        "        string[] memory values = new string[](0);"
+        "        bytes32[] memory values = new bytes32[](0);"
     ])
 
     # Generate createMon call

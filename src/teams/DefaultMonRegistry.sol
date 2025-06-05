@@ -14,7 +14,7 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
     mapping(uint256 monId => MonStats) public monStats;
     mapping(uint256 monId => EnumerableSetLib.AddressSet) private monMoves;
     mapping(uint256 monId => EnumerableSetLib.AddressSet) private monAbilities;
-    mapping(uint256 monId => mapping(bytes32 => string)) private monMetadata;
+    mapping(uint256 monId => mapping(bytes32 => bytes32)) private monMetadata;
 
     error MonAlreadyCreated();
     error MonNotyetCreated();
@@ -29,7 +29,7 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
         IMoveSet[] memory allowedMoves,
         IAbility[] memory allowedAbilities,
         bytes32[] memory keys,
-        string[] memory values
+        bytes32[] memory values
     ) external onlyOwner {
         MonStats storage existingMon = monStats[monId];
         // No mon has 0 hp and 0 stamina
@@ -92,18 +92,18 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
         }
     }
 
-    function modifyMonMetadata(uint256 monId, bytes32[] memory keys, string[] memory values) external onlyOwner {
+    function modifyMonMetadata(uint256 monId, bytes32[] memory keys, bytes32[] memory values) external onlyOwner {
         _modifyMonMetadata(monId, keys, values);
     }
 
-    function _modifyMonMetadata(uint256 monId, bytes32[] memory keys, string[] memory values) internal {
-        mapping(bytes32 => string) storage metadata = monMetadata[monId];
+    function _modifyMonMetadata(uint256 monId, bytes32[] memory keys, bytes32[] memory values) internal {
+        mapping(bytes32 => bytes32) storage metadata = monMetadata[monId];
         for (uint256 i; i < keys.length; ++i) {
             metadata[keys[i]] = values[i];
         }
     }
 
-    function getMonMetadata(uint256 monId, bytes32 key) external view returns (string memory) {
+    function getMonMetadata(uint256 monId, bytes32 key) external view returns (bytes32) {
         return monMetadata[monId][key];
     }
 
@@ -138,6 +138,21 @@ contract DefaultMonRegistry is IMonRegistry, Ownable {
         _monStats = monStats[monId];
         moves = monMoves[monId].values();
         abilities = monAbilities[monId].values();
+    }
+
+    function getMonIds(uint256 start, uint256 end) external view returns (uint256[] memory) {
+        if (start == end) {
+            uint256[] memory allIds = new uint256[](monIds.length());
+            for (uint256 i; i < monIds.length(); ++i) {
+                allIds[i] = monIds.at(i);
+            }
+            return allIds;
+        }
+        uint256[] memory ids = new uint256[](end - start);
+        for (uint256 i; i < end - start; ++i) {
+            ids[i] = monIds.at(start + i);
+        }
+        return ids;
     }
 
     function getMonStats(uint256 monId) external view returns (MonStats memory) {

@@ -162,7 +162,7 @@ contract SetupMons is Script {
         IAbility[] memory abilities = new IAbility[](1);
         abilities[0] = IAbility(address(risefromthegrave));
         bytes32[] memory keys = new bytes32[](0);
-        string[] memory values = new string[](0);
+        bytes32[] memory values = new bytes32[](0);
         registry.createMon(0, stats, moves, abilities, keys, values);
 
         return deployedContracts;
@@ -226,7 +226,7 @@ contract SetupMons is Script {
         IAbility[] memory abilities = new IAbility[](1);
         abilities[0] = IAbility(address(interweaving));
         bytes32[] memory keys = new bytes32[](0);
-        string[] memory values = new string[](0);
+        bytes32[] memory values = new bytes32[](0);
         registry.createMon(1, stats, moves, abilities, keys, values);
 
         return deployedContracts;
@@ -290,7 +290,7 @@ contract SetupMons is Script {
         IAbility[] memory abilities = new IAbility[](1);
         abilities[0] = IAbility(address(actusreus));
         bytes32[] memory keys = new bytes32[](0);
-        string[] memory values = new string[](0);
+        bytes32[] memory values = new bytes32[](0);
         registry.createMon(2, stats, moves, abilities, keys, values);
 
         return deployedContracts;
@@ -354,7 +354,7 @@ contract SetupMons is Script {
         IAbility[] memory abilities = new IAbility[](1);
         abilities[0] = IAbility(address(intrinsicvalue));
         bytes32[] memory keys = new bytes32[](0);
-        string[] memory values = new string[](0);
+        bytes32[] memory values = new bytes32[](0);
         registry.createMon(3, stats, moves, abilities, keys, values);
 
         return deployedContracts;
@@ -418,7 +418,7 @@ contract SetupMons is Script {
         IAbility[] memory abilities = new IAbility[](1);
         abilities[0] = IAbility(address(angery));
         bytes32[] memory keys = new bytes32[](0);
-        string[] memory values = new string[](0);
+        bytes32[] memory values = new bytes32[](0);
         registry.createMon(4, stats, moves, abilities, keys, values);
 
         return deployedContracts;
@@ -482,7 +482,7 @@ contract SetupMons is Script {
         IAbility[] memory abilities = new IAbility[](1);
         abilities[0] = IAbility(address(carrotharvest));
         bytes32[] memory keys = new bytes32[](0);
-        string[] memory values = new string[](0);
+        bytes32[] memory values = new bytes32[](0);
         registry.createMon(5, stats, moves, abilities, keys, values);
 
         return deployedContracts;
@@ -546,7 +546,7 @@ contract SetupMons is Script {
         IAbility[] memory abilities = new IAbility[](1);
         abilities[0] = IAbility(address(postworkout));
         bytes32[] memory keys = new bytes32[](0);
-        string[] memory values = new string[](0);
+        bytes32[] memory values = new bytes32[](0);
         registry.createMon(6, stats, moves, abilities, keys, values);
 
         return deployedContracts;
@@ -610,7 +610,7 @@ contract SetupMons is Script {
         IAbility[] memory abilities = new IAbility[](1);
         abilities[0] = IAbility(address(splitthepot));
         bytes32[] memory keys = new bytes32[](0);
-        string[] memory values = new string[](0);
+        bytes32[] memory values = new bytes32[](0);
         registry.createMon(7, stats, moves, abilities, keys, values);
 
         return deployedContracts;
@@ -674,7 +674,7 @@ contract SetupMons is Script {
         IAbility[] memory abilities = new IAbility[](1);
         abilities[0] = IAbility(address(overclock));
         bytes32[] memory keys = new bytes32[](0);
-        string[] memory values = new string[](0);
+        bytes32[] memory values = new bytes32[](0);
         registry.createMon(8, stats, moves, abilities, keys, values);
 
         return deployedContracts;

@@ -222,10 +222,16 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
     function_name = f"deploy{mon.name.replace(' ', '')}"
     lines = []
 
-    lines.append(f"    function {function_name}(DefaultMonRegistry registry) internal {{")
+    lines.append(f"    function {function_name}(DefaultMonRegistry registry) internal returns (DeployData[] memory) {{")
 
     # Get contracts for this mon
     mon_contracts = get_contracts_for_mon(mon, base_path)
+
+    # Create array to track deployed contracts
+    num_contracts = len(mon_contracts) if mon_contracts else 0
+    lines.append(f"        DeployData[] memory deployedContracts = new DeployData[]({num_contracts});")
+    lines.append("        uint256 contractIndex = 0;")
+    lines.append("")
 
     if mon_contracts:
         # Deploy contracts
@@ -242,7 +248,13 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
             args_str = ", ".join(constructor_args)
             lines.append(f"        {contract_name} {contract.variable_name} = new {contract_name}({args_str});")
 
-        lines.append("")
+            # Add to deployed contracts array
+            lines.append(f"        deployedContracts[contractIndex] = DeployData({{")
+            lines.append(f"            name: \"{contract.name}\",")
+            lines.append(f"            contractAddress: address({contract.variable_name})")
+            lines.append("        });")
+            lines.append("        contractIndex++;")
+            lines.append("")
 
     # Generate MonStats
     type1 = convert_type_to_solidity(mon.type1)
@@ -291,6 +303,8 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
 
     # Generate createMon call
     lines.append(f"        registry.createMon({mon.mon_id}, stats, moves, abilities, keys, values);")
+    lines.append("")
+    lines.append("        return deployedContracts;")
     lines.append("    }")
     lines.append("")
 
@@ -362,13 +376,40 @@ def generate_solidity_script(mons: Dict[str, MonData], contracts: Dict[str, Cont
         ""
     ]
 
-    # Add calls to individual deploy functions
-    contract_lines.append("        // Deploy all mons")
-    for mon in sorted(mons.values(), key=lambda m: m.mon_id):
-        function_name = f"deploy{mon.name.replace(' ', '')}"
-        contract_lines.append(f"        {function_name}(registry);")
+    # Add calls to individual deploy functions and collect deployment data
+    sorted_mons = sorted(mons.values(), key=lambda m: m.mon_id)
+    num_mons = len(sorted_mons)
 
     contract_lines.extend([
+        "        // Deploy all mons and collect deployment data",
+        f"        DeployData[][] memory allDeployData = new DeployData[][]({num_mons});",
+        ""
+    ])
+
+    # Generate calls to collect deployment data from each function
+    for i, mon in enumerate(sorted_mons):
+        function_name = f"deploy{mon.name.replace(' ', '')}"
+        contract_lines.append(f"        allDeployData[{i}] = {function_name}(registry);")
+
+    contract_lines.extend([
+        "",
+        "        // Calculate total length for flattened array",
+        "        uint256 totalLength = 0;",
+        "        for (uint256 i = 0; i < allDeployData.length; i++) {",
+        "            totalLength += allDeployData[i].length;",
+        "        }",
+        "",
+        "        // Create flattened array and copy all entries",
+        "        deployedContracts = new DeployData[](totalLength);",
+        "        uint256 currentIndex = 0;",
+        "",
+        "        // Copy all deployment data using nested loops",
+        "        for (uint256 i = 0; i < allDeployData.length; i++) {",
+        "            for (uint256 j = 0; j < allDeployData[i].length; j++) {",
+        "                deployedContracts[currentIndex] = allDeployData[i][j];",
+        "                currentIndex++;",
+        "            }",
+        "        }",
         "",
         "        vm.stopBroadcast();",
         "    }",

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
 // Created by mon_stats_to_sol.py
-
 pragma solidity ^0.8.0;
 
 import {Script} from "forge-std/Script.sol";

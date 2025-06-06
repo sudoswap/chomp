@@ -27,6 +27,7 @@ class MonData:
         self.moves: List[str] = []
         self.abilities: List[str] = []
         self.sprite_data: List[int] = []  # uint256 values for compressed sprite data
+        self.palette_data: List[int] = []  # uint256 values for compressed palette data
 
 
 class ContractInfo:
@@ -122,7 +123,7 @@ def get_mon_directory_name(mon_name: str) -> str:
 
 def analyze_gif(gif_path: str) -> dict:
     """Analyze a GIF file and extract first frame data."""
-    print(f"  Analyzing: {os.path.basename(gif_path)}")
+    print(f"\n  Analyzing: {os.path.basename(gif_path)}")
 
     try:
         with Image.open(gif_path) as img:
@@ -136,7 +137,7 @@ def analyze_gif(gif_path: str) -> dict:
             for pixel in pixels:
                 all_colors.add(tuple(pixel))
 
-            print(f"    Dimensions: {frame_array.shape[:2]} (height x width)")
+            print(f"    Dimensions: {frame_array.shape[:2]} ")
             print(f"    Unique colors: {len(all_colors)}")
 
             # Check if more than 16 colors
@@ -198,18 +199,54 @@ def compress_to_uint256(indexed_frame, bits_per_pixel: int) -> List[int]:
     return uint256_values
 
 
-def analyze_sprite_images(base_path: str) -> Dict[str, List[int]]:
-    """Analyze all mini GIF files and return sprite data indexed by monster name."""
+def compress_palette_to_uint256(palette: List[Tuple[int, int, int, int]]) -> List[int]:
+    """Convert color palette to compressed uint256 values.
+
+    Args:
+        palette: List of RGBA tuples from GIF analysis
+
+    Returns:
+        List of uint256 integers representing compressed palette data
+    """
+    bit_string = ""
+
+    for rgba in palette:
+        r, g, b, a = rgba
+
+        # Handle transparent color (0,0,0,0) with sentinel value
+        if r == 0 and g == 0 and b == 0 and a == 0:
+            # Use sentinel value: RGB(1,1,1) = 000000010000000100000001 in binary
+            bit_string += "000000010000000100000001"  # 24 bits total
+        else:
+            # Encode RGB values (ignore alpha), 8 bits per channel
+            bit_string += format(r, '08b')  # Red: 8 bits
+            bit_string += format(g, '08b')  # Green: 8 bits
+            bit_string += format(b, '08b')  # Blue: 8 bits
+
+    # Split into 256-bit chunks (uint256)
+    uint256_values = []
+    for i in range(0, len(bit_string), 256):
+        chunk = bit_string[i:i+256]
+        # Pad with zeros if needed
+        chunk = chunk.ljust(256, '0')
+        # Convert to integer
+        uint_value = int(chunk, 2)
+        uint256_values.append(uint_value)
+
+    return uint256_values
+
+
+def analyze_sprite_images(base_path: str) -> Tuple[Dict[str, List[int]], Dict[str, List[int]]]:
+    """Analyze all mini GIF files and return sprite and palette data indexed by monster name."""
     imgs_dir = os.path.join(base_path, "drool", "imgs")
     sprite_data = {}
+    palette_data = {}
 
     if not os.path.exists(imgs_dir):
         print(f"Warning: Images directory not found: {imgs_dir}")
-        return sprite_data
+        return sprite_data, palette_data
 
     mini_gifs = [f for f in os.listdir(imgs_dir) if f.endswith('_mini.gif')]
-
-    print(f"Found {len(mini_gifs)} mini GIF files:")
 
     for gif_file in sorted(mini_gifs):
         # Extract monster name from filename (e.g., "inutia" from "inutia_mini.gif")
@@ -220,13 +257,19 @@ def analyze_sprite_images(base_path: str) -> Dict[str, List[int]]:
 
         if result:
             # Compress frame to uint256 format
-            compressed = compress_to_uint256(result['indexed_frame'], result['bits_needed'])
-            sprite_data[mon_name] = compressed
-            print(f"    Compressed to {len(compressed)} uint256 values")
+            compressed_sprite = compress_to_uint256(result['indexed_frame'], result['bits_needed'])
+            sprite_data[mon_name] = compressed_sprite
+
+            # Compress palette to uint256 format
+            compressed_palette = compress_palette_to_uint256(result['palette'])
+            palette_data[mon_name] = compressed_palette
+
+            print(f"    Sprite: {len(compressed_sprite)} uint256 values")
+            print(f"    Palette: {len(compressed_palette)} uint256 values")
         else:
             print(f"    Failed to process {gif_file}")
 
-    return sprite_data
+    return sprite_data, palette_data
 
 
 def analyze_contract_dependencies(contract_path: str, base_path: str) -> Tuple[List[str], List[str]]:
@@ -553,32 +596,29 @@ def main():
     base_path = "."  # Assume script is run from repository root
 
     # Read CSV data
-    print("Reading CSV data...")
     mons = read_mons_csv(os.path.join(base_path, "drool", "mons.csv"))
     read_moves_csv(os.path.join(base_path, "drool", "moves.csv"), mons)
     read_abilities_csv(os.path.join(base_path, "drool", "abilities.csv"), mons)
 
-    print(f"Loaded {len(mons)} mons")
-
     # Analyze sprite images
-    print("\nAnalyzing sprite images...")
-    sprite_data = analyze_sprite_images(base_path)
+    sprite_data, palette_data = analyze_sprite_images(base_path)
 
-    # Populate sprite data in MonData objects
+    # Populate sprite and palette data in MonData objects
     for mon_name, mon in mons.items():
         mon_key = mon_name.lower()
         if mon_key in sprite_data:
             mon.sprite_data = sprite_data[mon_key]
-            print(f"  {mon_name}: {len(mon.sprite_data)} uint256 values")
+            mon.palette_data = palette_data.get(mon_key, [])
+            # print(f"  {mon_name}: {len(mon.sprite_data)} sprite uint256 values, {len(mon.palette_data)} palette uint256 values")
         else:
             print(f"  {mon_name}: No sprite data found")
 
-    print(f"Loaded sprite data for {len([m for m in mons.values() if m.sprite_data])} mons")
+    mons_with_sprites = len([m for m in mons.values() if m.sprite_data])
+    mons_with_palettes = len([m for m in mons.values() if m.palette_data])
 
     # Collect all contracts
-    print("Analyzing contracts...")
     contracts = collect_all_contracts(mons, base_path)
-    print(f"Found {len(contracts)} unique contracts to deploy")
+    print(f"\n Found {len(contracts)} unique contracts to deploy")
 
     # Generate Solidity script
     solidity_code = generate_solidity_script(mons, contracts, base_path)
@@ -589,14 +629,6 @@ def main():
 
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(solidity_code)
-
-    print(f"Generated deployment script: {output_path}")
-
-    # Print summary
-    print("\nSummary:")
-    for mon in sorted(mons.values(), key=lambda m: m.mon_id):
-        print(f"  {mon.name}: {len(mon.moves)} moves, {len(mon.abilities)} abilities")
-
 
 if __name__ == "__main__":
     main()

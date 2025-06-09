@@ -184,7 +184,7 @@ def compress_to_uint256(indexed_frame, bits_per_pixel: int) -> List[int]:
     for y in range(height):
         for x in range(width):
             pixel_value = indexed_frame[y, x]
-            bit_string += format(pixel_value, f'0{bits_per_pixel}b')
+            bit_string = format(pixel_value, f'0{bits_per_pixel}b') + bit_string
 
     # Split into 256-bit chunks (uint256)
     uint256_values = []
@@ -202,35 +202,45 @@ def compress_to_uint256(indexed_frame, bits_per_pixel: int) -> List[int]:
 def compress_palette_to_uint256(palette: List[Tuple[int, int, int, int]]) -> List[int]:
     """Convert color palette to compressed uint256 values.
 
+    Packs colors into uint256 words with a maximum of 10 colors per word (240 bits used, 16 bits unused).
+    This ensures no color is split across word boundaries for easier decoding.
+
     Args:
         palette: List of RGBA tuples from GIF analysis
 
     Returns:
         List of uint256 integers representing compressed palette data
     """
-    bit_string = ""
-
-    for rgba in palette:
-        r, g, b, a = rgba
-
-        # Handle transparent color (0,0,0,0) with sentinel value
-        if r == 0 and g == 0 and b == 0 and a == 0:
-            # Use sentinel value: RGB(1,1,1) = 000000010000000100000001 in binary
-            bit_string += "000000010000000100000001"  # 24 bits total
-        else:
-            # Encode RGB values (ignore alpha), 8 bits per channel
-            bit_string += format(r, '08b')  # Red: 8 bits
-            bit_string += format(g, '08b')  # Green: 8 bits
-            bit_string += format(b, '08b')  # Blue: 8 bits
-
-    # Split into 256-bit chunks (uint256)
     uint256_values = []
-    for i in range(0, len(bit_string), 256):
-        chunk = bit_string[i:i+256]
-        # Pad with zeros if needed
-        chunk = chunk.ljust(256, '0')
-        # Convert to integer
-        uint_value = int(chunk, 2)
+    colors_per_word = 10  # Maximum colors per uint256 (10 * 24 = 240 bits, 16 bits unused)
+
+    # Process colors in chunks of 10
+    for chunk_start in range(0, len(palette), colors_per_word):
+        chunk_end = min(chunk_start + colors_per_word, len(palette))
+        chunk_colors = palette[chunk_start:chunk_end]
+
+        # Build bit string for this chunk
+        bit_string = ""
+        for rgba in chunk_colors:
+            r, g, b, a = rgba
+
+            # Handle transparent color (0,0,0,0) with sentinel value
+            color_as_bits = ""
+            if r == 0 and g == 0 and b == 0 and a == 0:
+                # Use sentinel value: RGB(1,1,1) = 000000010000000100000001 in binary
+                color_as_bits = "000000010000000100000001"  # 24 bits total
+            else:
+                # Encode RGB values (ignore alpha), 8 bits per channel
+                color_as_bits = (format(r, '08b') + format(g, '08b') + format(b, '08b'))  # 24 bits total
+            
+            # Prepend to bit string (since we're packing from LSB to MSB)
+            bit_string = color_as_bits + bit_string
+
+        # Pad to 256 bits (leave unused bits as zeros)
+        bit_string = bit_string.ljust(256, '0')
+
+        # Convert to integer and add to results
+        uint_value = int(bit_string, 2)
         uint256_values.append(uint_value)
 
     return uint256_values
@@ -443,19 +453,28 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
     else:
         lines.append("        IAbility[] memory abilities = new IAbility[](0);")
 
-    # Generate metadata arrays with sprite data
-    if mon.sprite_data:
-        num_sprite_values = len(mon.sprite_data)
+    # Generate metadata arrays with sprite and palette data
+    total_metadata_count = len(mon.sprite_data) + len(mon.palette_data)
+
+    if total_metadata_count > 0:
         lines.extend([
-            f"        bytes32[] memory keys = new bytes32[]({num_sprite_values});",
-            f"        bytes32[] memory values = new bytes32[]({num_sprite_values});"
+            f"        bytes32[] memory keys = new bytes32[]({total_metadata_count});",
+            f"        bytes32[] memory values = new bytes32[]({total_metadata_count});"
         ])
 
-        # Add sprite data as "0", "1", "2", ...
+        metadata_index = 0
+
+        # Add sprite data as IMG_0, IMG_1, IMG_2, etc.
         for i, uint256_value in enumerate(mon.sprite_data):
-            # Convert uint256 to bytes32
-            lines.append(f"        keys[{i}] = bytes32(\"{i}\");")
-            lines.append(f"        values[{i}] = bytes32(uint256({uint256_value}));")
+            lines.append(f"        keys[{metadata_index}] = bytes32(\"IMG_{i}\");")
+            lines.append(f"        values[{metadata_index}] = bytes32(uint256({uint256_value}));")
+            metadata_index += 1
+
+        # Add palette data as PAL_0, PAL_1, PAL_2, etc.
+        for i, uint256_value in enumerate(mon.palette_data):
+            lines.append(f"        keys[{metadata_index}] = bytes32(\"PAL_{i}\");")
+            lines.append(f"        values[{metadata_index}] = bytes32(uint256({uint256_value}));")
+            metadata_index += 1
     else:
         lines.extend([
             "        bytes32[] memory keys = new bytes32[](0);",
@@ -612,9 +631,6 @@ def main():
             # print(f"  {mon_name}: {len(mon.sprite_data)} sprite uint256 values, {len(mon.palette_data)} palette uint256 values")
         else:
             print(f"  {mon_name}: No sprite data found")
-
-    mons_with_sprites = len([m for m in mons.values() if m.sprite_data])
-    mons_with_palettes = len([m for m in mons.values() if m.palette_data])
 
     # Collect all contracts
     contracts = collect_all_contracts(mons, base_path)

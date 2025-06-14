@@ -10,15 +10,15 @@ import {IEngineHook} from "../IEngineHook.sol";
 contract GachaRegistry is IMonRegistry, ERC721Soulbound, IEngineHook {
     using EnumerableSetLib for EnumerableSetLib.Uint256Set;
 
-    uint256 constant INITIAL_ROLLS = 4;
-    uint256 constant ROLL_COST = 300;
-    uint256 constant POINTS_PER_WIN = 50;
-    uint256 constant POINTS_PER_LOSS = 20;
-    uint256 constant POINTS_MULTIPLIER_1 = 2;
-    uint256 constant POINTS_MULTIPLIER_1_CHANCE_DENOM = 5;
-    uint256 constant POINTS_MULTIPLIER_2 = 3;
-    uint256 constant POINTS_MULTIPLIER_2_CHANCE_DENOM = 10;
-    uint256 constant BATTLE_COOLDOWN = 23 hours;
+    uint256 constant public INITIAL_ROLLS = 4;
+    uint256 constant public ROLL_COST = 300;
+    uint256 constant public POINTS_PER_WIN = 50;
+    uint256 constant public POINTS_PER_LOSS = 20;
+    uint256 constant public POINTS_MULTIPLIER_1 = 2;
+    uint256 constant public POINTS_MULTIPLIER_1_CHANCE_DENOM = 5;
+    uint256 constant public POINTS_MULTIPLIER_2 = 3;
+    uint256 constant public POINTS_MULTIPLIER_2_CHANCE_DENOM = 10;
+    uint256 constant public BATTLE_COOLDOWN = 23 hours;
 
     IMonRegistry public immutable MON_REGISTRY;
     IEngine public immutable ENGINE;

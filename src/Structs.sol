@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {BattleProposalStatus, Type} from "./Enums.sol";
 import {IRuleset} from "./IRuleset.sol";
 import {IValidator} from "./IValidator.sol";
+import {IEngineHook} from "./IEngineHook.sol";
 
 import {IAbility} from "./abilities/IAbility.sol";
 import {IEffect} from "./effects/IEffect.sol";
@@ -20,6 +21,7 @@ struct StartBattleArgs {
     IRuleset ruleset;
     ITeamRegistry teamRegistry;
     bytes32 p0TeamHash;
+    IEngineHook engineHook;
 }
 
 struct Battle {
@@ -33,6 +35,7 @@ struct Battle {
     Mon[][] teams;
     BattleProposalStatus status;
     uint96 p1TeamIndex;
+    IEngineHook engineHook;
 }
 
 struct BattleState {

@@ -4,18 +4,127 @@ pragma solidity ^0.8.0;
 import "../teams/IMonRegistry.sol";
 import "../lib/ERC721Soulbound.sol";
 import {EnumerableSetLib} from "../lib/EnumerableSetLib.sol";
+import {IEngine} from "../IEngine.sol";
+import {IEngineHook} from "../IEngineHook.sol";
 
-contract GachaRegistry is IMonRegistry, ERC721Soulbound {
+contract GachaRegistry is IMonRegistry, ERC721Soulbound, IEngineHook {
+    using EnumerableSetLib for EnumerableSetLib.Uint256Set;
 
-    IMonRegistry public MON_REGISTRY;
+    uint256 constant INITIAL_ROLLS = 4;
+    uint256 constant ROLL_COST = 300;
+    uint256 constant POINTS_PER_WIN = 50;
+    uint256 constant POINTS_PER_LOSS = 20;
+    uint256 constant POINTS_MULTIPLIER_1 = 2;
+    uint256 constant POINTS_MULTIPLIER_1_CHANCE_DENOM = 5;
+    uint256 constant POINTS_MULTIPLIER_2 = 3;
+    uint256 constant POINTS_MULTIPLIER_2_CHANCE_DENOM = 10;
+    uint256 constant BATTLE_COOLDOWN = 23 hours;
+
+    IMonRegistry public immutable MON_REGISTRY;
+    IEngine public immutable ENGINE;
 
     mapping(address => EnumerableSetLib.Uint256Set) private monsOwned;
+    mapping(address => uint256) public pointsBalance;
+    mapping(address => uint256) public lastBattleTimestamp;
 
-    constructor(IMonRegistry _MON_REGISTRY) ERC721Soulbound("MONS", "MONS") {
+    error AlreadyFirstRolled();
+    error NotYetFirstRolled();
+    error NoMoreStock();
+    error NotEngine();
+
+    event MonRoll(address indexed player, uint256[] monIds);
+
+    constructor(IMonRegistry _MON_REGISTRY, IEngine _ENGINE) ERC721Soulbound("MONS", "MONS") {
         MON_REGISTRY = _MON_REGISTRY;
+        ENGINE = _ENGINE;
     }
 
-    function tokenURI(uint256 id) public override view returns (string memory) {
+    function firstRoll() external returns (uint256[] memory monIds) {
+        if (balanceOf(msg.sender) > 0) {
+            revert AlreadyFirstRolled();
+        }
+        return _roll(INITIAL_ROLLS);
+    }
+
+    function roll(uint256 numRolls) external returns (uint256[] memory monIds) {
+        if (balanceOf(msg.sender) == 0) {
+            revert NotYetFirstRolled();
+        }
+        else if (balanceOf(msg.sender) == MON_REGISTRY.getMonCount()) {
+            revert NoMoreStock();
+        }
+        else {
+            pointsBalance[msg.sender] -= numRolls * ROLL_COST;
+        }
+        return _roll(numRolls);
+    }
+
+    function _roll(uint256 numRolls) internal returns (uint256[] memory monIds) {
+        monIds = new uint256[](numRolls);
+        uint256 numMons = MON_REGISTRY.getMonCount();
+        bytes32 prng = keccak256(abi.encodePacked(blockhash(block.number - 1), msg.sender));
+        for (uint256 i; i < numRolls; ++i) {
+            uint256 monId = uint256(prng) % numMons;
+            // Linear probing to solve for duplicate mons
+            while (monsOwned[msg.sender].contains(monId)) {
+                monId = (monId + 1) % numMons;
+            }
+            monIds[i] = monId;
+            _mint(msg.sender, monId);
+            monsOwned[msg.sender].add(monId);
+            prng = keccak256(abi.encodePacked(prng));
+        }
+        emit MonRoll(msg.sender, monIds);
+    }
+
+    // IEngineHook implementation
+    function onBattleStart(bytes32 battleKey) external override {}
+
+    function onRoundStart(bytes32 battleKey) external override {}
+
+    function onRoundEnd(bytes32 battleKey) external override {}
+
+    function onBattleEnd(bytes32 battleKey) external override {
+        if (msg.sender != address(ENGINE)) {
+            revert NotEngine();
+        }
+        address[] memory players = ENGINE.getPlayersForBattle(battleKey);
+        address winner = ENGINE.getWinner(battleKey);
+        if (winner == address(0)) {
+            return;
+        }
+        uint256 p0Points;
+        uint256 p1Points;
+        if (winner == players[0]) {
+            p0Points = POINTS_PER_WIN;
+            p1Points = POINTS_PER_LOSS;
+        } else {
+            p0Points = POINTS_PER_LOSS;
+            p1Points = POINTS_PER_WIN;
+        }
+        uint256 rng = uint256(blockhash(block.number - 1)) % POINTS_MULTIPLIER_2_CHANCE_DENOM;
+        uint256 pointScale = 1; 
+        if (rng == 0) {
+            pointScale = POINTS_MULTIPLIER_2;
+        }
+        else {
+            rng = uint256(keccak256(abi.encodePacked(rng))) % POINTS_MULTIPLIER_1_CHANCE_DENOM;
+            if (rng == 0) {
+                pointScale = POINTS_MULTIPLIER_1;
+            }
+        }
+        if (lastBattleTimestamp[players[0]] + BATTLE_COOLDOWN < block.timestamp) {
+            pointsBalance[players[0]] += p0Points * pointScale;
+            lastBattleTimestamp[players[0]] = block.timestamp;
+        }
+        if (lastBattleTimestamp[players[1]] + BATTLE_COOLDOWN < block.timestamp) {
+            pointsBalance[players[1]] += p1Points * pointScale;
+            lastBattleTimestamp[players[1]] = block.timestamp;
+        }
+    }
+
+    // TODO: read from onchain data and compose
+    function tokenURI(uint256) public override pure returns (string memory) {
         return "";
     }
 

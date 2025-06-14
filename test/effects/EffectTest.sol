@@ -19,6 +19,7 @@ import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
 import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
 import {TestTypeCalculator} from "../mocks/TestTypeCalculator.sol";
+import {IEngineHook} from "../../src/IEngineHook.sol";
 
 import {BattleHelper} from "../abstract/BattleHelper.sol";
 
@@ -158,32 +159,7 @@ contract EffectTest is Test, BattleHelper {
         defaultRegistry.setTeam(ALICE, team);
         defaultRegistry.setTeam(BOB, team);
 
-        StartBattleArgs memory args = StartBattleArgs({
-            p0: ALICE,
-            p1: BOB,
-            validator: oneMonOneMoveValidator,
-            rngOracle: mockOracle,
-            ruleset: IRuleset(address(0)),
-            teamRegistry: defaultRegistry,
-            p0TeamHash: keccak256(
-                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
-            )
-        });
-        vm.prank(ALICE);
-        bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(
-                args.validator,
-                args.rngOracle,
-                args.ruleset,
-                args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-            )
-        );
-        vm.prank(BOB);
-        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
-        vm.prank(ALICE);
-        engine.startBattle(battleKey, "", 0);
+        bytes32 battleKey = _startBattle(oneMonOneMoveValidator, engine, mockOracle, defaultRegistry);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -273,26 +249,7 @@ contract EffectTest is Test, BattleHelper {
         defaultRegistry.setTeam(ALICE, team);
         defaultRegistry.setTeam(BOB, team);
 
-        StartBattleArgs memory args = StartBattleArgs({
-            p0: ALICE,
-            p1: BOB,
-            validator: twoMonOneMoveValidator,
-            rngOracle: mockOracle,
-            ruleset: IRuleset(address(0)),
-            teamRegistry: defaultRegistry,
-            p0TeamHash: keccak256(
-                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
-            )
-        });
-        vm.prank(ALICE);
-        bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
-        );
-        vm.prank(BOB);
-        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
-        vm.prank(ALICE);
-        engine.startBattle(battleKey, "", 0);
+        bytes32 battleKey = _startBattle(twoMonOneMoveValidator, engine, mockOracle, defaultRegistry);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -372,33 +329,7 @@ contract EffectTest is Test, BattleHelper {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        StartBattleArgs memory args = StartBattleArgs({
-            p0: ALICE,
-            p1: BOB,
-            validator: twoMonValidator,
-            rngOracle: mockOracle,
-            ruleset: IRuleset(address(0)),
-            teamRegistry: defaultRegistry,
-            p0TeamHash: keccak256(
-                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
-            )
-        });
-        vm.prank(ALICE);
-        bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(
-                args.validator,
-                args.rngOracle,
-                args.ruleset,
-                args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-            )
-        );
-        vm.prank(BOB);
-        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
-        vm.prank(ALICE);
-
-        engine.startBattle(battleKey, "", 0);
+        bytes32 battleKey = _startBattle(twoMonValidator, engine, mockOracle, defaultRegistry);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -541,32 +472,7 @@ contract EffectTest is Test, BattleHelper {
         defaultRegistry.setTeam(ALICE, fastTeam);
         defaultRegistry.setTeam(BOB, slowTeam);
 
-        StartBattleArgs memory args = StartBattleArgs({
-            p0: ALICE,
-            p1: BOB,
-            validator: oneMonOneMoveValidator,
-            rngOracle: mockOracle,
-            ruleset: IRuleset(address(0)),
-            teamRegistry: defaultRegistry,
-            p0TeamHash: keccak256(
-                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
-            )
-        });
-        vm.prank(ALICE);
-        bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(
-                args.validator,
-                args.rngOracle,
-                args.ruleset,
-                args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-            )
-        );
-        vm.prank(BOB);
-        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
-        vm.prank(ALICE);
-        engine.startBattle(battleKey, "", 0);
+        bytes32 battleKey = _startBattle(oneMonOneMoveValidator, engine, mockOracle, defaultRegistry);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -652,33 +558,7 @@ contract EffectTest is Test, BattleHelper {
         defaultRegistry.setTeam(ALICE, team);
         defaultRegistry.setTeam(BOB, team);
 
-        StartBattleArgs memory args = StartBattleArgs({
-            p0: ALICE,
-            p1: BOB,
-            validator: oneMonOneMoveValidator,
-            rngOracle: mockOracle,
-            ruleset: IRuleset(address(0)),
-            teamRegistry: defaultRegistry,
-            p0TeamHash: keccak256(
-                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
-            )
-        });
-
-        vm.prank(ALICE);
-        bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(
-                args.validator,
-                args.rngOracle,
-                args.ruleset,
-                args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-            )
-        );
-        vm.prank(BOB);
-        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
-        vm.prank(ALICE);
-        engine.startBattle(battleKey, "", 0);
+        bytes32 battleKey = _startBattle(oneMonOneMoveValidator, engine, mockOracle, defaultRegistry);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -810,33 +690,7 @@ contract EffectTest is Test, BattleHelper {
             engine, DefaultValidator.Args({MONS_PER_TEAM: 2, MOVES_PER_MON: 1, TIMEOUT_DURATION: TIMEOUT_DURATION})
         );
 
-        StartBattleArgs memory args = StartBattleArgs({
-            p0: ALICE,
-            p1: BOB,
-            validator: twoMonOneMoveValidator,
-            rngOracle: mockOracle,
-            ruleset: IRuleset(address(0)),
-            teamRegistry: defaultRegistry,
-            p0TeamHash: keccak256(
-                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
-            )
-        });
-
-        vm.prank(ALICE);
-        bytes32 battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(
-                args.validator,
-                args.rngOracle,
-                args.ruleset,
-                args.teamRegistry,
-                keccak256(abi.encodePacked(bytes32(""), uint256(0)))
-            )
-        );
-        vm.prank(BOB);
-        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
-        vm.prank(ALICE);
-        engine.startBattle(battleKey, "", 0);
+        bytes32 battleKey = _startBattle(twoMonOneMoveValidator, engine, mockOracle, defaultRegistry);
 
         // First move of the game has to be selecting their mons (both index 0)
         _commitRevealExecuteForAliceAndBob(
@@ -929,7 +783,8 @@ contract EffectTest is Test, BattleHelper {
             teamRegistry: defaultRegistry,
             p0TeamHash: keccak256(
                 abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
-            )
+            ),
+            engineHook: IEngineHook(address(0))
         });
 
         vm.prank(ALICE);

@@ -17,9 +17,10 @@ import {ITypeCalculator} from "../../src/types/ITypeCalculator.sol";
 import {TypeCalculator} from "../../src/types/TypeCalculator.sol";
 import {MockRandomnessOracle} from "../mocks/MockRandomnessOracle.sol";
 import {TestTeamRegistry} from "../mocks/TestTeamRegistry.sol";
+import {BattleHelper} from "../abstract/BattleHelper.sol";
 import {Test} from "forge-std/Test.sol";
 
-contract AttackCalculatorTest is Test {
+contract AttackCalculatorTest is Test, BattleHelper {
     Engine engine;
     TypeCalculator typeCalc;
     MockRandomnessOracle defaultOracle;
@@ -27,9 +28,6 @@ contract AttackCalculatorTest is Test {
     MockRandomnessOracle mockOracle;
     CommitManager commitManager;
     DefaultValidator validator;
-
-    address constant ALICE = address(1);
-    address constant BOB = address(2);
 
     bytes32 battleKey;
 
@@ -93,26 +91,7 @@ contract AttackCalculatorTest is Test {
         defaultRegistry.setTeam(BOB, bobTeam);
 
         // Start battle
-        StartBattleArgs memory args = StartBattleArgs({
-            p0: ALICE,
-            p1: BOB,
-            validator: validator,
-            rngOracle: defaultOracle,
-            ruleset: IRuleset(address(0)),
-            teamRegistry: defaultRegistry,
-            p0TeamHash: keccak256(
-                abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
-            )
-        });
-        vm.prank(ALICE);
-        battleKey = engine.proposeBattle(args);
-        bytes32 battleIntegrityHash = keccak256(
-            abi.encodePacked(args.validator, args.rngOracle, args.ruleset, args.teamRegistry, args.p0TeamHash)
-        );
-        vm.prank(BOB);
-        engine.acceptBattle(battleKey, 0, battleIntegrityHash);
-        vm.prank(ALICE);
-        engine.startBattle(battleKey, "", 0);
+        battleKey = _startBattle(validator, engine, mockOracle, defaultRegistry);
         return battleKey;
     }
 

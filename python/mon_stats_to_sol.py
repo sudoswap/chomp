@@ -3,6 +3,7 @@
 import csv
 import os
 import re
+import argparse
 from typing import Dict, List, Tuple
 from PIL import Image
 import numpy as np
@@ -375,7 +376,7 @@ def collect_all_contracts(mons: Dict[str, MonData], base_path: str) -> Dict[str,
     return contracts
 
 
-def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
+def generate_deploy_function_for_mon(mon: MonData, base_path: str, include_color: bool = False) -> List[str]:
     """Generate the deploy function for a specific mon"""
     function_name = f"deploy{mon.name.replace(' ', '')}"
     lines = []
@@ -453,29 +454,36 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
     else:
         lines.append("        IAbility[] memory abilities = new IAbility[](0);")
 
-    # Generate metadata arrays with sprite and palette data
-    total_metadata_count = len(mon.sprite_data) + len(mon.palette_data)
+    # Generate metadata arrays with sprite and palette data (if color flag is enabled)
+    if include_color:
+        total_metadata_count = len(mon.sprite_data) + len(mon.palette_data)
 
-    if total_metadata_count > 0:
-        lines.extend([
-            f"        bytes32[] memory keys = new bytes32[]({total_metadata_count});",
-            f"        bytes32[] memory values = new bytes32[]({total_metadata_count});"
-        ])
+        if total_metadata_count > 0:
+            lines.extend([
+                f"        bytes32[] memory keys = new bytes32[]({total_metadata_count});",
+                f"        bytes32[] memory values = new bytes32[]({total_metadata_count});"
+            ])
 
-        metadata_index = 0
+            metadata_index = 0
 
-        # Add sprite data as IMG_0, IMG_1, IMG_2, etc.
-        for i, uint256_value in enumerate(mon.sprite_data):
-            lines.append(f"        keys[{metadata_index}] = bytes32(\"IMG_{i}\");")
-            lines.append(f"        values[{metadata_index}] = bytes32(uint256({uint256_value}));")
-            metadata_index += 1
+            # Add sprite data as IMG_0, IMG_1, IMG_2, etc.
+            for i, uint256_value in enumerate(mon.sprite_data):
+                lines.append(f"        keys[{metadata_index}] = bytes32(\"IMG_{i}\");")
+                lines.append(f"        values[{metadata_index}] = bytes32(uint256({uint256_value}));")
+                metadata_index += 1
 
-        # Add palette data as PAL_0, PAL_1, PAL_2, etc.
-        for i, uint256_value in enumerate(mon.palette_data):
-            lines.append(f"        keys[{metadata_index}] = bytes32(\"PAL_{i}\");")
-            lines.append(f"        values[{metadata_index}] = bytes32(uint256({uint256_value}));")
-            metadata_index += 1
+            # Add palette data as PAL_0, PAL_1, PAL_2, etc.
+            for i, uint256_value in enumerate(mon.palette_data):
+                lines.append(f"        keys[{metadata_index}] = bytes32(\"PAL_{i}\");")
+                lines.append(f"        values[{metadata_index}] = bytes32(uint256({uint256_value}));")
+                metadata_index += 1
+        else:
+            lines.extend([
+                "        bytes32[] memory keys = new bytes32[](0);",
+                "        bytes32[] memory values = new bytes32[](0);"
+            ])
     else:
+        # No color data - empty metadata arrays
         lines.extend([
             "        bytes32[] memory keys = new bytes32[](0);",
             "        bytes32[] memory values = new bytes32[](0);"
@@ -491,7 +499,7 @@ def generate_deploy_function_for_mon(mon: MonData, base_path: str) -> List[str]:
     return lines
 
 
-def generate_solidity_script(mons: Dict[str, MonData], contracts: Dict[str, ContractInfo], base_path: str) -> str:
+def generate_solidity_script(mons: Dict[str, MonData], contracts: Dict[str, ContractInfo], base_path: str, include_color: bool = False) -> str:
     """Generate the complete Solidity deployment script"""
 
     # Generate imports
@@ -600,7 +608,7 @@ def generate_solidity_script(mons: Dict[str, MonData], contracts: Dict[str, Cont
     # Generate individual deploy functions for each mon
     deploy_functions = []
     for mon in sorted(mons.values(), key=lambda m: m.mon_id):
-        deploy_functions.extend(generate_deploy_function_for_mon(mon, base_path))
+        deploy_functions.extend(generate_deploy_function_for_mon(mon, base_path, include_color))
 
     # Generate contract footer
     contract_footer = ["}"]
@@ -612,32 +620,45 @@ def generate_solidity_script(mons: Dict[str, MonData], contracts: Dict[str, Cont
 
 def main():
     """Main function to generate the deployment script"""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Generate Solidity deployment script for mons')
+    parser.add_argument('--color', action='store_true',
+                       help='Include sprite and palette color data in the generated script')
+    args = parser.parse_args()
+
     base_path = "."  # Assume script is run from repository root
 
     # Read CSV data
     mons = read_mons_csv(os.path.join(base_path, "drool", "mons.csv"))
     read_moves_csv(os.path.join(base_path, "drool", "moves.csv"), mons)
     read_abilities_csv(os.path.join(base_path, "drool", "abilities.csv"), mons)
+    print(f"Loaded {len(mons)} mons")
 
-    # Analyze sprite images
-    sprite_data, palette_data = analyze_sprite_images(base_path)
+    # Conditionally analyze sprite images if --color flag is set
+    if args.color:
+        print("\nAnalyzing sprite images...")
+        sprite_data, palette_data = analyze_sprite_images(base_path)
 
-    # Populate sprite and palette data in MonData objects
-    for mon_name, mon in mons.items():
-        mon_key = mon_name.lower()
-        if mon_key in sprite_data:
-            mon.sprite_data = sprite_data[mon_key]
-            mon.palette_data = palette_data.get(mon_key, [])
-            # print(f"  {mon_name}: {len(mon.sprite_data)} sprite uint256 values, {len(mon.palette_data)} palette uint256 values")
-        else:
-            print(f"  {mon_name}: No sprite data found")
+        # Populate sprite and palette data in MonData objects
+        for mon_name, mon in mons.items():
+            mon_key = mon_name.lower()
+            if mon_key in sprite_data:
+                mon.sprite_data = sprite_data[mon_key]
+                mon.palette_data = palette_data.get(mon_key, [])
+                print(f"  {mon_name}: {len(mon.sprite_data)} sprite uint256 values, {len(mon.palette_data)} palette uint256 values")
+            else:
+                print(f"  {mon_name}: No sprite data found")
+
+        mons_with_sprites = len([m for m in mons.values() if m.sprite_data])
+        mons_with_palettes = len([m for m in mons.values() if m.palette_data])
+        print(f"Loaded sprite data for {mons_with_sprites} mons, palette data for {mons_with_palettes} mons")
 
     # Collect all contracts
     contracts = collect_all_contracts(mons, base_path)
-    print(f"\n Found {len(contracts)} unique contracts to deploy")
+    print(f"Found {len(contracts)} unique contracts to deploy")
 
     # Generate Solidity script
-    solidity_code = generate_solidity_script(mons, contracts, base_path)
+    solidity_code = generate_solidity_script(mons, contracts, base_path, args.color)
 
     # Write to output file
     output_path = os.path.join(base_path, "script", "SetupMons.s.sol")
@@ -645,6 +666,21 @@ def main():
 
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(solidity_code)
+
+    print(f"Generated deployment script: {output_path}")
+
+    if args.color:
+        print("Color data included in deployment script")
+    else:
+        print("Color data not included (use --color flag to include)")
+
+    # Print summary
+    print("\nSummary:")
+    for mon in sorted(mons.values(), key=lambda m: m.mon_id):
+        color_info = ""
+        if args.color and (mon.sprite_data or mon.palette_data):
+            color_info = f" (sprite: {len(mon.sprite_data)} uint256, palette: {len(mon.palette_data)} uint256)"
+        print(f"  {mon.name}: {len(mon.moves)} moves, {len(mon.abilities)} abilities{color_info}")
 
 if __name__ == "__main__":
     main()

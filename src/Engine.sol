@@ -113,7 +113,8 @@ contract Engine is IEngine {
             teams: teams,
             teamRegistry: args.teamRegistry,
             p0TeamHash: args.p0TeamHash,
-            p1TeamIndex: 0 // placeholder value until p1 responds
+            p1TeamIndex: 0, // placeholder value until p1 responds
+            engineHook: args.engineHook
         });
         emit BattleProposal(args.p1, msg.sender, battleKey);
         return battleKey;
@@ -208,6 +209,10 @@ contract Engine is IEngine {
         // Set flag to be 2 which means both players act
         battleStates[battleKey].playerSwitchForTurnFlag = 2;
 
+        if (address(battle.engineHook) != address(0)) {
+            battle.engineHook.onBattleStart(battleKey);
+        }
+
         emit BattleStart(battleKey, p0TeamIndex, battle.p0, battle.p1);
     }
 
@@ -230,6 +235,10 @@ contract Engine is IEngine {
         // Set the battle key for the stack frame
         // (gets cleared at the end of the transaction)
         battleKeyForWrite = battleKey;
+
+        if (address(battle.engineHook) != address(0)) {
+            battle.engineHook.onRoundStart(battleKey);
+        }
 
         // If only a single player has a move to submit, then we don't trigger any effects
         // (Basically this only handles switching mons for now)
@@ -337,10 +346,17 @@ contract Engine is IEngine {
 
         // Progress turn index and finally set the player switch for turn flag on the state
         if (state.winner != address(0)) {
+            if (address(battle.engineHook) != address(0)) {
+                battle.engineHook.onBattleEnd(battleKey);
+            }
             return;
         }
         state.turnId += 1;
         state.playerSwitchForTurnFlag = playerSwitchForTurnFlag;
+
+        if (address(battle.engineHook) != address(0)) {
+            battle.engineHook.onRoundEnd(battleKey);
+        }
 
         // Emits switch for turn flag for the next turn, but the priority index for this current turn
         emit EngineExecute(battleKey, turnId, playerSwitchForTurnFlag, priorityPlayerIndex);
@@ -358,6 +374,9 @@ contract Engine is IEngine {
             if (afkResult != address(0)) {
                 state.winner = afkResult;
                 battle.status = BattleProposalStatus.Ended;
+                if (address(battle.engineHook) != address(0)) {
+                    battle.engineHook.onBattleEnd(battleKey);
+                }
                 emit BattleComplete(battleKey, afkResult);
                 return;
             }
@@ -946,6 +965,10 @@ contract Engine is IEngine {
 
     function getMonKOCount(bytes32 battleKey, uint256 playerIndex) external view returns (uint256) {
         return monsKOedBitmap[bytes32(uint256(battleKey) + playerIndex)];
+    }
+
+    function getWinner(bytes32 battleKey) external view returns (address) {
+        return battleStates[battleKey].winner;
     }
 
     // To be called once (after CommitManager is deployed and set to the Engine)

@@ -8,7 +8,4 @@ library MonSVGRenderer {
     uint256 constant HEIGHT = 32;
     uint256 constant WIDTH = 32;
     uint256 constant NUM_IMG_SLOTS = 16;
-
-    renderMon(uint256 monId, IMonRegistry monRegistry) external view returns (string memory) {
-    }
 }

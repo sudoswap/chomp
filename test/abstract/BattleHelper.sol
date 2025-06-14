@@ -9,6 +9,7 @@ import {FastCommitManager} from "../../src/FastCommitManager.sol";
 import {IValidator} from "../../src/IValidator.sol";
 import {IRandomnessOracle} from "../../src/rng/IRandomnessOracle.sol";
 import {ITeamRegistry} from "../../src/teams/ITeamRegistry.sol";
+import {IEngineHook} from "../../src/IEngineHook.sol";
 
 import {Test} from "forge-std/Test.sol";
 
@@ -64,7 +65,8 @@ abstract contract BattleHelper is Test {
             teamRegistry: defaultRegistry,
             p0TeamHash: keccak256(
                 abi.encodePacked(bytes32(""), uint256(0), defaultRegistry.getMonRegistryIndicesForTeam(ALICE, 0))
-            )
+            ),
+            engineHook: IEngineHook(address(0))
         });
         vm.startPrank(ALICE);
         bytes32 battleKey = engine.proposeBattle(args);
